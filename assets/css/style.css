@@ -456,5 +456,6 @@ p { margin: 0 0 16px; }
   .container { padding: 0 18px; }
   .signup-card { padding: 24px; }
   .form-field-group { flex-direction: column; }
+  .form-field-group input[type="email"] { flex: none; width: 100%; }
   .form-field-group .btn { width: 100%; }
 }
