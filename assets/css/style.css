@@ -151,22 +151,28 @@ a { color: var(--color-primary); }
 .lang-switch {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  gap: 2px;
+  padding: 3px;
+  background: var(--color-primary-tint);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 .lang-switch a {
-  color: var(--color-neutral);
+  color: var(--color-primary);
   text-decoration: none;
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  border-radius: 999px;
+  line-height: 1.3;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 .lang-switch a[aria-current="page"] {
-  color: var(--color-primary);
-  background: var(--color-primary-tint);
+  background: var(--color-primary);
+  color: #fff;
 }
-.lang-switch a:hover { color: var(--color-primary); }
-.lang-divider { color: var(--color-neutral); }
+.lang-switch a:not([aria-current="page"]):hover {
+  background: var(--color-secondary-tint);
+}
 
 .nav .btn { padding: 10px 20px; font-size: 0.92rem; }
 
