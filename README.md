@@ -15,8 +15,8 @@ Chasry helps freelancers and small businesses get paid on time. Log an invoice o
 
 ```
 .
-├── index.html              # Greek homepage (default locale)
-├── en/index.html           # English homepage
+├── index.html              # English homepage (default locale)
+├── el/index.html           # Greek homepage
 ├── 404.html                # Custom 404 page
 ├── assets/
 │   ├── css/style.css       # Shared stylesheet
@@ -25,7 +25,8 @@ Chasry helps freelancers and small businesses get paid on time. Log an invoice o
 │   └── favicons/           # Favicons and app icons
 ├── robots.txt
 ├── sitemap.xml
-└── site.webmanifest
+├── site.webmanifest
+└── vercel.json             # Redirects (legacy /en/ -> /)
 ```
 
 ## Running Locally
@@ -40,7 +41,7 @@ Then open [http://localhost:8080](http://localhost:8080).
 
 ## Internationalization
 
-The site is bilingual (Greek / English) by design. Greek is served at `/`, English at `/en/`. Each locale has its own HTML page; both share the same stylesheet and script.
+The site is bilingual (English / Greek) by design. English is served at `/` (default), Greek at `/el/`. Each locale has its own HTML page; both share the same stylesheet and script.
 
 ## Deployment
 
