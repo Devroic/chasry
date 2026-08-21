@@ -3,12 +3,12 @@
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://chasry.com/</loc>
-    <xhtml:link rel="alternate" hreflang="el" href="https://chasry.com/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://chasry.com/en/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://chasry.com/"/>
+    <xhtml:link rel="alternate" hreflang="el" href="https://chasry.com/el/"/>
   </url>
   <url>
-    <loc>https://chasry.com/en/</loc>
-    <xhtml:link rel="alternate" hreflang="el" href="https://chasry.com/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://chasry.com/en/"/>
+    <loc>https://chasry.com/el/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://chasry.com/"/>
+    <xhtml:link rel="alternate" hreflang="el" href="https://chasry.com/el/"/>
   </url>
 </urlset>
