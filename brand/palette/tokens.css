@@ -1,0 +1,15 @@
+/* Chasry — Brand color tokens */
+
+:root {
+  --color-primary: #23458D;         /* Navy — CTA, links, headers */
+  --color-primary-hover: #0B2561;
+  --color-primary-tint: #E2E9F8;    /* ανοιχτό background για sections/cards */
+
+  --color-secondary: #63C2EE;       /* Sky Blue — accents, highlights */
+  --color-secondary-hover: #2CADE8;
+  --color-secondary-tint: #B8E3F7;  /* ανοιχτό γαλάζιο background/accent panels */
+
+  --color-ink: #0D0D0D;             /* βασικό χρώμα κειμένου */
+  --color-neutral: #94A3B8;         /* borders, muted text, placeholders */
+  --color-bg: #FFFFFF;              /* βασικό background */
+}
