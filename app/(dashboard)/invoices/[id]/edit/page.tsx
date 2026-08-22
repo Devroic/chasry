@@ -17,7 +17,9 @@ export default async function EditInvoicePage({
   const [{ data: invoice }, { data: customers }] = await Promise.all([
     supabase
       .from("invoices")
-      .select("id, customer_id, invoice_number, amount, currency, issued_date, due_date, notes")
+      .select(
+        "id, customer_id, invoice_number, amount, currency, issued_date, due_date, payment_link, notes"
+      )
       .eq("id", id)
       .eq("user_id", user.id)
       .single(),
@@ -40,6 +42,7 @@ export default async function EditInvoicePage({
             customers={customers ?? []}
             currency={profile.currency}
             defaultValues={invoice}
+            defaultPaymentLink={profile.payment_link ?? undefined}
             submitLabel="Save changes"
           />
         </Suspense>

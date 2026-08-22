@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   InvoiceSummary,
+  PayNowButton,
   ReminderHeading,
   ReminderLayout,
   ReminderText,
@@ -13,6 +14,7 @@ export interface ReminderBeforeDueProps {
   amount: string;
   dueDateLabel: string;
   daysUntilDue: number;
+  paymentLink?: string;
 }
 
 export default function ReminderBeforeDueEmail({
@@ -22,6 +24,7 @@ export default function ReminderBeforeDueEmail({
   amount = "€450.00",
   dueDateLabel = "Due 29 Aug 2026",
   daysUntilDue = 7,
+  paymentLink,
 }: Partial<ReminderBeforeDueProps>) {
   const dayWord = daysUntilDue === 1 ? "day" : "days";
 
@@ -36,6 +39,7 @@ export default function ReminderBeforeDueEmail({
         it&rsquo;s already scheduled — this is just a heads-up.
       </ReminderText>
       <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />
+      {paymentLink && <PayNowButton href={paymentLink} />}
       <ReminderText>Thanks for your business.</ReminderText>
     </ReminderLayout>
   );

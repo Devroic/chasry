@@ -18,7 +18,7 @@ export function ReminderTimeline({
 }: {
   dueDate: string;
   offsets: number[];
-  logs: { offset_days: number; status: "sent" | "failed"; sent_at: string }[];
+  logs: { offset_days: number; status: "sent" | "failed" | "skipped"; sent_at: string }[];
   invoiceIsPaid: boolean;
   /** Current time, computed by the caller — keeps this component pure. */
   now: number;
@@ -49,6 +49,9 @@ export function ReminderTimeline({
           icon = <XCircle className="size-4 text-destructive" />;
           status = "Failed to send";
           tone = "text-destructive";
+        } else if (log?.status === "skipped") {
+          icon = <XCircle className="size-4 text-muted-foreground" />;
+          status = "Skipped — later one sent";
         } else if (invoiceIsPaid) {
           icon = <XCircle className="size-4 text-muted-foreground" />;
           status = "Skipped — invoice paid";

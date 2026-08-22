@@ -15,9 +15,17 @@ export function isTodayUtc(date: Date): boolean {
   );
 }
 
-export type ReminderTone = "before" | "overdue";
+export type ReminderTone = "before" | "overdue" | "seriously_overdue";
 
-/** Negative/zero offsets (before or on the due date) read as a heads-up; positive offsets read as overdue. */
+/** Days overdue at which reminders stop being a polite nudge and get direct instead. */
+export const SERIOUSLY_OVERDUE_THRESHOLD_DAYS = 14;
+
+/**
+ * Negative/zero offsets (before or on the due date) read as a heads-up.
+ * Positive offsets escalate in tone the further overdue they are — a
+ * reminder 60 days late shouldn't read identically to one sent yesterday.
+ */
 export function toneForOffset(offsetDays: number): ReminderTone {
-  return offsetDays > 0 ? "overdue" : "before";
+  if (offsetDays <= 0) return "before";
+  return offsetDays >= SERIOUSLY_OVERDUE_THRESHOLD_DAYS ? "seriously_overdue" : "overdue";
 }

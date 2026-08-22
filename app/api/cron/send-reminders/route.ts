@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
-import { addDaysUtc, isTodayUtc, toneForOffset } from "@/lib/reminders";
+import { addDaysUtc, toneForOffset } from "@/lib/reminders";
 import { formatDate, formatMoney } from "@/lib/format";
 import { checkCronRateLimit } from "@/lib/rate-limit";
 import ReminderBeforeDueEmail from "@/emails/reminder-before-due";
 import ReminderOverdueEmail from "@/emails/reminder-overdue";
+import ReminderSeriouslyOverdueEmail from "@/emails/reminder-seriously-overdue";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
   // lib/plan.ts), not whether reminders work on the ones they do have.
   const [{ data: profiles, error: profilesError }, { data: settings, error: settingsError }] =
     await Promise.all([
-      supabase.from("profiles").select("id, business_name, email"),
+      supabase.from("profiles").select("id, business_name, email, payment_link"),
       supabase.from("reminder_settings").select("user_id, offsets, enabled").eq("enabled", true),
     ]);
 
@@ -60,12 +61,12 @@ export async function GET(request: Request) {
   const offsetsByUser = new Map((settings ?? []).map((s) => [s.user_id, s.offsets]));
 
   if (allUserIds.length === 0) {
-    return NextResponse.json({ checked: 0, sent: 0, failed: 0 });
+    return NextResponse.json({ checked: 0, sent: 0, skipped: 0, failed: 0 });
   }
 
   const { data: invoices, error: invoicesError } = await supabase
     .from("invoices")
-    .select("id, user_id, customer_id, invoice_number, amount, currency, due_date")
+    .select("id, user_id, customer_id, invoice_number, amount, currency, due_date, payment_link")
     .eq("status", "unpaid")
     .in("user_id", allUserIds);
 
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
   }
 
   if (!invoices || invoices.length === 0) {
-    return NextResponse.json({ checked: 0, sent: 0, failed: 0 });
+    return NextResponse.json({ checked: 0, sent: 0, skipped: 0, failed: 0 });
   }
 
   const customerIds = [...new Set(invoices.map((i) => i.customer_id))];
@@ -107,6 +108,10 @@ export async function GET(request: Request) {
   let sent = 0;
   let failed = 0;
   let checked = 0;
+  let skipped = 0;
+
+  const today = new Date();
+  const todayUtcMidnight = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
 
   for (const invoice of invoices) {
     const offsets = offsetsByUser.get(invoice.user_id);
@@ -114,21 +119,50 @@ export async function GET(request: Request) {
     const customer = customerById.get(invoice.customer_id);
     if (!offsets || !profile || !customer) continue;
 
-    for (const offsetDays of offsets) {
-      checked++;
-      const key = `${invoice.id}:${offsetDays}`;
-      if (alreadySent.has(key)) continue;
+    // Every offset whose target date has arrived (today or earlier — earlier
+    // covers an invoice logged already overdue, or a missed cron run) and
+    // hasn't been logged yet. Only the most recent one actually gets sent;
+    // this stops a backdated invoice from firing every past milestone in
+    // one email storm on the first run after it's created.
+    const due = offsets
+      .filter((offsetDays) => !alreadySent.has(`${invoice.id}:${offsetDays}`))
+      .map((offsetDays) => ({ offsetDays, targetDate: addDaysUtc(invoice.due_date, offsetDays) }))
+      .filter(({ targetDate }) => targetDate.getTime() <= todayUtcMidnight)
+      .sort((a, b) => b.targetDate.getTime() - a.targetDate.getTime());
 
-      const targetDate = addDaysUtc(invoice.due_date, offsetDays);
-      if (!isTodayUtc(targetDate)) continue;
+    checked += due.length;
+    if (due.length === 0) continue;
 
-      const tone = toneForOffset(offsetDays);
-      const businessName = profile.business_name || profile.email;
-      const amountLabel = formatMoney(Number(invoice.amount), invoice.currency);
-      const dueDateFormatted = formatDate(invoice.due_date);
+    const [{ offsetDays }, ...stale] = due;
 
-      const element =
-        tone === "overdue"
+    for (const { offsetDays: staleOffset } of stale) {
+      await supabase.from("reminder_logs").insert({
+        invoice_id: invoice.id,
+        user_id: invoice.user_id,
+        offset_days: staleOffset,
+        status: "skipped",
+      });
+      skipped++;
+    }
+
+    const tone = toneForOffset(offsetDays);
+    const businessName = profile.business_name || profile.email;
+    const amountLabel = formatMoney(Number(invoice.amount), invoice.currency);
+    const dueDateFormatted = formatDate(invoice.due_date);
+    const paymentLink = invoice.payment_link ?? profile.payment_link ?? undefined;
+
+    const element =
+      tone === "seriously_overdue"
+        ? ReminderSeriouslyOverdueEmail({
+            businessName,
+            clientName: customer.name,
+            invoiceNumber: invoice.invoice_number ?? undefined,
+            amount: amountLabel,
+            dueDateLabel: `Was due ${dueDateFormatted}`,
+            daysOverdue: offsetDays,
+            paymentLink,
+          })
+        : tone === "overdue"
           ? ReminderOverdueEmail({
               businessName,
               clientName: customer.name,
@@ -136,6 +170,7 @@ export async function GET(request: Request) {
               amount: amountLabel,
               dueDateLabel: `Was due ${dueDateFormatted}`,
               daysOverdue: offsetDays,
+              paymentLink,
             })
           : ReminderBeforeDueEmail({
               businessName,
@@ -144,45 +179,47 @@ export async function GET(request: Request) {
               amount: amountLabel,
               dueDateLabel: `Due ${dueDateFormatted}`,
               daysUntilDue: -offsetDays,
+              paymentLink,
             });
 
-      const subject =
-        tone === "overdue"
+    const subject =
+      tone === "seriously_overdue"
+        ? `Please arrange payment: invoice ${invoice.invoice_number ?? ""} from ${businessName}`.trim()
+        : tone === "overdue"
           ? `Overdue: invoice ${invoice.invoice_number ?? ""} from ${businessName}`.trim()
           : `Reminder: invoice ${invoice.invoice_number ?? ""} due soon from ${businessName}`.trim();
 
-      try {
-        const { data, error } = await resend.emails.send({
-          from: REMINDERS_FROM_EMAIL,
-          to: customer.email,
-          replyTo: profile.email,
-          subject,
-          react: element,
-        });
+    try {
+      const { data, error } = await resend.emails.send({
+        from: REMINDERS_FROM_EMAIL,
+        to: customer.email,
+        replyTo: profile.email,
+        subject,
+        react: element,
+      });
 
-        if (error) throw new Error(error.message);
+      if (error) throw new Error(error.message);
 
-        await supabase.from("reminder_logs").insert({
-          invoice_id: invoice.id,
-          user_id: invoice.user_id,
-          offset_days: offsetDays,
-          status: "sent",
-          resend_message_id: data?.id ?? null,
-        });
-        sent++;
-      } catch (err) {
-        console.error("cron/send-reminders: send failed", { invoiceId: invoice.id, err });
-        await supabase.from("reminder_logs").insert({
-          invoice_id: invoice.id,
-          user_id: invoice.user_id,
-          offset_days: offsetDays,
-          status: "failed",
-          error: err instanceof Error ? err.message : "Unknown error",
-        });
-        failed++;
-      }
+      await supabase.from("reminder_logs").insert({
+        invoice_id: invoice.id,
+        user_id: invoice.user_id,
+        offset_days: offsetDays,
+        status: "sent",
+        resend_message_id: data?.id ?? null,
+      });
+      sent++;
+    } catch (err) {
+      console.error("cron/send-reminders: send failed", { invoiceId: invoice.id, err });
+      await supabase.from("reminder_logs").insert({
+        invoice_id: invoice.id,
+        user_id: invoice.user_id,
+        offset_days: offsetDays,
+        status: "failed",
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+      failed++;
     }
   }
 
-  return NextResponse.json({ checked, sent, failed });
+  return NextResponse.json({ checked, sent, skipped, failed });
 }

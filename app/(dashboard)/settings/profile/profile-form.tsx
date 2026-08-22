@@ -20,7 +20,12 @@ export function ProfileForm({
   defaultValues,
   email,
 }: {
-  defaultValues: { business_name: string; timezone: string; currency: string };
+  defaultValues: {
+    business_name: string;
+    timezone: string;
+    currency: string;
+    payment_link: string;
+  };
   email: string;
 }) {
   const [state, formAction, pending] = useActionState<ProfileFormState, FormData>(
@@ -76,6 +81,22 @@ export function ProfileForm({
           <Label htmlFor="timezone">Timezone</Label>
           <Input id="timezone" name="timezone" defaultValue={defaultValues.timezone} required />
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="payment_link">Payment link (optional)</Label>
+        <Input
+          id="payment_link"
+          name="payment_link"
+          type="url"
+          placeholder="https://buy.stripe.com/... or https://paypal.me/you"
+          defaultValue={defaultValues.payment_link}
+        />
+        <p className="text-xs text-muted-foreground">
+          Add a Stripe Payment Link, PayPal.me, or any page clients can pay you from. When set,
+          reminder emails include a &ldquo;Pay now&rdquo; button linking here — you can also set a
+          different one per invoice.
+        </p>
       </div>
 
       <Button type="submit" disabled={pending}>

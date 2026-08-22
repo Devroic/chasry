@@ -19,6 +19,7 @@ function parseInvoiceForm(formData: FormData) {
     currency: formData.get("currency") || "EUR",
     issued_date: formData.get("issued_date"),
     due_date: formData.get("due_date"),
+    payment_link: formData.get("payment_link"),
     notes: formData.get("notes"),
   });
 }
@@ -163,13 +164,13 @@ export async function sendPreviewReminder(invoiceId: string) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("business_name, email")
+    .select("business_name, email, payment_link")
     .eq("id", user.id)
     .single();
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("invoice_number, amount, currency, due_date, customer_id")
+    .select("invoice_number, amount, currency, due_date, customer_id, payment_link")
     .eq("id", invoiceId)
     .eq("user_id", user.id)
     .single();
@@ -194,6 +195,7 @@ export async function sendPreviewReminder(invoiceId: string) {
       amount: formatMoney(Number(invoice.amount), invoice.currency),
       dueDateLabel: `Due ${formatDate(invoice.due_date)}`,
       daysUntilDue: 7,
+      paymentLink: invoice.payment_link ?? profile.payment_link ?? undefined,
     }),
   });
 }

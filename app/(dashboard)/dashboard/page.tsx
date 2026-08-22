@@ -104,7 +104,7 @@ export default async function DashboardPage({
         {invoices.length === 0 ? (
           <EmptyState
             title="No unpaid invoices yet"
-            description="Log your first invoice and Chasry will start chasing it for you automatically."
+            description="Already chasing someone for a late payment? Log it here — Chasry works on invoices you're already waiting on, not just new ones."
             actionLabel="Add an invoice"
             actionHref="/invoices/new"
           />

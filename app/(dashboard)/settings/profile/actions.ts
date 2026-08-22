@@ -16,6 +16,7 @@ export async function updateProfile(
     business_name: formData.get("business_name"),
     timezone: formData.get("timezone"),
     currency: formData.get("currency"),
+    payment_link: formData.get("payment_link"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
 

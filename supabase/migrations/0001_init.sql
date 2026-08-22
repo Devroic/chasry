@@ -12,6 +12,12 @@ create table public.profiles (
   email text not null,
   timezone text not null default 'UTC',
   currency text not null default 'EUR',
+  -- Default "pay me" link (Stripe Payment Link, PayPal.me, bank-transfer
+  -- instructions page, etc.) included as a button in reminder emails when
+  -- set. Chasry never touches the money itself — this just links out to
+  -- however the business already gets paid, which avoids needing Stripe
+  -- Connect or any money-transmission surface area for a v1.
+  payment_link text,
   stripe_customer_id text unique,
   stripe_subscription_id text unique,
   -- 'none': free plan (default — no card, no Stripe subscription yet).
@@ -90,6 +96,9 @@ create table public.invoices (
   issued_date date not null default current_date,
   due_date date not null,
   status text not null default 'unpaid' check (status in ('unpaid', 'paid', 'canceled')),
+  -- Overrides profiles.payment_link for this invoice specifically. Usually
+  -- null — most invoices just use the business's default payment link.
+  payment_link text,
   notes text,
   paid_at timestamptz,
   created_at timestamptz not null default now(),
@@ -124,8 +133,11 @@ create trigger invoices_set_updated_at
 -- ─────────────────────────────────────────────────────────────────────────
 create table public.reminder_settings (
   user_id uuid primary key references public.profiles (id) on delete cascade,
-  -- days relative to due_date: negative = before due, positive = after due
-  offsets int[] not null default '{-7,-3,1}',
+  -- days relative to due_date: negative = before due, positive = after due.
+  -- Includes 14 by default so the tone-escalation (see lib/reminders.ts,
+  -- SERIOUSLY_OVERDUE_THRESHOLD_DAYS) is something new users actually see
+  -- happen, not an opt-in feature nobody discovers.
+  offsets int[] not null default '{-7,-3,1,14}',
   enabled boolean not null default true
 );
 
@@ -142,7 +154,12 @@ create table public.reminder_logs (
   invoice_id uuid not null references public.invoices (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
   offset_days int not null,
-  status text not null check (status in ('sent', 'failed')),
+  -- 'skipped': the offset's target date had already passed by the time we
+  -- first saw the invoice (e.g. it was logged already overdue, or a cron
+  -- run was missed) and a later, more current offset was sent instead —
+  -- see app/api/cron/send-reminders/route.ts. Recorded so it's never
+  -- reconsidered, not because anything was sent for it.
+  status text not null check (status in ('sent', 'failed', 'skipped')),
   resend_message_id text,
   error text,
   sent_at timestamptz not null default now(),

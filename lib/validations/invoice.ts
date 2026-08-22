@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalUrl } from "./shared";
 
 export const invoiceSchema = z.object({
   customer_id: z.string().uuid("Choose a client"),
@@ -13,6 +14,7 @@ export const invoiceSchema = z.object({
   currency: z.string().trim().length(3).default("EUR"),
   issued_date: z.string().min(1, "Issued date is required"),
   due_date: z.string().min(1, "Due date is required"),
+  payment_link: optionalUrl,
   notes: z
     .string()
     .trim()

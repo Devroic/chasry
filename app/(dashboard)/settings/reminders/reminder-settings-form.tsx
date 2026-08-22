@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { updateReminderSettings, type ReminderSettingsState } from "./actions";
+import { SERIOUSLY_OVERDUE_THRESHOLD_DAYS } from "@/lib/reminders";
 
-const OFFSET_OPTIONS = [
+const GENTLE_OFFSETS = [
   { value: -7, label: "7 days before due" },
   { value: -3, label: "3 days before due" },
   { value: -1, label: "1 day before due" },
@@ -15,6 +16,11 @@ const OFFSET_OPTIONS = [
   { value: 1, label: "1 day after due" },
   { value: 3, label: "3 days after due" },
   { value: 7, label: "7 days after due" },
+];
+
+const FIRM_OFFSETS = [
+  { value: 14, label: "14 days after due" },
+  { value: 30, label: "30 days after due" },
 ];
 
 export function ReminderSettingsForm({
@@ -53,7 +59,7 @@ export function ReminderSettingsForm({
       </div>
 
       <div className="space-y-3">
-        {OFFSET_OPTIONS.map((option) => (
+        {GENTLE_OFFSETS.map((option) => (
           <div key={option.value} className="flex items-center justify-between">
             <Label htmlFor={`offset_${option.value}`} className="text-sm font-normal">
               {option.label}
@@ -65,6 +71,26 @@ export function ReminderSettingsForm({
             />
           </div>
         ))}
+      </div>
+
+      <div>
+        <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          After {SERIOUSLY_OVERDUE_THRESHOLD_DAYS}+ days, reminders read more direct automatically
+        </p>
+        <div className="space-y-3">
+          {FIRM_OFFSETS.map((option) => (
+            <div key={option.value} className="flex items-center justify-between">
+              <Label htmlFor={`offset_${option.value}`} className="text-sm font-normal">
+                {option.label}
+              </Label>
+              <Switch
+                id={`offset_${option.value}`}
+                name={`offset_${option.value}`}
+                defaultChecked={defaultOffsets.includes(option.value)}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <Button type="submit" disabled={pending}>

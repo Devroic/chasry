@@ -86,7 +86,7 @@ export default async function InvoicesPage({
       {invoices.length === 0 ? (
         <EmptyState
           title="No invoices yet"
-          description="Log an unpaid invoice and Chasry will start sending reminders automatically."
+          description="Log an unpaid invoice — even one that's already overdue — and Chasry starts sending reminders automatically."
           actionLabel="Add your first invoice"
           actionHref="/invoices/new"
         />

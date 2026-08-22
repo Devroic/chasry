@@ -1,5 +1,6 @@
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
@@ -113,6 +114,27 @@ export function InvoiceSummary({
         {amount}
       </Text>
       <Text style={{ fontSize: "13px", color: BRAND.neutral, margin: 0 }}>{dueDateLabel}</Text>
+    </Section>
+  );
+}
+
+export function PayNowButton({ href }: { href: string }) {
+  return (
+    <Section style={{ margin: "0 0 20px" }}>
+      <Button
+        href={href}
+        style={{
+          backgroundColor: BRAND.primary,
+          color: "#FFFFFF",
+          fontSize: "15px",
+          fontWeight: 600,
+          padding: "12px 24px",
+          borderRadius: "8px",
+          textDecoration: "none",
+        }}
+      >
+        Pay now
+      </Button>
     </Section>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { requireOnboardedUser } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { InvoiceStatusBadge } from "@/components/dashboard/invoice-status-badge";
 import { InvoiceActions } from "@/components/dashboard/invoice-actions";
@@ -14,7 +14,7 @@ export default async function InvoiceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { supabase, user } = await requireUser();
+  const { supabase, user, profile } = await requireOnboardedUser();
 
   // `settings` only depends on user.id (known up front), not on the invoice
   // row, so it can run alongside the invoice fetch instead of after it.
@@ -22,7 +22,7 @@ export default async function InvoiceDetailPage({
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, amount, currency, issued_date, due_date, status, notes, customer_id"
+        "id, invoice_number, amount, currency, issued_date, due_date, status, notes, customer_id, payment_link"
       )
       .eq("id", id)
       .eq("user_id", user.id)
@@ -31,6 +31,8 @@ export default async function InvoiceDetailPage({
   ]);
 
   if (!invoice) notFound();
+
+  const paymentLink = invoice.payment_link ?? profile.payment_link;
 
   const [{ data: customer }, { data: logs }] = await Promise.all([
     supabase.from("customers").select("id, name, email").eq("id", invoice.customer_id).single(),
@@ -75,6 +77,34 @@ export default async function InvoiceDetailPage({
               </Link>
             </div>
           )}
+          <div className="col-span-2 sm:col-span-3">
+            <p className="text-xs text-muted-foreground">Payment link in reminders</p>
+            {paymentLink ? (
+              <a
+                href={paymentLink}
+                target="_blank"
+                rel="noreferrer"
+                className="block truncate text-sm text-brand-primary hover:underline"
+              >
+                {paymentLink}
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                None set —{" "}
+                <Link href="/settings/profile" className="text-brand-primary hover:underline">
+                  add a default
+                </Link>{" "}
+                or{" "}
+                <Link
+                  href={`/invoices/${invoice.id}/edit`}
+                  className="text-brand-primary hover:underline"
+                >
+                  set one for this invoice
+                </Link>
+                .
+              </p>
+            )}
+          </div>
           {invoice.notes && (
             <div className="col-span-2 sm:col-span-3">
               <p className="text-xs text-muted-foreground">Notes</p>

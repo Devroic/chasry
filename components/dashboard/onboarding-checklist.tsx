@@ -22,14 +22,14 @@ export function OnboardingChecklist({
     {
       done: hasInvoice,
       title: "Log an unpaid invoice",
-      description: "Amount and due date. Thirty seconds of work.",
+      description: "Amount and due date — past-due ones count too. Thirty seconds of work.",
       href: "/invoices/new",
       cta: "Add an invoice",
     },
     {
       done: false,
       title: "Check your reminder schedule",
-      description: "We default to 7 days before, 3 days before, and 1 day after.",
+      description: "Defaults to 7 and 3 days before, then 1 and 14 days after — getting firmer automatically.",
       href: "/settings/reminders",
       cta: "Review schedule",
     },

@@ -33,6 +33,8 @@ export function InvoiceForm({
   currency,
   defaultValues,
   defaultCustomerId,
+  suggestedInvoiceNumber,
+  defaultPaymentLink,
   submitLabel = "Save invoice",
 }: {
   action: (prev: InvoiceFormState, formData: FormData) => Promise<InvoiceFormState>;
@@ -44,9 +46,14 @@ export function InvoiceForm({
     amount: number;
     issued_date: string;
     due_date: string;
+    payment_link: string | null;
     notes: string | null;
   };
   defaultCustomerId?: string;
+  /** Prefilled invoice number for a *new* invoice, e.g. "INV-1043" following the last one used. */
+  suggestedInvoiceNumber?: string;
+  /** The business's default payment link, shown as a placeholder for the per-invoice override. */
+  defaultPaymentLink?: string;
   submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState<InvoiceFormState, FormData>(action, null);
@@ -121,7 +128,7 @@ export function InvoiceForm({
           <Input
             id="invoice_number"
             name="invoice_number"
-            defaultValue={defaultValues?.invoice_number ?? ""}
+            defaultValue={defaultValues?.invoice_number ?? suggestedInvoiceNumber ?? ""}
             placeholder="INV-1001"
           />
         </div>
@@ -165,6 +172,22 @@ export function InvoiceForm({
             Net {days}
           </Button>
         ))}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="payment_link">Payment link (optional)</Label>
+        <Input
+          id="payment_link"
+          name="payment_link"
+          type="url"
+          defaultValue={defaultValues?.payment_link ?? ""}
+          placeholder={defaultPaymentLink || "https://buy.stripe.com/..."}
+        />
+        <p className="text-xs text-muted-foreground">
+          {defaultPaymentLink
+            ? "Leave blank to use your default payment link from Settings."
+            : "Included as a “Pay now” button in reminder emails for this invoice."}
+        </p>
       </div>
 
       <div className="space-y-1.5">

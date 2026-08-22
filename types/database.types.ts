@@ -6,7 +6,7 @@
 export type SubscriptionStatus = "none" | "active" | "past_due" | "canceled";
 
 export type InvoiceStatus = "unpaid" | "paid" | "canceled";
-export type ReminderLogStatus = "sent" | "failed";
+export type ReminderLogStatus = "sent" | "failed" | "skipped";
 
 type NoRelationships = { Relationships: [] };
 
@@ -20,6 +20,7 @@ export interface Database {
           email: string;
           timezone: string;
           currency: string;
+          payment_link: string | null;
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           subscription_status: SubscriptionStatus;
@@ -61,6 +62,7 @@ export interface Database {
           issued_date: string;
           due_date: string;
           status: InvoiceStatus;
+          payment_link: string | null;
           notes: string | null;
           paid_at: string | null;
           created_at: string;

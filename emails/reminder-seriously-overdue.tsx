@@ -7,7 +7,7 @@ import {
   ReminderText,
 } from "@/emails/components/reminder-layout";
 
-export interface ReminderOverdueProps {
+export interface ReminderSeriouslyOverdueProps {
   businessName: string;
   clientName: string;
   invoiceNumber?: string;
@@ -17,31 +17,28 @@ export interface ReminderOverdueProps {
   paymentLink?: string;
 }
 
-export default function ReminderOverdueEmail({
+export default function ReminderSeriouslyOverdueEmail({
   businessName = "Acme Design Co.",
   clientName = "Jordan",
   invoiceNumber = "INV-1042",
   amount = "€450.00",
-  dueDateLabel = "Was due 15 Aug 2026",
-  daysOverdue = 1,
+  dueDateLabel = "Was due 20 Jul 2026",
+  daysOverdue = 30,
   paymentLink,
-}: Partial<ReminderOverdueProps>) {
-  const dayWord = daysOverdue === 1 ? "day" : "days";
-
+}: Partial<ReminderSeriouslyOverdueProps>) {
   return (
     <ReminderLayout
-      previewText={`Invoice is now ${daysOverdue} ${dayWord} overdue`}
+      previewText={`Invoice is now ${daysOverdue} days overdue — please arrange payment`}
       businessName={businessName}
     >
-      <ReminderHeading>Hi {clientName}, this invoice is now overdue</ReminderHeading>
+      <ReminderHeading>Hi {clientName}, this payment is significantly overdue</ReminderHeading>
       <ReminderText>
-        This invoice from {businessName} was due {daysOverdue} {dayWord} ago and hasn&rsquo;t
-        been marked as paid yet. If you&rsquo;ve already sent payment, thank you — feel free to
-        ignore this. Otherwise, please arrange payment when you get a chance.
+        This invoice from {businessName} was due {daysOverdue} days ago. Please arrange payment as
+        soon as possible, or reply to this email if there&rsquo;s an issue we should know about.
       </ReminderText>
       <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />
       {paymentLink && <PayNowButton href={paymentLink} />}
-      <ReminderText>Thanks for your business.</ReminderText>
+      <ReminderText>We&rsquo;d appreciate this being resolved promptly.</ReminderText>
     </ReminderLayout>
   );
 }

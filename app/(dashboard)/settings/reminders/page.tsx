@@ -19,7 +19,7 @@ export default async function ReminderSettingsPage() {
           you turn on below, relative to the invoice&rsquo;s due date.
         </p>
         <ReminderSettingsForm
-          defaultOffsets={settings?.offsets ?? [-7, -3, 1]}
+          defaultOffsets={settings?.offsets ?? [-7, -3, 1, 14]}
           defaultEnabled={settings?.enabled ?? true}
         />
       </CardContent>
