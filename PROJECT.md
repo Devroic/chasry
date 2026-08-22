@@ -18,7 +18,9 @@ monthly subscription.
   thinks about it.)
 - The app sends **automatic reminder emails** at specific offsets relative to the due date —
   e.g. 7 days before, 3 days before, 1 day after — and this schedule is configurable, not fixed.
-- Access is gated by a **monthly subscription**.
+- **Pricing has a free tier**, revised from the original "subscription only" brief after a UX/
+  growth review (see below) — a card-required trial was judged too much friction for someone
+  discovering Chasry cold. Free comes with a real limit (not just a countdown), Pro removes it.
 
 ## Non-functional requirements
 
@@ -47,9 +49,28 @@ monthly subscription.
 - **Stack**: Next.js (Server Actions + a couple of Route Handlers) on Vercel, Supabase
   (Postgres/Auth/RLS), Stripe Billing, Resend + React Email, Vercel Cron for the daily reminder
   job — chosen to fit the low-budget constraint (~$20–30/mo) while still being production-grade.
-- **Pricing**: 7-day free trial, then a single €10/month plan (no tiers).
 - **Domain/email**: reminders send from `reminders@chasry.com` once Resend's DNS records are
   added on Namecheap, alongside (not replacing) the existing `info@chasry.com` forwarding.
+
+## Pricing (revised from the original "trial then subscribe" brief)
+
+Original plan: 7-day free trial, card required upfront, then a flat €10/month. Revisited after
+the app was built, on the reasoning that (a) a flat price doesn't scale with how much value a
+heavy user gets vs. a light one, and (b) requiring a card before anyone can try a niche tool cuts
+top-of-funnel hard, especially for cold traffic from social ads.
+
+**Current model:**
+- **Free** (default, no card): full functionality, capped at `FREE_INVOICE_LIMIT` (currently 3)
+  *active* invoices at a time — see `lib/plan.ts`. Reminders work fully on the free plan; the cap
+  is the only thing that's limited, not the product's core value.
+- **Pro** — €10/month, unlimited invoices/clients. No trial (the free plan already serves that
+  purpose) — billing starts immediately on upgrade via Stripe Checkout.
+- Upgrade entry points: the paywall moment when the free limit is hit (on `/invoices/new`), and
+  Settings → Billing at any time.
+
+This is a starting point, not something to treat as settled — worth revisiting with real usage
+data (e.g. is 3 invoices the right cap? does a mid-tier make sense once there's a userbase to
+segment?).
 
 ## Explicitly out of scope for this phase
 

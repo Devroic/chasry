@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { InvoiceForm } from "@/components/dashboard/invoice-form";
-import { requireUser } from "@/lib/auth";
+import { requireOnboardedUser } from "@/lib/auth";
 import { updateInvoice } from "@/app/(dashboard)/invoices/actions";
 
 export default async function EditInvoicePage({
@@ -12,9 +12,9 @@ export default async function EditInvoicePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { supabase, user } = await requireUser();
+  const { supabase, user, profile } = await requireOnboardedUser();
 
-  const [{ data: invoice }, { data: customers }, { data: profile }] = await Promise.all([
+  const [{ data: invoice }, { data: customers }] = await Promise.all([
     supabase
       .from("invoices")
       .select("id, customer_id, invoice_number, amount, currency, issued_date, due_date, notes")
@@ -26,7 +26,6 @@ export default async function EditInvoicePage({
       .select("id, name")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
-    supabase.from("profiles").select("currency").eq("id", user.id).single(),
   ]);
 
   if (!invoice) notFound();
@@ -39,7 +38,7 @@ export default async function EditInvoicePage({
           <InvoiceForm
             action={updateInvoice.bind(null, invoice.id)}
             customers={customers ?? []}
-            currency={profile?.currency ?? invoice.currency}
+            currency={profile.currency}
             defaultValues={invoice}
             submitLabel="Save changes"
           />

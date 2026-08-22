@@ -16,20 +16,24 @@ export default async function InvoiceDetailPage({
   const { id } = await params;
   const { supabase, user } = await requireUser();
 
-  const { data: invoice } = await supabase
-    .from("invoices")
-    .select(
-      "id, invoice_number, amount, currency, issued_date, due_date, status, notes, customer_id"
-    )
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+  // `settings` only depends on user.id (known up front), not on the invoice
+  // row, so it can run alongside the invoice fetch instead of after it.
+  const [{ data: invoice }, { data: settings }] = await Promise.all([
+    supabase
+      .from("invoices")
+      .select(
+        "id, invoice_number, amount, currency, issued_date, due_date, status, notes, customer_id"
+      )
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
+  ]);
 
   if (!invoice) notFound();
 
-  const [{ data: customer }, { data: settings }, { data: logs }] = await Promise.all([
+  const [{ data: customer }, { data: logs }] = await Promise.all([
     supabase.from("customers").select("id, name, email").eq("id", invoice.customer_id).single(),
-    supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
     supabase
       .from("reminder_logs")
       .select("offset_days, status, sent_at")

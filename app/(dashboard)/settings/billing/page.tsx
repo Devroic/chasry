@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth";
+import { requireOnboardedUser } from "@/lib/auth";
 import { isPro, planLabel, FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,22 +14,15 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function BillingSettingsPage() {
-  const { supabase, user } = await requireUser();
+  const { supabase, user, profile } = await requireOnboardedUser();
 
-  const [{ data: profile }, { count: activeInvoiceCount }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("subscription_status, current_period_end, stripe_customer_id")
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "unpaid"),
-  ]);
+  const { count: activeInvoiceCount } = await supabase
+    .from("invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "unpaid");
 
-  const status = profile?.subscription_status ?? "none";
+  const status = profile.subscription_status;
   const pro = isPro(status);
 
   return (
@@ -63,7 +56,7 @@ export default async function BillingSettingsPage() {
             <Badge variant="outline">{pro ? (STATUS_LABEL[status] ?? status) : planLabel(status)}</Badge>
           </div>
 
-          {status === "active" && profile?.current_period_end && (
+          {status === "active" && profile.current_period_end && (
             <p className="text-xs text-muted-foreground">
               Renews {formatDate(profile.current_period_end)}.
             </p>

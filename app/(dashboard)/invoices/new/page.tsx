@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { InvoiceForm } from "@/components/dashboard/invoice-form";
 import { UpgradePrompt } from "@/components/dashboard/upgrade-prompt";
-import { requireUser } from "@/lib/auth";
+import { requireOnboardedUser } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { createInvoice } from "@/app/(dashboard)/invoices/actions";
 
@@ -13,26 +13,22 @@ export default async function NewInvoicePage({
   searchParams: Promise<{ customer_id?: string }>;
 }) {
   const { customer_id } = await searchParams;
-  const { supabase, user } = await requireUser();
+  const { supabase, user, profile } = await requireOnboardedUser();
 
-  const [{ data: customers }, { data: profile }, { count: activeInvoiceCount }] =
-    await Promise.all([
-      supabase
-        .from("customers")
-        .select("id, name")
-        .eq("user_id", user.id)
-        .order("name", { ascending: true }),
-      supabase.from("profiles").select("currency, subscription_status").eq("id", user.id).single(),
-      supabase
-        .from("invoices")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "unpaid"),
-    ]);
+  const [{ data: customers }, { count: activeInvoiceCount }] = await Promise.all([
+    supabase
+      .from("customers")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true }),
+    supabase
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "unpaid"),
+  ]);
 
-  const atFreeLimit =
-    !isPro(profile?.subscription_status ?? "none") &&
-    (activeInvoiceCount ?? 0) >= FREE_INVOICE_LIMIT;
+  const atFreeLimit = !isPro(profile.subscription_status) && (activeInvoiceCount ?? 0) >= FREE_INVOICE_LIMIT;
 
   return (
     <div className="max-w-lg">
@@ -45,7 +41,7 @@ export default async function NewInvoicePage({
             <InvoiceForm
               action={createInvoice}
               customers={customers ?? []}
-              currency={profile?.currency ?? "EUR"}
+              currency={profile.currency}
               defaultCustomerId={customer_id}
             />
           </Suspense>

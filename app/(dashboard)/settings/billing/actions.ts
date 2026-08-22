@@ -3,16 +3,7 @@
 import { redirect } from "next/navigation";
 import { stripe } from "@/lib/stripe";
 import { createCheckoutSession } from "@/lib/billing";
-import { createClient } from "@/lib/supabase/server";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  return { supabase, user: user! };
-}
+import { requireUser } from "@/lib/auth";
 
 export async function startCheckout() {
   const { supabase, user } = await requireUser();

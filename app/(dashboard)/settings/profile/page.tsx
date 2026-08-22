@@ -1,16 +1,10 @@
-import { requireUser } from "@/lib/auth";
+import { requireOnboardedUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProfileForm } from "./profile-form";
 import { DangerZone } from "./danger-zone";
 
 export default async function ProfileSettingsPage() {
-  const { supabase, user } = await requireUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("business_name, timezone, currency, email")
-    .eq("id", user.id)
-    .single();
+  const { profile } = await requireOnboardedUser();
 
   return (
     <div className="space-y-8">
@@ -18,11 +12,11 @@ export default async function ProfileSettingsPage() {
         <CardContent className="pt-6">
           <ProfileForm
             defaultValues={{
-              business_name: profile?.business_name ?? "",
-              timezone: profile?.timezone ?? "UTC",
-              currency: profile?.currency ?? "EUR",
+              business_name: profile.business_name ?? "",
+              timezone: profile.timezone,
+              currency: profile.currency,
             }}
-            email={profile?.email ?? user.email ?? ""}
+            email={profile.email}
           />
         </CardContent>
       </Card>

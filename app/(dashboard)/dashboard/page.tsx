@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth";
+import { requireOnboardedUser } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -16,9 +16,9 @@ export default async function DashboardPage({
   searchParams: Promise<{ upgraded?: string }>;
 }) {
   const { upgraded } = await searchParams;
-  const { supabase, user } = await requireUser();
+  const { supabase, user, profile } = await requireOnboardedUser();
 
-  const [{ data: unpaidInvoices }, { count: customerCount }, { count: invoiceCount }, { data: profile }] =
+  const [{ data: unpaidInvoices }, { count: customerCount }, { count: invoiceCount }] =
     await Promise.all([
       supabase
         .from("invoices")
@@ -34,7 +34,6 @@ export default async function DashboardPage({
         .from("invoices")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id),
-      supabase.from("profiles").select("currency, subscription_status").eq("id", user.id).single(),
     ]);
 
   const today = new Date();

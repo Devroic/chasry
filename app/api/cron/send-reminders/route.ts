@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
 import { addDaysUtc, isTodayUtc, toneForOffset } from "@/lib/reminders";
@@ -13,8 +14,15 @@ export const maxDuration = 60;
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  const header = request.headers.get("authorization");
-  return header === `Bearer ${secret}`;
+  const header = request.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+
+  // Constant-time comparison — a plain `===` leaks timing information an
+  // attacker could use to guess the secret byte-by-byte over many requests.
+  const headerBuf = Buffer.from(header);
+  const expectedBuf = Buffer.from(expected);
+  if (headerBuf.length !== expectedBuf.length) return false;
+  return timingSafeEqual(headerBuf, expectedBuf);
 }
 
 export async function GET(request: Request) {

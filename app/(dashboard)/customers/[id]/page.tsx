@@ -30,21 +30,25 @@ export default async function CustomerDetailPage({
   const { error } = await searchParams;
   const { supabase, user } = await requireUser();
 
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("id, name, email, phone, notes")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+  // Neither query depends on the other's result — both only need `id` and
+  // `user.id`, which are already known — so they run in parallel rather than
+  // waiting on the customer fetch before starting the invoices one.
+  const [{ data: customer }, { data: invoices }] = await Promise.all([
+    supabase
+      .from("customers")
+      .select("id, name, email, phone, notes")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("invoices")
+      .select("id, invoice_number, amount, currency, due_date, status")
+      .eq("customer_id", id)
+      .eq("user_id", user.id)
+      .order("due_date", { ascending: false }),
+  ]);
 
   if (!customer) notFound();
-
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("id, invoice_number, amount, currency, due_date, status")
-    .eq("customer_id", id)
-    .eq("user_id", user.id)
-    .order("due_date", { ascending: false });
 
   return (
     <div>

@@ -7,7 +7,7 @@ get paid. This is the production web app — sign up, log an invoice, Chasry cha
 
 - **Next.js 16** (App Router, TypeScript, Server Actions) — Tailwind CSS + shadcn/ui (Radix)
 - **Supabase** — Postgres, Auth, Row Level Security
-- **Stripe** — Billing (Checkout, Customer Portal, webhooks) — 7-day trial, €10/month
+- **Stripe** — Billing (Checkout, Customer Portal, webhooks) — free plan + €10/month Pro, no trial
 - **Resend** + React Email — reminder emails
 - **Vercel** — hosting + Cron (daily reminder job)
 - **Upstash Redis** (optional) — rate limiting on auth + cron
@@ -103,9 +103,8 @@ npm run email:dev       # preview the reminder email templates at http://localho
 stripe listen --forward-to localhost:3000/api/stripe/webhook   # in a second terminal
 ```
 
-Sign up, complete onboarding (Stripe test card `4242 4242 4242 4242`, any future date/CVC), add a
-client, add an invoice due today, then manually trigger the reminder cron to see it work end to
-end:
+Sign up, complete onboarding (no card needed — you land on the free plan), add a client, add an
+invoice due today, then manually trigger the reminder cron to see it work end to end:
 
 ```bash
 curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/send-reminders
@@ -113,6 +112,11 @@ curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/sen
 
 Or, from any invoice's detail page in the app, use **"Send me a preview"** to email yourself a
 sample reminder without waiting for the cron.
+
+To test the upgrade flow: add invoices until you hit the free plan's limit (3 active by default,
+`FREE_INVOICE_LIMIT` in `lib/plan.ts`) — you'll see the upgrade prompt in place of the "add
+invoice" form. Use Stripe test card `4242 4242 4242 4242`, any future date/CVC, to complete
+checkout and confirm the webhook flips you to Pro.
 
 ## 8. Deploy
 
@@ -126,14 +130,15 @@ sample reminder without waiting for the cron.
 6. Add a **second** Stripe webhook endpoint for your production URL (keep the test-mode one for
    local dev), and switch `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` to live-mode values once you're
    ready to charge real cards.
-7. Do one real end-to-end pass in production: sign up, start the trial with a real card, add a
-   client with an email you control, add an invoice due today, and confirm the cron sends.
+7. Do one real end-to-end pass in production: sign up, add a client with an email you control,
+   add an invoice due today, confirm the cron sends, then upgrade with a real card and confirm
+   the webhook flips your account to Pro.
 
 ## Project structure
 
 ```
 app/(auth)/          login, signup, password reset — unauthenticated
-app/(onboarding)/    business details + start trial
+app/(onboarding)/    business details (no card — lands on the free plan)
 app/(dashboard)/     dashboard, invoices, customers, settings — behind auth
 app/api/stripe/      Stripe webhook
 app/api/cron/        the daily reminder job
