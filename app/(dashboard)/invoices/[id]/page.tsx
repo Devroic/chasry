@@ -76,7 +76,15 @@ export default async function InvoiceDetailPage({
       <PageHeader
         title={invoice.invoice_number || t("genericTitle")}
         description={customer ? t("detail.for", { name: customer.name }) : undefined}
-        action={<InvoiceStatusBadge status={invoice.status} dueDate={invoice.due_date} />}
+        action={
+          // Top right, matching the client detail page. These used to sit in
+          // the middle of the page, so the same actions lived in two different
+          // places depending on which record you were looking at.
+          <div className="flex flex-wrap items-center gap-2">
+            <InvoiceStatusBadge status={invoice.status} dueDate={invoice.due_date} />
+            <InvoiceActions invoiceId={invoice.id} status={invoice.status} />
+          </div>
+        }
       />
 
       <Card className="mb-6">
@@ -165,10 +173,6 @@ export default async function InvoiceDetailPage({
           )}
         </CardContent>
       </Card>
-
-      <div className="mb-6">
-        <InvoiceActions invoiceId={invoice.id} status={invoice.status} />
-      </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">

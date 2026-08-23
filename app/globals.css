@@ -115,42 +115,49 @@
      badge text (DashboardShell's UserMenu), which paired the old #5a7fd1
      with --brand-secondary-tint at only ~3.5:1. */
   --brand-primary-hover: #8bacdf;
-  --brand-primary-tint: #16223f;
+  --brand-primary-tint: #23232a;
   --brand-secondary: #63c2ee;
   --brand-secondary-hover: #8bd4f4;
-  --brand-secondary-tint: #14304a;
-  --brand-ink: #f2f4f8;
-  --brand-neutral: #8291a8;
+  --brand-secondary-tint: #1e2c34;
+  --brand-ink: #f4f4f5;
+  --brand-neutral: #8e8e96;
 
-  --background: #0b1220;
+  /* Neutral dark grey, not navy. The surfaces used to be blue-tinted
+     (#0b1220 / #101a2e / #16223f), which read as a "dark blue theme" rather
+     than a dark theme. Chrome is now near-neutral so the brand blues
+     (--brand-primary, --brand-secondary) are the only colour on the page and
+     actually stand out. Contrast was re-checked, not eyeballed: every
+     foreground token below stays above WCAG AA (4.5:1) on both --background
+     and --card. */
+  --background: #131314;
   --foreground: var(--brand-ink);
-  --card: #101a2e;
+  --card: #1b1b1d;
   --card-foreground: var(--brand-ink);
-  --popover: #101a2e;
+  --popover: #1b1b1d;
   --popover-foreground: var(--brand-ink);
   --primary: var(--brand-secondary);
-  --primary-foreground: #0b1220;
-  --secondary: #16223f;
-  --secondary-foreground: #dfe6f7;
-  --muted: #16223f;
-  --muted-foreground: #93a2ba;
-  --accent: #14304a;
-  --accent-foreground: #bfe8fa;
+  --primary-foreground: #131314;
+  --secondary: #242428;
+  --secondary-foreground: #e4e4e7;
+  --muted: #242428;
+  --muted-foreground: #a1a1aa;
+  --accent: #2b2b30;
+  --accent-foreground: #f4f4f5;
   --destructive: oklch(0.704 0.191 22.216);
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.15);
   --ring: var(--brand-secondary);
   --chart-1: var(--brand-secondary);
-  --chart-2: #3f63b8;
+  --chart-2: var(--brand-primary);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: #101a2e;
+  --sidebar: #1b1b1d;
   --sidebar-foreground: var(--brand-ink);
   --sidebar-primary: var(--brand-secondary);
-  --sidebar-primary-foreground: #0b1220;
-  --sidebar-accent: #16223f;
-  --sidebar-accent-foreground: #dfe6f7;
+  --sidebar-primary-foreground: #131314;
+  --sidebar-accent: #242428;
+  --sidebar-accent-foreground: #e4e4e7;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: var(--brand-secondary);
 }

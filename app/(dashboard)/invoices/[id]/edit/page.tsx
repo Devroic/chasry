@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { BackLink } from "@/components/dashboard/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { InvoiceForm } from "@/components/dashboard/invoice-form";
 import { requireOnboardedUser } from "@/lib/auth";
@@ -41,7 +40,6 @@ export default async function EditInvoicePage({
 
   return (
     <div className="max-w-4xl">
-      <BackLink href={`/invoices/${invoice.id}`} label={invoice.invoice_number || t("genericTitle")} />
       <PageHeader title={t("editPage.title")} />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-6 lg:col-span-2">
@@ -56,6 +54,8 @@ export default async function EditInvoicePage({
                 offsets: reminderSettings?.offsets ?? [],
                 enabled: reminderSettings?.enabled ?? true,
               }}
+              lockCustomer
+              cancelHref={`/invoices/${invoice.id}`}
               submitLabel={tCommon("saveChanges")}
             />
           </Suspense>

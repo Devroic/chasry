@@ -302,6 +302,7 @@
     },
     "form": {
       "clientLabel": "Client",
+      "clientLockedHint": "The client can't be changed after an invoice is created. Delete this invoice and add a new one if it went to the wrong client.",
       "addNewClient": "+ Add new client",
       "clientPlaceholder": "Choose a client",
       "needClientFirst": "You need a client first —",

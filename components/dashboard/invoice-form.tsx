@@ -48,6 +48,8 @@ export function InvoiceForm({
   suggestedInvoiceNumber,
   defaultPaymentLink,
   accountDefaults,
+  lockCustomer = false,
+  cancelHref,
   submitLabel,
 }: {
   action: (prev: InvoiceFormState, formData: FormData) => Promise<InvoiceFormState>;
@@ -69,6 +71,15 @@ export function InvoiceForm({
   defaultPaymentLink?: string;
   /** The account's reminder default — used to describe/seed the override section. */
   accountDefaults: { offsets: number[]; enabled: boolean };
+  /**
+   * Editing an existing invoice: the client is shown read-only. An invoice is
+   * already assigned to someone, reminders may already have gone out to that
+   * address, and the payment link resolves through them, so silently pointing
+   * it at a different client mid-flight would make the reminder history lie.
+   */
+  lockCustomer?: boolean;
+  /** When set, a Cancel button appears next to Save and returns here. */
+  cancelHref?: string;
   submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState<InvoiceFormState, FormData>(action, null);
@@ -148,47 +159,63 @@ export function InvoiceForm({
         </Alert>
       )}
 
-      <FormField
-        label={t("clientLabel")}
-        htmlFor="customer_id"
-        error={errors.customer_id?.message}
-        labelAction={
-          <Link
-            href={`/customers/new?return_to=${pathname}`}
-            className="text-xs font-medium text-brand-primary hover:underline"
+      {lockCustomer ? (
+        <FormField label={t("clientLabel")} htmlFor="customer_id_display">
+          <div
+            id="customer_id_display"
+            className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground"
           >
-            {t("addNewClient")}
-          </Link>
-        }
-      >
-        <Controller
-          name="customer_id"
-          control={control}
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="customer_id" className="w-full" aria-invalid={!!errors.customer_id}>
-                <SelectValue placeholder={t("clientPlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {customers.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            {t("needClientFirst")}{" "}
-            <Link href="/customers/new" className="text-brand-primary hover:underline">
-              {t("addOne")}
+            {selectedCustomer?.name ?? ""}
+          </div>
+          <p className="text-xs text-muted-foreground">{t("clientLockedHint")}</p>
+        </FormField>
+      ) : (
+        <FormField
+          label={t("clientLabel")}
+          htmlFor="customer_id"
+          error={errors.customer_id?.message}
+          labelAction={
+            <Link
+              href={`/customers/new?return_to=${pathname}`}
+              className="text-xs font-medium text-brand-primary hover:underline"
+            >
+              {t("addNewClient")}
             </Link>
-            .
-          </p>
-        )}
-      </FormField>
+          }
+        >
+          <Controller
+            name="customer_id"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger
+                  id="customer_id"
+                  className="w-full"
+                  aria-invalid={!!errors.customer_id}
+                >
+                  <SelectValue placeholder={t("clientPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {customers.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              {t("needClientFirst")}{" "}
+              <Link href="/customers/new" className="text-brand-primary hover:underline">
+                {t("addOne")}
+              </Link>
+              .
+            </p>
+          )}
+        </FormField>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField label={t("amountLabel")} htmlFor="amount" error={errors.amount?.message}>
@@ -255,9 +282,16 @@ export function InvoiceForm({
         onToggleOffset={toggleOffset}
       />
 
-      <Button type="submit" loading={pending} disabled={customers.length === 0}>
-        {pending ? tCommon("saving") : (submitLabel ?? t("submitCreate"))}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button type="submit" loading={pending} disabled={customers.length === 0}>
+          {pending ? tCommon("saving") : (submitLabel ?? t("submitCreate"))}
+        </Button>
+        {cancelHref && (
+          <Button type="button" variant="ghost" asChild>
+            <Link href={cancelHref}>{tCommon("cancel")}</Link>
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

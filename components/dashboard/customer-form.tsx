@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, startTransition, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +24,7 @@ export function CustomerForm({
   defaultValues,
   accountDefaults,
   submitLabel,
+  cancelHref,
   returnTo,
 }: {
   action: (prev: CustomerFormState, formData: FormData) => Promise<CustomerFormState>;
@@ -38,6 +40,8 @@ export function CustomerForm({
   /** The account's own reminder default — used to describe and seed the override section. */
   accountDefaults: { offsets: number[]; enabled: boolean };
   submitLabel?: string;
+  /** When set, a Cancel button appears next to Save and returns here. */
+  cancelHref?: string;
   returnTo?: string;
 }) {
   const [state, formAction, pending] = useActionState<CustomerFormState, FormData>(action, null);
@@ -149,9 +153,16 @@ export function CustomerForm({
         onToggleOffset={toggleOffset}
       />
 
-      <Button type="submit" loading={pending}>
-        {pending ? tCommon("saving") : (submitLabel ?? t("submitCreate"))}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button type="submit" loading={pending}>
+          {pending ? tCommon("saving") : (submitLabel ?? t("submitCreate"))}
+        </Button>
+        {cancelHref && (
+          <Button type="button" variant="ghost" asChild>
+            <Link href={cancelHref}>{tCommon("cancel")}</Link>
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

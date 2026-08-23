@@ -1,5 +1,5 @@
 import { RouteSpinner } from "@/components/dashboard/route-spinner";
 
-export default function DashboardLoading() {
+export default function Loading() {
   return <RouteSpinner />;
 }
