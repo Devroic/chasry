@@ -86,9 +86,11 @@ and had to be circled back for, which is why this section exists.
   `"style": "radix-nova"` afterwards — the CLI's default has switched away from Radix before.
 - Don't reintroduce a card-required trial or a `'trialing'`/`'incomplete'` subscription status —
   the pricing model is free-tier + Pro now (see `PROJECT.md`), not trial-then-subscribe.
-- This is a git repo with a remote: `origin` → `github.com/andreaseracleous99/chasry-webapp`
-  (private), `origin/HEAD` set so diff-based tooling (`/security-review`, etc.) works. Don't push
-  without being asked — commits happen locally by default; ask before `git push`.
+- This is a git repo with a remote: `origin` → `github.com/Devroic/chasry-webapp` (**private**,
+  owned by the `Devroic` org — moved there from the personal `andreaseracleous99` account, alongside
+  `Devroic/chasry`, the landing page). GitHub redirects the old URL, so stale clones still work.
+  `origin/HEAD` is set so diff-based tooling (`/security-review`, etc.) works. Don't push without
+  being asked — commits happen locally by default; ask before `git push`.
 - `.env.local` has real (non-placeholder) Supabase credentials for local dev as of this writing —
   don't overwrite it with placeholder values when testing; if you need a placeholder env for a
   quick build check, restore the real values afterward rather than leaving it stubbed out.

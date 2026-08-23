@@ -815,11 +815,21 @@ in the app is below the fold or in a state that's fine to lazy-load; this one is
 - Migrations are now CLI-managed (`npm run db:push`), but that push is still **manual** — it isn't
   wired into the Vercel deploy, so schema and code can ship out of step. Worth adding as a deploy
   step once there's real traffic; the risk today is only forgetting to run it.
-- The repo now **does** have a GitHub remote (`origin` → `andreaseracleous99/chasry-webapp`), so
+- The repo now **does** have a GitHub remote (`origin` → `Devroic/chasry-webapp`, private), so
   the packaged `/security-review` skill should now run — it previously couldn't because it diffs
   against `origin/HEAD`. Worth running it (and `/code-review ultra`) rather than continuing to
   rely on the manual security pass above, especially over the auth/billing/RLS surface.
-- Sentry isn't actually integrated despite the env var placeholder.
+- **Sentry isn't integrated at all** — no `@sentry/nextjs` package, zero references in code, only a
+  `NEXT_PUBLIC_SENTRY_DSN=` line in `.env.example` that implies otherwise. This matters most for the
+  silent paths: the daily cron and the Stripe webhook both fail invisibly today.
+- **Upstash rate limiting is wired but inert.** `lib/rate-limit.ts` guards login/signup/reset
+  (10/min per IP) and the cron (5/min), but with no `UPSTASH_REDIS_REST_*` env vars set it
+  short-circuits to `{ success: true }` — so those endpoints are currently unthrottled. The code
+  needs no change to switch on; just set the two env vars. Supabase Auth's own server-side limits
+  still apply regardless, so this is mainly about protecting Vercel function invocations.
+- **Vercel's Git integration may need reconnecting** after the org transfer — Vercel links via its
+  GitHub App, and a change of owner commonly breaks it. The failure mode is silent: pushes simply
+  stop triggering deploys, with no error. Check Vercel → Project → Settings → Git.
 - No automated tests exist (unit or e2e).
 - `FREE_INVOICE_LIMIT = 3` is a starting guess, not validated against real usage.
 - i18n coverage stops at the page/component layer — Server Action validation errors and success
