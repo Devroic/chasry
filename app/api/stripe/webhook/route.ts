@@ -54,8 +54,24 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!signature || !webhookSecret) {
+  // These two look alike but mean opposite things, so they're split.
+  //
+  // No `stripe-signature` header = almost always a bot probing the endpoint.
+  // Not reported: it's noise, and Stripe always sends the header.
+  if (!signature) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  // A missing secret is *our* misconfiguration, and a total billing outage:
+  // every webhook 400s, so nobody who pays is ever upgraded. This used to
+  // share the branch above and was reported nowhere — the deploy would look
+  // healthy while silently dropping every payment event.
+  if (!webhookSecret) {
+    Sentry.captureException(new Error("STRIPE_WEBHOOK_SECRET is not set — all Stripe webhooks are being rejected"), {
+      level: "fatal",
+      tags: { integration: "stripe", stage: "config" },
+    });
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
   const body = await request.text();
@@ -65,10 +81,14 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("stripe/webhook: signature verification failed", err);
-    // Usually a stale STRIPE_WEBHOOK_SECRET after a redeploy, occasionally
-    // someone probing the endpoint. Warning, not error — Stripe retries.
+    // `error`, not `warning`, so it actually reaches the inbox — the default
+    // Sentry alert only emails on *high priority* issues, and warnings don't
+    // qualify. Reaching here means a `stripe-signature` header was present
+    // (the probe case already returned above), so this is either a stale
+    // STRIPE_WEBHOOK_SECRET — every payment silently failing to upgrade — or
+    // someone forging Stripe signatures. Both are worth being woken up for.
     Sentry.captureException(err, {
-      level: "warning",
+      level: "error",
       tags: { integration: "stripe", stage: "verify-signature" },
     });
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });

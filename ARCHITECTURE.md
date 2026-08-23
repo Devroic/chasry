@@ -541,9 +541,37 @@ reason for adding Sentry. Everywhere else, the automatic handlers suffice.
 - `app/api/cron/send-reminders/route.ts` — 5 points, tagged `job: send-reminders` with a `stage`.
   A burst of `stage: send` is the signal that Resend's 100/day cap was hit. Only the invoice id and
   offset are attached — no client email or amount.
-- `app/api/stripe/webhook/route.ts` — 3 points, tagged `integration: stripe`. Sync failures are
-  `level: "fatal"` because they mean **someone paid and didn't get Pro**. Signature failures are
-  `level: "warning"` — usually a stale `STRIPE_WEBHOOK_SECRET` after a redeploy, and Stripe retries.
+- `app/api/stripe/webhook/route.ts` — 4 points, tagged `integration: stripe`. Sync failures are
+  `level: "fatal"` (**someone paid and didn't get Pro**). Signature failures are `level: "error"`,
+  **not `warning`** — see the alerting note below for why that distinction decides whether you get
+  an email. A *missing* `STRIPE_WEBHOOK_SECRET` is reported separately at `fatal`: it means every
+  webhook is rejected and nobody who pays is upgraded, and it previously shared a branch with the
+  "no signature header" probe case and so was reported nowhere at all.
+
+**Alerting — what actually reaches the inbox.** The project's default rule is *"Send a notification
+for high priority issues"*, and Sentry derives priority from **log level**: `fatal`/`error` are high
+(emailed), `warning` and below are not. So `level` is not cosmetic — it decides whether a human
+finds out. That's why Stripe signature failures were raised from `warning` to `error`. Note also
+that the alert fires on **new** issues, not every occurrence: 500 hits of the same bug send one
+email, and an ongoing known issue goes quiet after the first.
+
+**Cron check-in monitoring** (`MONITOR_SLUG = "send-reminders"`) closes the gap that error reporting
+structurally cannot: `captureException` only fires when something *throws*, so if Vercel's scheduler
+stops invoking the route entirely, nothing throws, nothing is reported, and the app looks perfectly
+healthy while silently sending no reminders at all — the worst possible failure for this product.
+`Sentry.captureCheckIn` records an `in_progress` at the start and `ok`/`error` at the end, so Sentry
+alerts on the **absence** of an expected run. Two details worth preserving:
+
+- The check-in starts **after** the auth and rate-limit guards, so a rejected probe isn't recorded
+  as a job run (or a spurious failure).
+- Status is derived from `response.ok`, **not** from whether the handler threw — the sweep signals
+  failure by *returning* 500, so a `withMonitor`-style wrapper would have logged failed runs as
+  healthy. The handler body was extracted into `runReminderSweep()` for this, leaving its logic and
+  its many return points untouched.
+
+The monitor auto-creates from the config in the route (crontab `0 7 * * *`, UTC, matching
+`vercel.json`). Verified live: a real invocation returned `{checked:0,sent:0,skipped:0,failed:0}`
+with no emails sent, and the monitor appeared in Sentry with the right schedule.
 
 **Source maps are not uploaded yet.** That needs `SENTRY_AUTH_TOKEN` (a real secret) in `.env.local`
 *and* in Vercel. Without it the build still succeeds; production stack traces are just minified.

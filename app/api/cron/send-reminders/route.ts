@@ -33,6 +33,10 @@ function isAuthorized(request: Request) {
   return timingSafeEqual(headerBuf, expectedBuf);
 }
 
+/** Sentry Cron Monitor slug. Must match the monitor in the Sentry UI — it's
+ * auto-created from the config below on the first check-in. */
+const MONITOR_SLUG = "send-reminders";
+
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,6 +47,49 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
 
+  // Check-in starts *after* auth/rate-limit so a rejected probe isn't recorded
+  // as a job run (or a job failure). From here on, this is a genuine execution.
+  //
+  // Why this exists at all: captureException only fires when something
+  // *throws*. If Vercel's scheduler stops firing this route entirely — the
+  // single worst failure mode for the product, since reminders are the whole
+  // point — nothing throws, so nothing is reported and the app looks healthy
+  // while quietly doing nothing. A check-in monitor inverts that: Sentry
+  // alerts on the *absence* of an expected run.
+  const checkInId = Sentry.captureCheckIn(
+    { monitorSlug: MONITOR_SLUG, status: "in_progress" },
+    {
+      // Mirrors vercel.json's "0 7 * * *".
+      schedule: { type: "crontab", value: "0 7 * * *" },
+      // Grace period before a missed run is flagged — absorbs a late start
+      // without crying wolf.
+      checkinMargin: 60,
+      // maxDuration route config is 60s; alert if a run overruns well past it.
+      maxRuntime: 5,
+      timezone: "UTC",
+    }
+  );
+
+  try {
+    const response = await runReminderSweep();
+    Sentry.captureCheckIn({
+      checkInId,
+      monitorSlug: MONITOR_SLUG,
+      // The sweep signals failure by returning 500, not by throwing, so the
+      // check-in status has to be derived from the response — otherwise a
+      // failed run would be recorded as a healthy one.
+      status: response.ok ? "ok" : "error",
+    });
+    return response;
+  } catch (err) {
+    Sentry.captureCheckIn({ checkInId, monitorSlug: MONITOR_SLUG, status: "error" });
+    Sentry.captureException(err, { tags: { job: "send-reminders", stage: "unhandled" } });
+    console.error("cron/send-reminders: unhandled failure", err);
+    return NextResponse.json({ error: "Reminder run failed" }, { status: 500 });
+  }
+}
+
+async function runReminderSweep() {
   const supabase = createAdminClient();
 
   // Reminders send for every account regardless of plan — free-plan invoices
