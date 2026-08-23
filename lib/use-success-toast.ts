@@ -18,12 +18,12 @@ import { toast } from "sonner";
  * twice in a row with the same message still toasts twice, which a
  * `[message]` dependency would silently swallow.
  */
-export function useSuccessToast(state: { success?: string } | null) {
+export function useSuccessToast(state: { success?: string; description?: string } | null) {
   const lastShown = useRef<object | null>(null);
 
   useEffect(() => {
     if (!state?.success || lastShown.current === state) return;
     lastShown.current = state;
-    toast.success(state.success);
+    toast.success(state.success, { description: state.description });
   }, [state]);
 }

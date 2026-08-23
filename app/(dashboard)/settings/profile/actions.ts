@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { profileSchema } from "@/lib/validations/profile";
 import { stripe } from "@/lib/stripe";
 
-export type ProfileFormState = { error?: string; success?: string } | null;
+export type ProfileFormState = { error?: string; success?: string; description?: string } | null;
 
 export async function updateProfile(
   _prev: ProfileFormState,
@@ -24,7 +24,7 @@ export async function updateProfile(
   if (error) return { error: "Couldn't save changes. Try again." };
 
   revalidatePath("/settings/profile");
-  return { success: "Saved." };
+  return { success: "Profile saved", description: "Your business details are up to date." };
 }
 
 export async function deleteAccount() {

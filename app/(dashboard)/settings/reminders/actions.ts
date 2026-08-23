@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { reminderOffsetsSchema } from "@/lib/validations/invoice";
 
-export type ReminderSettingsState = { error?: string; success?: string } | null;
+export type ReminderSettingsState = { error?: string; success?: string; description?: string } | null;
 
 const PRESET_OFFSETS = [-7, -3, -1, 0, 1, 3, 7, 14, 30];
 
@@ -27,5 +27,5 @@ export async function updateReminderSettings(
   if (error) return { error: "Couldn't save changes. Try again." };
 
   revalidatePath("/settings/reminders");
-  return { success: "Saved." };
+  return { success: "Reminder schedule saved", description: "Chasry will use this from the next daily run." };
 }
