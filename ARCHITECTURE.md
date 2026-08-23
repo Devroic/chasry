@@ -42,6 +42,21 @@ out explicitly — trust this file over memory of the plan.
 - Sentry and Upstash rate limiting are wired for (`.env.example`, `lib/rate-limit.ts` no-ops
   without env vars set) but **Sentry itself is not actually integrated yet** — no `@sentry/nextjs`
   install or config. Add it before relying on it.
+- **`npm run lint` deliberately does *not* pass `--quiet`.** It used to, which hid all warnings
+  and showed only errors — that's how the `ThemeToggle` hydration bug (see "Theme" below) stayed
+  invisible longer than it should have. Expect **2 standing warnings**, both
+  `react-hooks/incompatible-library` on `watch()` in `invoice-form.tsx` and
+  `reminder-settings-form.tsx`: React Compiler can't memoize react-hook-form's `watch()`. These
+  are **advisory only and currently inert** — React Compiler is not enabled by default in Next.js
+  16 and isn't enabled here (no `reactCompiler` in `next.config.ts`, no
+  `babel-plugin-react-compiler` installed), so nothing is actually being skipped. They'd become
+  real if React Compiler is ever turned on; switching those `watch()` calls to `useWatch()` is
+  the likely fix at that point. Don't "fix" them by re-adding `--quiet`.
+- `shadcn` and `react-email` are **devDependencies**, not runtime dependencies — both are
+  CLI-only (`npx shadcn add …`, and the `email:dev` preview server) and are never imported by app
+  code, so shipping them in a production install was pure bloat. The *runtime* email library,
+  `@react-email/components`, **is** imported (`emails/`) and correctly stays in `dependencies`.
+  Don't move that one.
 
 ## Pricing & plan gating
 
