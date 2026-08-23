@@ -422,12 +422,30 @@ inert. Once a user actually toggles the theme, `next-themes` persists that choic
 first toggle. The dark-mode CSS tokens themselves already existed in `globals.css` from the
 initial brand-token setup and are unaffected by this default — dark mode is still fully reachable
 via the toggle, just not the theme a new visitor lands on. `components/theme-toggle.tsx`
-(`ThemeToggle`) is a sun/moon icon button using
-`useTheme()`'s `resolvedTheme`/`setTheme` — deliberately has **no** `mounted`-guard `useEffect`
-(an earlier version had one, to dodge a perceived hydration mismatch; removed after confirming
-`resolvedTheme` is `undefined` on both the server render and the client's first hydration pass,
-so there's no actual mismatch to guard against, just a one-frame icon settle after hydration —
-also avoids an eslint `react-hooks/set-state-in-effect` violation). The toggle is rendered in both
+(`ThemeToggle`) is a sun/moon icon button that **decides which icon and label to show purely via
+CSS `dark:` variants — it must never branch on `resolvedTheme` during render.** Both icons and
+both `sr-only` labels are always in the DOM; `dark:hidden`/`dark:block` picks one. This is the
+same trick the dual logos below use, and it's load-bearing:
+
+> **Corrects an earlier note in this file that was wrong.** A previous version branched at render
+> time (`resolvedTheme === "dark" ? <Sun/> : <Moon/>`) and this file claimed that was safe because
+> "`resolvedTheme` is `undefined` on both the server render and the client's first hydration pass."
+> That is **not** true — `next-themes` injects a *blocking* inline script that reads `localStorage`
+> and applies the theme before React hydrates, so for any visitor who had toggled to dark,
+> `resolvedTheme` was already `"dark"` on the client's first render while the server had rendered
+> `undefined`. The result was a genuine hydration mismatch (`aria-label` and the whole `<svg>`
+> subtree differing), logged as a React error and forcing a subtree re-render on **every page
+> load in dark mode**. It went unnoticed for a while because it only reproduces with a stored
+> dark preference — a fresh visitor never sees it. Found by reading the *dev-server* logs, which
+> carry the component stack; the browser console alone only showed the generic message. Don't
+> reintroduce render-time theme branching. The other common fix — a `mounted` state guard — is
+> also avoided here: it flashes the wrong icon for a frame and trips eslint's
+> `react-hooks/set-state-in-effect`.
+
+Reading `resolvedTheme` inside the `onClick` handler is fine (it runs after hydration). The
+toggle's accessible name is translated (`header.lightMode`/`header.darkMode`) — it was previously
+hardcoded English, missed in the i18n pass because it lived in an `aria-label` rather than visible
+text. The toggle is rendered in both
 `<SiteHeader>` (auth/onboarding/not-found) and `DashboardShell`'s header, next to
 `LanguageSwitcher` (see i18n below). Every place that used to hardcode `bg-white`/`text-white`/
 `from-white` instead of the `background`/`foreground` semantic tokens was swept and fixed as part
