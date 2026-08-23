@@ -39,9 +39,12 @@ out explicitly — trust this file over memory of the plan.
   `profile-form.tsx`, and `reminder-settings-form.tsx` for the pattern. Forms already on the
   react-hook-form pattern (`onboarding-form.tsx`'s currency `Select` via `Controller`) are
   unaffected, since react-hook-form reads its own state, never the native `FormData`.
-- Sentry and Upstash rate limiting are wired for (`.env.example`, `lib/rate-limit.ts` no-ops
-  without env vars set) but **Sentry itself is not actually integrated yet** — no `@sentry/nextjs`
-  install or config. Add it before relying on it.
+- **Sentry** (`@sentry/nextjs`) is integrated — see "Error monitoring" below. **Upstash** rate
+  limiting is wired but **inert**: `lib/rate-limit.ts` short-circuits to `{ success: true }` unless
+  `UPSTASH_REDIS_REST_URL`/`_TOKEN` are set, so login/signup/reset (10/min per IP) and the cron
+  (5/min) are currently unthrottled. No code change is needed to switch it on — just set the two
+  env vars. Supabase Auth applies its own server-side limits regardless, so this is mainly about
+  protecting Vercel function invocations rather than auth security.
 - **`npm run lint` deliberately does *not* pass `--quiet`.** It used to, which hid all warnings
   and showed only errors — that's how the `ThemeToggle` hydration bug (see "Theme" below) stayed
   invisible longer than it should have. Expect **2 standing warnings**, both
@@ -497,6 +500,59 @@ respects `prefers-reduced-motion`, and `Button` sets `cursor-pointer` explicitly
 don't do this by default — it's the CLI's `--pointer` init flag, not applied here since it wasn't
 passed).
 
+## Error monitoring (Sentry)
+
+`@sentry/nextjs`, org `chasry`, project `javascript-nextjs`, **EU region** (the DSN points at
+`ingest.de.sentry.io` — worth knowing, since the US endpoint would silently reject these events).
+
+Four init points, one per runtime:
+
+| File | Runtime | Covers |
+|---|---|---|
+| `sentry.server.config.ts` | Node | Server Actions, Route Handlers, **the cron** |
+| `sentry.edge.config.ts` | Edge | `proxy.ts` (session refresh + route guards) |
+| `instrumentation-client.ts` | Browser | Client render/interaction errors |
+| `instrumentation.ts` | — | Loads the right one; re-exports `onRequestError` |
+
+`app/global-error.tsx` catches root-layout crashes. It uses inline styles and a plain `<a>` on
+purpose (with an eslint-disable explaining why): it only renders once the React tree has already
+failed, so `next/link` would try to navigate *through* the broken tree, and `globals.css` may be
+exactly what failed.
+
+**Deliberate configuration choices:**
+
+- **`enabled` is gated on the DSN**, so no DSN (local dev, CI) means the SDK no-ops. Nothing to
+  guard at call sites.
+- **`tracesSampleRate: 0`** — errors only. Traces are the main consumer of the 5k-events/month free
+  tier and there's no latency problem worth sampling yet. Raise deliberately.
+- **Session Replay is off.** It records real sessions, which here would ship client names, email
+  addresses and invoice amounts to a third party — not a privacy trade worth making for a tool
+  handling other people's billing data.
+- **`tunnelRoute: "/monitoring"`** routes events through our own domain so ad/tracker blockers
+  don't silently swallow reports from real users.
+- **Not set up with `@sentry/wizard`** — it rewrites `next.config.ts`, which would have destroyed
+  the security headers and the `next-intl` wrapper, and it drops a `/sentry-example-page` into the
+  app. Wrapper order matters: `withSentryConfig(withNextIntl(nextConfig))`, Sentry outermost.
+- `disableLogger` is **not** set; it's deprecated in SDK 10 and emits a build warning.
+
+**Explicit `captureException` calls** were added to the two paths that fail *silently* — the whole
+reason for adding Sentry. Everywhere else, the automatic handlers suffice.
+
+- `app/api/cron/send-reminders/route.ts` — 5 points, tagged `job: send-reminders` with a `stage`.
+  A burst of `stage: send` is the signal that Resend's 100/day cap was hit. Only the invoice id and
+  offset are attached — no client email or amount.
+- `app/api/stripe/webhook/route.ts` — 3 points, tagged `integration: stripe`. Sync failures are
+  `level: "fatal"` because they mean **someone paid and didn't get Pro**. Signature failures are
+  `level: "warning"` — usually a stale `STRIPE_WEBHOOK_SECRET` after a redeploy, and Stripe retries.
+
+**Source maps are not uploaded yet.** That needs `SENTRY_AUTH_TOKEN` (a real secret) in `.env.local`
+*and* in Vercel. Without it the build still succeeds; production stack traces are just minified.
+The DSN itself is public by design — it ships in client JS and only permits *sending* events.
+
+Verified end to end: a test exception was delivered to the EU endpoint and appeared in the project
+as `JAVASCRIPT-NEXTJS-2`. (`JAVASCRIPT-NEXTJS-1` is Sentry's own seeded demo issue, not from this
+app.)
+
 ## Theme (dark/light)
 
 `components/theme-provider.tsx` wraps `next-themes`' `ThemeProvider` with `attribute="class"`,
@@ -819,9 +875,9 @@ in the app is below the fold or in a state that's fine to lazy-load; this one is
   the packaged `/security-review` skill should now run — it previously couldn't because it diffs
   against `origin/HEAD`. Worth running it (and `/code-review ultra`) rather than continuing to
   rely on the manual security pass above, especially over the auth/billing/RLS surface.
-- **Sentry isn't integrated at all** — no `@sentry/nextjs` package, zero references in code, only a
-  `NEXT_PUBLIC_SENTRY_DSN=` line in `.env.example` that implies otherwise. This matters most for the
-  silent paths: the daily cron and the Stripe webhook both fail invisibly today.
+- Sentry is integrated (see "Error monitoring"), but **source maps aren't uploaded** — production
+  stack traces stay minified until `SENTRY_AUTH_TOKEN` is set in `.env.local` and Vercel. Also
+  remember to add `NEXT_PUBLIC_SENTRY_DSN` to Vercel's env vars, or production reports nothing.
 - **Upstash rate limiting is wired but inert.** `lib/rate-limit.ts` guards login/signup/reset
   (10/min per IP) and the cron (5/min), but with no `UPSTASH_REDIS_REST_*` env vars set it
   short-circuits to `{ success: true }` — so those endpoints are currently unthrottled. The code

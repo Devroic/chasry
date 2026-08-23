@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import * as Sentry from "@sentry/nextjs";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SubscriptionStatus } from "@/types/database.types";
@@ -38,6 +39,13 @@ async function syncSubscription(subscription: Stripe.Subscription) {
 
   if (error) {
     console.error("stripe/webhook: failed to sync subscription", error);
+    // Highest-consequence failure in the app: Stripe took the money but the
+    // profile never flipped to Pro, so the user is charged and still capped.
+    Sentry.captureException(error, {
+      level: "fatal",
+      tags: { integration: "stripe", stage: "sync-subscription" },
+      extra: { customerId, subscriptionId: subscription.id },
+    });
     throw error;
   }
 }
@@ -57,6 +65,12 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("stripe/webhook: signature verification failed", err);
+    // Usually a stale STRIPE_WEBHOOK_SECRET after a redeploy, occasionally
+    // someone probing the endpoint. Warning, not error — Stripe retries.
+    Sentry.captureException(err, {
+      level: "warning",
+      tags: { integration: "stripe", stage: "verify-signature" },
+    });
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -116,6 +130,11 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error("stripe/webhook: handler failed", { type: event.type, err });
+    Sentry.captureException(err, {
+      level: "fatal",
+      tags: { integration: "stripe", stage: "handle-event" },
+      extra: { eventType: event.type, eventId: event.id },
+    });
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 

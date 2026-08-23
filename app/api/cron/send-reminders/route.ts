@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
+import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
 import { addDaysUtc, toneForOffset } from "@/lib/reminders";
@@ -66,6 +67,9 @@ export async function GET(request: Request) {
       profilesError,
       settingsError,
     });
+    Sentry.captureException(profilesError ?? settingsError, {
+      tags: { job: "send-reminders", stage: "load-profiles" },
+    });
     return NextResponse.json({ error: "Failed to load settings" }, { status: 500 });
   }
 
@@ -87,6 +91,9 @@ export async function GET(request: Request) {
 
   if (invoicesError) {
     console.error("cron/send-reminders: failed to load invoices", invoicesError);
+    Sentry.captureException(invoicesError, {
+      tags: { job: "send-reminders", stage: "load-invoices" },
+    });
     return NextResponse.json({ error: "Failed to load invoices" }, { status: 500 });
   }
 
@@ -102,6 +109,9 @@ export async function GET(request: Request) {
 
   if (customersError) {
     console.error("cron/send-reminders: failed to load customers", customersError);
+    Sentry.captureException(customersError, {
+      tags: { job: "send-reminders", stage: "load-customers" },
+    });
     return NextResponse.json({ error: "Failed to load clients" }, { status: 500 });
   }
   const customerById = new Map((customers ?? []).map((c) => [c.id, c]));
@@ -116,6 +126,9 @@ export async function GET(request: Request) {
 
   if (logsError) {
     console.error("cron/send-reminders: failed to load reminder logs", logsError);
+    Sentry.captureException(logsError, {
+      tags: { job: "send-reminders", stage: "load-logs" },
+    });
     return NextResponse.json({ error: "Failed to load reminder logs" }, { status: 500 });
   }
 
@@ -270,6 +283,14 @@ export async function GET(request: Request) {
       sent++;
     } catch (err) {
       console.error("cron/send-reminders: send failed", { invoiceId: invoice.id, err });
+      // Per-invoice send failure. Tagged (not just logged) because a burst of
+      // these is the signal that Resend's daily cap was hit — the failure mode
+      // that used to lose reminders permanently. No client email or invoice
+      // amount is attached; the invoice id is enough to investigate.
+      Sentry.captureException(err, {
+        tags: { job: "send-reminders", stage: "send" },
+        extra: { invoiceId: invoice.id, offsetDays },
+      });
       await supabase.from("reminder_logs").upsert(
         {
           invoice_id: invoice.id,
