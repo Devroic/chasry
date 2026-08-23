@@ -22,9 +22,19 @@
  */
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
+/**
+ * Only these two are real, user-reachable deployments. Checking against an
+ * allowlist rather than "is VERCEL_ENV set at all" matters: `vercel dev` runs
+ * locally but *does* set VERCEL_ENV — to "development" — so a presence check
+ * would quietly start reporting from a laptop again, which is the exact thing
+ * this gate exists to prevent.
+ */
+const REPORTING_ENVIRONMENTS = ["production", "preview"];
+
 export const sentryEnabled =
   Boolean(dsn) &&
-  (Boolean(process.env.VERCEL_ENV) || process.env.SENTRY_FORCE_ENABLE === "1");
+  (REPORTING_ENVIRONMENTS.includes(process.env.VERCEL_ENV ?? "") ||
+    process.env.SENTRY_FORCE_ENABLE === "1");
 
 /** production | preview | development — the facet alert rules filter on. */
 export const sentryEnvironment =
