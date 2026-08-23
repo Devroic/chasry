@@ -12,6 +12,12 @@ import ReminderSeriouslyOverdueEmail from "@/emails/reminder-seriously-overdue";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/** How long after an offset's target date a *failed* send keeps retrying.
+ * Long enough to ride out a transient outage or a one-day Resend quota
+ * exhaustion, short enough that a permanently-undeliverable address stops
+ * being retried instead of bouncing daily forever. */
+const FAILED_RETRY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
@@ -102,7 +108,7 @@ export async function GET(request: Request) {
 
   const { data: existingLogs, error: logsError } = await supabase
     .from("reminder_logs")
-    .select("invoice_id, offset_days")
+    .select("invoice_id, offset_days, status")
     .in(
       "invoice_id",
       invoices.map((i) => i.id)
@@ -112,7 +118,22 @@ export async function GET(request: Request) {
     console.error("cron/send-reminders: failed to load reminder logs", logsError);
     return NextResponse.json({ error: "Failed to load reminder logs" }, { status: 500 });
   }
-  const alreadySent = new Set((existingLogs ?? []).map((l) => `${l.invoice_id}:${l.offset_days}`));
+
+  // `status` matters here — this used to key off *every* log row regardless of
+  // status, which meant a reminder that failed to send was recorded as
+  // 'failed' and then skipped forever: it never retried, and the user was
+  // never told. A single transient blip (or hitting Resend's free-tier
+  // 100-emails/day cap, which the whole account shares with Supabase Auth's
+  // signup/reset mail) silently lost that reminder permanently — the exact
+  // opposite of the product's promise. Only 'sent' and 'skipped' are terminal
+  // now; 'failed' is retried on the next run.
+  const settled = new Set<string>();
+  const failedBefore = new Set<string>();
+  for (const log of existingLogs ?? []) {
+    const key = `${log.invoice_id}:${log.offset_days}`;
+    if (log.status === "failed") failedBefore.add(key);
+    else settled.add(key);
+  }
 
   let sent = 0;
   let failed = 0;
@@ -143,9 +164,19 @@ export async function GET(request: Request) {
     // this stops a backdated invoice from firing every past milestone in
     // one email storm on the first run after it's created.
     const due = offsets
-      .filter((offsetDays) => !alreadySent.has(`${invoice.id}:${offsetDays}`))
+      .filter((offsetDays) => !settled.has(`${invoice.id}:${offsetDays}`))
       .map((offsetDays) => ({ offsetDays, targetDate: addDaysUtc(invoice.due_date, offsetDays) }))
       .filter(({ targetDate }) => targetDate.getTime() <= todayUtcMidnight)
+      // A previously-failed offset retries, but only for a bounded window.
+      // Without this, the *last* offset in a schedule (nothing newer ever
+      // supersedes it) would retry every single day forever against an
+      // address that may simply be undeliverable — burning quota and
+      // hard-bouncing daily, which damages domain sending reputation.
+      .filter(({ offsetDays, targetDate }) =>
+        failedBefore.has(`${invoice.id}:${offsetDays}`)
+          ? todayUtcMidnight - targetDate.getTime() <= FAILED_RETRY_WINDOW_MS
+          : true
+      )
       .sort((a, b) => b.targetDate.getTime() - a.targetDate.getTime());
 
     checked += due.length;
@@ -153,13 +184,20 @@ export async function GET(request: Request) {
 
     const [{ offsetDays }, ...stale] = due;
 
+    // Upsert, not insert: a row may already exist for this offset from an
+    // earlier failed attempt, and `unique (invoice_id, offset_days)` would
+    // reject a plain insert — which, before failures were retried at all,
+    // could never happen. Same reason applies to the sent/failed writes below.
     for (const { offsetDays: staleOffset } of stale) {
-      await supabase.from("reminder_logs").insert({
-        invoice_id: invoice.id,
-        user_id: invoice.user_id,
-        offset_days: staleOffset,
-        status: "skipped",
-      });
+      await supabase.from("reminder_logs").upsert(
+        {
+          invoice_id: invoice.id,
+          user_id: invoice.user_id,
+          offset_days: staleOffset,
+          status: "skipped",
+        },
+        { onConflict: "invoice_id,offset_days" }
+      );
       skipped++;
     }
 
@@ -218,23 +256,30 @@ export async function GET(request: Request) {
 
       if (error) throw new Error(error.message);
 
-      await supabase.from("reminder_logs").insert({
-        invoice_id: invoice.id,
-        user_id: invoice.user_id,
-        offset_days: offsetDays,
-        status: "sent",
-        resend_message_id: data?.id ?? null,
-      });
+      await supabase.from("reminder_logs").upsert(
+        {
+          invoice_id: invoice.id,
+          user_id: invoice.user_id,
+          offset_days: offsetDays,
+          status: "sent",
+          resend_message_id: data?.id ?? null,
+          error: null,
+        },
+        { onConflict: "invoice_id,offset_days" }
+      );
       sent++;
     } catch (err) {
       console.error("cron/send-reminders: send failed", { invoiceId: invoice.id, err });
-      await supabase.from("reminder_logs").insert({
-        invoice_id: invoice.id,
-        user_id: invoice.user_id,
-        offset_days: offsetDays,
-        status: "failed",
-        error: err instanceof Error ? err.message : "Unknown error",
-      });
+      await supabase.from("reminder_logs").upsert(
+        {
+          invoice_id: invoice.id,
+          user_id: invoice.user_id,
+          offset_days: offsetDays,
+          status: "failed",
+          error: err instanceof Error ? err.message : "Unknown error",
+        },
+        { onConflict: "invoice_id,offset_days" }
+      );
       failed++;
     }
   }

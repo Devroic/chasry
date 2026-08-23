@@ -239,12 +239,20 @@ directly, the way `0005` was confirmed.
   TXT, `rsend`/`send` CNAMEs, `_dmarc` TXT; none of these touch the existing `@`/`www` records or
   the `info@chasry.com` forwarding), and Authentication → Emails → SMTP Settings in Supabase points
   at `smtp.resend.com:465` with that same `RESEND_API_KEY`, sending as `Chasry <noreply@chasry.com>`.
-  The Auth → Rate Limits "emails/h" value is raised to 100 (was locked to 2 before custom SMTP;
-  Supabase's own UI enforces this — the field isn't editable at all without custom SMTP enabled).
-  100/h is a deliberate ceiling, not "unlimited": it's comfortably under Resend's free-tier daily
-  cap so a burst never bounces at Resend's end either. If Resend's plan is upgraded, this can go
-  higher via that same Rate Limits field. Note this is a *separate* Resend API key/purpose from
-  `lib/resend.ts`'s reminder-email sending — same account and domain, different consumer.
+  The Auth → Rate Limits "emails/h" value is set in Supabase (the field isn't editable at all
+  without custom SMTP enabled — it's locked to 2/h before that). Note this is a *separate* Resend
+  API key/purpose from `lib/resend.ts`'s reminder-email sending — same account and domain,
+  different consumer, **and critically the same quota**.
+
+  > **Corrects an earlier claim in this file.** This used to say the value was raised to 100/h and
+  > that 100/h was "comfortably under Resend's free-tier daily cap." That was wrong on the facts:
+  > Resend's free tier is **3,000 emails/month _and_ 100 emails/day** (verified at
+  > resend.com/pricing). 100 per *hour* is not comfortably under a 100 per *day* cap — it is the
+  > entire daily budget in a single hour. Because Supabase Auth mail and the reminder cron share
+  > one Resend account, an auth burst could exhaust the day's quota and take **reminders** down
+  > with it — the core product function — while nothing in the UI would say so. Keep this value
+  > well below the daily cap (~20–30/h) so auth traffic can't starve reminders, and revisit it if
+  > the Resend plan changes (Pro at $20/mo removes the daily cap entirely).
 - `lib/billing.ts` — shared `createCheckoutSession()` helper used by both the paywall prompt and
   the billing settings page.
 - Account deletion (`app/(dashboard)/settings/profile/actions.ts`) also cancels the Stripe
@@ -319,6 +327,23 @@ Components — see "Internationalization" below.
    money-transmission surface area for a v1.
 5. Sent via Resend, `reply-to` set to the business owner's email. Logs `sent`/`failed`/`skipped` —
    this is what the reminder timeline on the invoice detail page reads from.
+
+**Failed sends retry; only `sent`/`skipped` are terminal.** The dedup set is built from log rows
+whose status is `sent` or `skipped`; `failed` rows are deliberately excluded so the next run tries
+again. This fixed a real silent-data-loss bug: the guard previously keyed off *every* log row
+regardless of status, so any failed send was recorded and then skipped forever — one transient
+blip, or one day of exceeding Resend's free-tier **100-emails/day** cap (shared with Supabase Auth
+mail, see "Server Actions" above), permanently lost that reminder with nothing surfaced to the
+user. Two things make the retry safe:
+
+- **Writes are `upsert`s, not `insert`s** (`onConflict: "invoice_id,offset_days"`). A retry hits
+  the existing row from the failed attempt, and `unique (invoice_id, offset_days)` would reject a
+  plain insert — verified against the live DB: the old `insert` path returns `23505` in exactly
+  this scenario, so retrying *without* the upsert change would have broken the cron outright.
+- **Retries are time-boxed** by `FAILED_RETRY_WINDOW_MS` (3 days after the offset's target date).
+  Without it the *last* offset in a schedule — nothing newer ever supersedes it into `skipped` —
+  would retry daily forever against an address that may simply be undeliverable, burning quota and
+  hard-bouncing repeatedly, which harms domain sending reputation.
 
 **Known limitation, not fixed**: date comparison is UTC-based, not per-user timezone. A reminder
 can land a few hours off from a user's local midnight. Documented, acceptable for v1.
