@@ -1,0 +1,423 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "edit": "Edit",
+    "back": "Back",
+    "optional": "optional",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "notes": "Notes",
+    "amount": "Amount",
+    "currency": "Currency",
+    "dueDate": "Due date",
+    "status": "Status",
+    "none": "None",
+    "pro": "Pro",
+    "free": "Free"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "clients": "Clients",
+    "invoices": "Invoices",
+    "settings": "Settings"
+  },
+  "header": {
+    "upgradeToPro": "Upgrade to Pro",
+    "settings": "Settings",
+    "helpAndFaqs": "Help & FAQs",
+    "logOut": "Log out",
+    "lightMode": "Switch to light mode",
+    "darkMode": "Switch to dark mode",
+    "language": "Language",
+    "accountMenu": "Account menu",
+    "openMenu": "Open menu"
+  },
+  "footer": {
+    "help": "Help",
+    "contactUs": "Contact us",
+    "rights": "All rights reserved."
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Log in to manage your invoices.",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Log in",
+      "submitting": "Logging in…",
+      "newToChasry": "New to Chasry?",
+      "signUpNow": "Sign up now"
+    },
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "Free to start, no card required. Upgrade to Pro whenever you outgrow it.",
+      "businessName": "Business name",
+      "email": "Email",
+      "password": "Password",
+      "passwordHint": "At least 8 characters.",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "alreadyHaveAccount": "Already have an account?",
+      "logIn": "Log in",
+      "checkInboxTitle": "Check your inbox",
+      "goToLogin": "Go to login"
+    },
+    "resetPassword": {
+      "title": "Reset your password",
+      "subtitle": "We'll email you a link to set a new one.",
+      "email": "Email",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "backToLogin": "Back to login"
+    },
+    "resetPasswordConfirm": {
+      "title": "Set a new password",
+      "subtitle": "Choose a new password for your Chasry account.",
+      "newPassword": "New password",
+      "passwordHint": "At least 8 characters.",
+      "submit": "Save new password",
+      "submitting": "Saving…",
+      "expiredError": "That reset link has expired. Request a new one."
+    },
+    "signupConfirmed": {
+      "confirming": "Confirming",
+      "expiredTitle": "Link expired",
+      "expiredSubtitle": "This confirmation link is invalid or has expired. Sign up again to get a new one.",
+      "backToSignup": "Back to sign up",
+      "confirmedTitle": "Email confirmed",
+      "confirmedSubtitle": "Your account is ready. Let's get you set up.",
+      "continue": "Continue"
+    }
+  },
+  "onboarding": {
+    "title": "Set up your account",
+    "subtitle": "A couple of details and you're in — free to use, no card required.",
+    "businessNameLabel": "Business name",
+    "businessNamePlaceholder": "Your business or freelance name",
+    "businessNameHint": "This is how you'll appear to clients in reminder emails.",
+    "businessNameConfirm": "Clients will see reminders from <strong>{name}</strong> — change this anytime from Settings → Profile.",
+    "currency": "Currency",
+    "submit": "Go to dashboard",
+    "submitting": "Saving…",
+    "freeNotice": "Free for up to {limit} active invoices. Upgrade to Pro anytime from Settings."
+  },
+  "notFound": {
+    "eyebrow": "404",
+    "title": "This page went unpaid.",
+    "subtitle": "We looked everywhere, but there's nothing at this address. It may have moved, or the link might be off.",
+    "cta": "Back to Chasry"
+  },
+  "help": {
+    "title": "Help & FAQs",
+    "subtitle": "Answers to the questions we hear most. Can't find yours? We're a quick email away.",
+    "stillStuck": "Still stuck?",
+    "emailUs": "Email us and we'll get back to you as soon as we can.",
+    "faqs": [
+      {
+        "question": "What does Chasry actually do?",
+        "answer": "You log a client and an unpaid invoice once — amount and due date — and Chasry emails polite reminders on your behalf until it's marked paid. No manual chasing."
+      },
+      {
+        "question": "What's included on the free plan?",
+        "answer": "Everything, up to {limit} active (unpaid) invoices at a time. Reminders, unlimited clients, and the full reminder schedule all work on the free plan — the limit only affects how many unpaid invoices you can have open at once."
+      },
+      {
+        "question": "What happens when I hit the free limit?",
+        "answer": "Mark an existing invoice as paid to free up a slot, or upgrade to Pro ({price}) for unlimited invoices and clients. There's no trial — the free plan already lets you try everything before you'd need to."
+      },
+      {
+        "question": "When exactly do reminders get sent?",
+        "answer": "Once a day, Chasry checks every unpaid invoice against your reminder schedule (e.g. 7 and 3 days before the due date, 1 day after). You can turn individual reminders on or off, or pause reminders entirely, from Settings → Reminders."
+      },
+      {
+        "question": "Does Chasry collect the payment itself?",
+        "answer": "No — Chasry never touches your money. If you add a payment link (a Stripe Payment Link, PayPal.me, or similar) in Settings, reminder emails include a \"Pay now\" button pointing to it, but the client pays you directly."
+      },
+      {
+        "question": "Can I preview what a reminder email looks like?",
+        "answer": "Yes — open any invoice and use \"Send me a preview\" to get a sample reminder emailed to your own inbox. It's never sent to your client."
+      },
+      {
+        "question": "What currencies are supported?",
+        "answer": "EUR, USD, and GBP today. Set your default in Settings → Profile — every invoice uses that currency."
+      },
+      {
+        "question": "How do I cancel my subscription or delete my account?",
+        "answer": "Manage or cancel your Pro subscription anytime from Settings → Billing. Deleting your account (Settings → Profile → Danger zone) permanently removes your clients, invoices, and reminder history, and cancels any active subscription immediately."
+      },
+      {
+        "question": "Is my data secure?",
+        "answer": "Your data is isolated per account at the database level, all connections are encrypted, and Chasry never stores your clients' payment details — payments happen entirely on your own payment link, outside Chasry."
+      }
+    ]
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Here's what's outstanding right now.",
+    "upgradedBanner": "You're on Pro now — unlimited clients and invoices.",
+    "getSetUp": "Get set up",
+    "checklist": {
+      "addClientTitle": "Add your first client",
+      "addClientDescription": "Their name and email — that's all Chasry needs.",
+      "addClientCta": "Add a client",
+      "addInvoiceTitle": "Log an unpaid invoice",
+      "addInvoiceDescription": "Amount and due date — past-due ones count too. Thirty seconds of work.",
+      "addInvoiceCta": "Add an invoice",
+      "checkScheduleTitle": "Check your reminder schedule",
+      "checkScheduleDescription": "Defaults to 7 and 3 days before, then 1 and 14 days after — getting firmer automatically.",
+      "checkScheduleCta": "Review schedule"
+    },
+    "statOutstanding": "Outstanding",
+    "statOverdue": "Overdue invoices",
+    "statUnpaid": "Unpaid invoices",
+    "freeLimitHint": "{count} of {limit} on the free plan",
+    "dueSoon": "Due soon",
+    "clientFallback": "Client",
+    "viewAll": "View all",
+    "emptyTitle": "No unpaid invoices yet",
+    "emptyDescription": "Already chasing someone for a late payment? Log it here — Chasry works on invoices you're already waiting on, not just new ones.",
+    "emptyCta": "Add an invoice"
+  },
+  "customers": {
+    "listTitle": "Clients",
+    "listSubtitle": "The people and businesses you invoice.",
+    "addClient": "Add client",
+    "searchPlaceholder": "Search name or email…",
+    "emptyTitle": "No clients yet",
+    "emptyDescription": "Add a client so you can start logging invoices for them.",
+    "emptyCta": "Add your first client",
+    "noSearchResults": "Nothing matches this search.",
+    "columnName": "Name",
+    "columnEmail": "Email",
+    "columnPhone": "Phone",
+    "columnPaymentLink": "Payment link",
+    "columnSchedule": "Reminder schedule",
+    "columnNotes": "Notes",
+    "detail": {
+      "backLabel": "Clients",
+      "editClient": "Edit",
+      "deleteClient": "Delete",
+      "deleteTitle": "Delete {name}?",
+      "deleteDescription": "This can't be undone. You can only delete a client once they have no invoices.",
+      "hasInvoicesError": "{name} still has invoices on file. Delete or reassign those first.",
+      "paymentLinkNone": "None set",
+      "customForClient": "Custom for this client",
+      "accountDefault": "Your account default",
+      "invoicesTitle": "Invoices",
+      "newInvoice": "New invoice",
+      "noInvoices": "No invoices for this client yet."
+    },
+    "form": {
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "emailHint": "Reminder emails are sent here.",
+      "phoneLabel": "Phone (optional)",
+      "paymentLinkLabel": "Payment link (optional)",
+      "paymentLinkHint": "Used in this client's reminders. Leave blank to use your default from Settings.",
+      "notesLabel": "Notes (optional)",
+      "submitCreate": "Save client",
+      "submitEdit": "Save changes"
+    },
+    "new": {
+      "title": "Add a client",
+      "subtitle": "Just their name and email to start.",
+      "tipsTitle": "Good to know",
+      "tip1": "Only name and email are required — phone and notes are optional.",
+      "tip2": "Reminder emails go to the email address you enter here.",
+      "tip3": "You can log an invoice for them right after saving."
+    },
+    "editPage": {
+      "title": "Edit client",
+      "tipsTitle": "Good to know",
+      "tip1": "Changing the email here doesn't affect invoices you've already sent.",
+      "tip2": "Reminder emails for existing unpaid invoices switch to the new email right away."
+    }
+  },
+  "invoices": {
+    "listTitle": "Invoices",
+    "listSubtitle": "Every invoice you're tracking, and what Chasry is doing about it.",
+    "addInvoice": "Add invoice",
+    "searchPlaceholder": "Search client or invoice number…",
+    "filterAll": "All",
+    "filterUnpaid": "Unpaid",
+    "filterOverdue": "Overdue",
+    "filterPaid": "Paid",
+    "emptyTitle": "No invoices yet",
+    "emptyDescription": "Log an unpaid invoice — even one that's already overdue — and Chasry starts sending reminders automatically.",
+    "emptyCta": "Add your first invoice",
+    "noResults": "Nothing matches this view.",
+    "clientFallback": "Client",
+    "genericTitle": "Invoice",
+    "columnClient": "Client",
+    "columnInvoiceNumber": "Invoice number",
+    "columnDue": "Due",
+    "columnAmount": "Amount",
+    "columnStatus": "Status",
+    "dueIn": "{days, plural, one {# day left} other {# days left}}",
+    "dueToday": "Due today",
+    "overdueBy": "{days, plural, one {# day overdue} other {# days overdue}}",
+    "statusUnpaid": "Unpaid",
+    "statusOverdue": "Overdue",
+    "statusPaid": "Paid",
+    "statusCanceled": "Canceled",
+    "actions": {
+      "markPaid": "Mark as paid",
+      "markPaidToast": "Marked as paid — reminders stopped.",
+      "reopen": "Reopen",
+      "reopenToast": "Reopened — reminders will resume.",
+      "sendPreview": "Send me a preview",
+      "sending": "Sending…",
+      "sendPreviewToast": "Preview sent to your email.",
+      "edit": "Edit",
+      "deleteTitle": "Delete this invoice?",
+      "deleteDescription": "This can't be undone. Reminder history for this invoice will also be removed."
+    },
+    "detail": {
+      "backLabel": "Invoices",
+      "for": "For {name}",
+      "amount": "Amount",
+      "due": "Due",
+      "client": "Client",
+      "paymentLinkInReminders": "Payment link in reminders",
+      "paymentLinkNone": "None set —",
+      "addDefault": "add a default",
+      "or": "or",
+      "setForClient": "set one for this client",
+      "notes": "Notes",
+      "reminderSchedule": "Reminder schedule",
+      "customForInvoice": "Custom for this invoice",
+      "customForClient": "Custom for {name}",
+      "accountDefault": "Your account default",
+      "remindersOffTitle": "Reminders are turned off for this invoice. Change this from",
+      "editInvoice": "Edit invoice",
+      "orAccountSettings": "or your",
+      "accountSettings": "account settings"
+    },
+    "form": {
+      "clientLabel": "Client",
+      "addNewClient": "+ Add new client",
+      "clientPlaceholder": "Choose a client",
+      "needClientFirst": "You need a client first —",
+      "addOne": "add one",
+      "amountLabel": "Amount",
+      "invoiceNumberLabel": "Invoice number (optional)",
+      "invoiceNumberPlaceholder": "INV-1001",
+      "dueDateLabel": "Due date",
+      "presetsLabel": "Due date presets:",
+      "preset1Week": "1 week",
+      "preset2Weeks": "2 weeks",
+      "preset1Month": "1 month",
+      "paymentLinkNote": "Reminders for this invoice will include {source}: {link}",
+      "paymentLinkNoteNone": "No payment link set yet — add one on this client or in Settings → Profile to include a \"Pay now\" button in reminders.",
+      "paymentLinkSourceClient": "this client's payment link",
+      "paymentLinkSourceAccount": "your default payment link",
+      "notesLabel": "Notes (optional)",
+      "submitCreate": "Save invoice",
+      "submitEdit": "Save changes"
+    },
+    "new": {
+      "title": "Add an invoice",
+      "subtitle": "Thirty seconds of work.",
+      "tipsTitle": "What happens next",
+      "tip1": "Chasry checks daily and sends reminders automatically on your schedule from Settings.",
+      "tip2": "Mark it paid anytime — reminders stop the moment you do.",
+      "tip3": "Add a payment link so clients can pay straight from the reminder email."
+    },
+    "editPage": {
+      "title": "Edit invoice",
+      "tipsTitle": "Good to know",
+      "tip1": "Changing the due date reschedules any reminders that haven't sent yet.",
+      "tip2": "Already-sent reminders aren't recalled or corrected."
+    }
+  },
+  "offsetPicker": {
+    "daysBeforeDue": "{days, plural, one {# day before due} other {# days before due}}",
+    "onDueDateOption": "On the due date",
+    "daysAfterDue": "{days, plural, one {# day after due} other {# days after due}}"
+  },
+  "reminderTimeline": {
+    "noneConfigured": "No reminders configured.",
+    "scheduled": "Scheduled",
+    "sent": "Sent {date}",
+    "failed": "Failed to send",
+    "skippedLaterSent": "Skipped — later one sent",
+    "skippedPaid": "Skipped — invoice paid",
+    "missed": "Missed"
+  },
+  "invoiceActionErrors": {
+    "reopenFailed": "Couldn't reopen this invoice."
+  },
+  "reminderOverride": {
+    "customTitle": "Custom reminder schedule",
+    "activeDescription": "Overrides your default schedule for {scope}.",
+    "inactiveDescription": "Currently using your default: {schedule}.",
+    "enabledFor": "Reminders enabled for {scope}",
+    "removeOverride": "Remove override, use default instead",
+    "scopeClient": "this client",
+    "scopeInvoice": "this invoice",
+    "beforeSuffix": "{days, plural, one {day before} other {days before}}",
+    "onDueDate": "on the due date",
+    "afterSuffix": "{days, plural, one {day after} other {days after}}",
+    "turnedOff": "Turned off",
+    "noneScheduled": "No reminders scheduled"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "reminders": "Reminders",
+      "billing": "Billing"
+    },
+    "profile": {
+      "emailLabel": "Email",
+      "businessNameLabel": "Business name",
+      "currencyLabel": "Currency",
+      "paymentLinkLabel": "Payment link (optional)",
+      "paymentLinkHint": "Add a Stripe Payment Link, PayPal.me, or any page clients can pay you from. When set, reminder emails include a \"Pay now\" button linking here — you can also set a different one per client.",
+      "saved": "Saved."
+    },
+    "reminders": {
+      "intro": "Chasry checks every unpaid invoice once a day and sends a reminder on any of the days you turn on below, relative to the invoice's due date.",
+      "enabledLabel": "Reminders enabled",
+      "enabledHint": "Turn off to pause all reminder emails.",
+      "firmNotice": "After {days}+ days, reminders read more direct automatically",
+      "submit": "Save schedule",
+      "saved": "Saved."
+    },
+    "billing": {
+      "pastDueWarning": "Your last payment failed. Update your card from Manage billing below to keep Pro active — you'll drop back to the free plan's {limit}-invoice limit if it isn't resolved.",
+      "planTitle": "Chasry plan",
+      "proLabel": "Pro — {price}",
+      "freeLabel": "Free",
+      "proDescription": "Unlimited clients and invoices.",
+      "freeDescription": "Up to {limit} active invoices at a time ({used} used). Unlimited clients.",
+      "renews": "Renews {date}.",
+      "manageBilling": "Manage billing",
+      "upgradeToPro": "Upgrade to Pro",
+      "statusActive": "Active",
+      "statusPastDue": "Payment failed — updating",
+      "statusCanceled": "Canceled"
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "description": "Permanently delete your account, clients, invoices, and reminder history. This can't be undone.",
+      "deleteAccount": "Delete account",
+      "confirmTitle": "Delete your Chasry account?",
+      "confirmDescription": "This permanently deletes your account, every client, every invoice, and all reminder history, and cancels your subscription immediately. There's no undo.",
+      "confirmSubmit": "Yes, delete everything",
+      "deleting": "Deleting…"
+    }
+  },
+  "upgradePrompt": {
+    "title": "You're using all {count} of your {limit} free invoices",
+    "description": "Mark one as paid, or upgrade to Pro for unlimited invoices and clients — {price}, cancel anytime.",
+    "cta": "Upgrade to Pro"
+  }
+}

@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", monospace;
   --font-heading: var(--font-sans);
   --color-brand-primary: var(--brand-primary);
   --color-brand-primary-hover: var(--brand-primary-hover);
@@ -88,7 +88,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.75rem;
+  --radius: 0.875rem;
   --sidebar: #ffffff;
   --sidebar-foreground: var(--brand-ink);
   --sidebar-primary: var(--brand-primary);
@@ -102,8 +102,19 @@
 }
 
 .dark {
-  --brand-primary: #3f63b8;
-  --brand-primary-hover: #5a7fd1;
+  /* Lightened from the light-mode navy (#23458d-derived #3f63b8) — that
+     shade only gives ~3:1 against this theme's dark background/card/tint
+     surfaces, failing WCAG AA (4.5:1) for the ~25 places across the app
+     that use it as link/badge/active-nav TEXT color (text-brand-primary).
+     #3f63b8 itself is kept as an explicit dark:bg-[#3f63b8] override on the
+     one spot that uses it as a *background* with white text
+     (DashboardShell's avatar circle), since that pairing already had good
+     contrast (5.7:1) and would break if this token were reused there too. */
+  --brand-primary: #7b9bdb;
+  /* Also lightened — the only remaining dark-mode consumer is the Pro-plan
+     badge text (DashboardShell's UserMenu), which paired the old #5a7fd1
+     with --brand-secondary-tint at only ~3.5:1. */
+  --brand-primary-hover: #8bacdf;
   --brand-primary-tint: #16223f;
   --brand-secondary: #63c2ee;
   --brand-secondary-hover: #8bd4f4;

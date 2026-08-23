@@ -1,52 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, startTransition } from "react";
+import { useTranslations } from "next-intl";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { requestPasswordReset, type AuthFormState } from "@/app/(auth)/actions";
+import { requestResetSchema } from "@/lib/validations/auth";
+import { toFormData } from "@/lib/utils";
+import type { z } from "zod";
+
+type ResetInput = z.infer<typeof requestResetSchema>;
 
 export default function ResetPasswordPage() {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     requestPasswordReset,
     null
   );
+  const t = useTranslations("auth.resetPassword");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetInput>({
+    resolver: zodResolver(requestResetSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+  });
+
+  const onValid = (data: ResetInput) => startTransition(() => formAction(toFormData(data)));
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-foreground">Reset your password</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        We&rsquo;ll email you a link to set a new one.
-      </p>
+      <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+        {t("title")}
+      </h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>
 
       {state?.success ? (
         <Alert className="mt-8">
           <AlertDescription>{state.success}</AlertDescription>
         </Alert>
       ) : (
-        <form action={formAction} className="mt-8 space-y-4">
+        <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
           {state?.error && (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" autoComplete="email" required />
-          </div>
+          <FormField label={t("email")} htmlFor="email" error={errors.email?.message}>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              className="h-11"
+              aria-invalid={!!errors.email}
+              {...register("email")}
+            />
+          </FormField>
 
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Sending…" : "Send reset link"}
+          <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+            {pending ? t("submitting") : t("submit")}
           </Button>
         </form>
       )}
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         <Link href="/login" className="font-medium text-brand-primary hover:underline">
-          Back to login
+          {t("backToLogin")}
         </Link>
       </p>
     </div>

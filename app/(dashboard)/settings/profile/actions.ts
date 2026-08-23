@@ -14,7 +14,6 @@ export async function updateProfile(
 ): Promise<ProfileFormState> {
   const parsed = profileSchema.safeParse({
     business_name: formData.get("business_name"),
-    timezone: formData.get("timezone"),
     currency: formData.get("currency"),
     payment_link: formData.get("payment_link"),
   });

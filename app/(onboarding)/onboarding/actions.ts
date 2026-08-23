@@ -12,7 +12,6 @@ export async function completeOnboarding(
 ): Promise<OnboardingState> {
   const parsed = profileSchema.safeParse({
     business_name: formData.get("business_name"),
-    timezone: formData.get("timezone"),
     currency: formData.get("currency"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };

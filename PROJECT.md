@@ -49,8 +49,11 @@ monthly subscription.
 - **Stack**: Next.js (Server Actions + a couple of Route Handlers) on Vercel, Supabase
   (Postgres/Auth/RLS), Stripe Billing, Resend + React Email, Vercel Cron for the daily reminder
   job — chosen to fit the low-budget constraint (~$20–30/mo) while still being production-grade.
-- **Domain/email**: reminders send from `reminders@chasry.com` once Resend's DNS records are
-  added on Namecheap, alongside (not replacing) the existing `info@chasry.com` forwarding.
+- **Domain/email**: `chasry.com` is verified as a sending domain in Resend (DKIM/SPF/DMARC records
+  added on Namecheap, alongside — not replacing — the existing `info@chasry.com` forwarding).
+  Reminders send from `reminders@chasry.com`; Supabase Auth's own emails (signup confirmation,
+  password reset) send from `noreply@chasry.com` via the same Resend account, configured as
+  Supabase's custom SMTP provider — see "Server Actions" in `ARCHITECTURE.md`.
 
 ## Pricing (revised from the original "trial then subscribe" brief)
 

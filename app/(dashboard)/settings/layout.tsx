@@ -2,21 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/settings/profile", label: "Profile" },
-  { href: "/settings/reminders", label: "Reminders" },
-  { href: "/settings/billing", label: "Billing" },
-];
+  { href: "/settings/profile", labelKey: "profile" },
+  { href: "/settings/reminders", labelKey: "reminders" },
+  { href: "/settings/billing", labelKey: "billing" },
+] as const;
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations("settings");
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Settings" />
+      <PageHeader title={t("title")} />
       <div className="mb-6 flex gap-1 border-b border-border">
         {TABS.map((tab) => {
           const active = pathname === tab.href;
@@ -31,7 +33,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
-              {tab.label}
+              {t(`tabs.${tab.labelKey}`)}
             </Link>
           );
         })}

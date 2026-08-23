@@ -13,7 +13,6 @@ export default async function ProfileSettingsPage() {
           <ProfileForm
             defaultValues={{
               business_name: profile.business_name ?? "",
-              timezone: profile.timezone,
               currency: profile.currency,
               payment_link: profile.payment_link ?? "",
             }}

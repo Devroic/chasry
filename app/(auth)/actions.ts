@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
+import { safeNextPath } from "@/lib/supabase/middleware";
 import { loginSchema, signupSchema, requestResetSchema } from "@/lib/validations/auth";
 
 export type AuthFormState = { error?: string; success?: string } | null;
@@ -28,7 +29,7 @@ export async function login(_prev: AuthFormState, formData: FormData): Promise<A
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "Incorrect email or password." };
 
-  redirect("/dashboard");
+  redirect(safeNextPath(formData.get("next")?.toString()));
 }
 
 export async function signup(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -43,17 +44,34 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { data: { business_name: parsed.data.business_name } },
+    options: {
+      data: { business_name: parsed.data.business_name },
+      emailRedirectTo: `${appUrl}/signup/confirmed`,
+    },
   });
   if (error) {
-    if (error.message.toLowerCase().includes("already registered")) {
+    if (error.code === "user_already_exists" || error.code === "email_exists") {
       return { error: "An account with that email already exists." };
     }
+    if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit") {
+      return { error: "Too many attempts right now — please try again in a few minutes." };
+    }
+    if (error.code === "weak_password") {
+      return { error: "Choose a stronger password and try again." };
+    }
     return { error: "Couldn't create your account. Please try again." };
+  }
+
+  // Supabase doesn't return an error for a duplicate, already-confirmed email
+  // (anti-enumeration by design) — it signals this instead via an empty
+  // `identities` array on an otherwise normal-looking response.
+  if (data.user && data.user.identities?.length === 0) {
+    return { error: "An account with that email already exists." };
   }
 
   if (data.user) {

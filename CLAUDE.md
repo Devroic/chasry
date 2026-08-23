@@ -13,6 +13,13 @@ is considered done:
   weight, `frontend-design`. Apply findings, don't just read them — e.g. this repo's `Button`
   didn't have `cursor-pointer` and `globals.css` didn't respect `prefers-reduced-motion` until a
   `ui-ux-pro-max` pass caught both; that pass also produced `lib/plan.ts` and `UpgradePrompt`.
+- **Before styling anything the user compares to chasry.com**: actually load the live site and
+  look at it (screenshot + computed styles — font-family, weight, colors), don't design from
+  memory of the brand palette alone. The first pass at the auth pages (a 50/50 split-screen with
+  a giant logo/mascot panel) was built without doing this and had to be thrown out and rebuilt
+  once the user pointed out it didn't match the real landing page at all. The actual site uses a
+  slim header with a small logo (not a half-viewport panel) and Inter at weight 800 for
+  headlines — see "UI structure" in `ARCHITECTURE.md` for what was actually found.
 - **Before finishing any change that touches auth, billing, RLS, webhooks, or Server Actions**:
   run `/security-review`. As of this writing it needs a GitHub `origin/HEAD` remote to diff
   against — this repo is local-only, so it currently fails with `fatal: ambiguous argument
@@ -35,12 +42,53 @@ and had to be circled back for, which is why this section exists.
 ## Working on this repo
 
 - `README.md` has setup/deploy steps (accounts, env vars, migration) — don't duplicate that here.
-- Don't reintroduce `react-hook-form`, a `Calendar`/`Popover` date picker, or Sentry config
-  without a reason — all three were deliberately left out or removed (see `ARCHITECTURE.md`).
+- `react-hook-form` + `zodResolver`, called directly in each form component (not through a shared
+  hook — see "Forms & validation" in `ARCHITECTURE.md` for why the wrapper hook was abandoned),
+  is the validation pattern for **every** form in the app now — auth, onboarding, and the
+  dashboard CRUD forms (customer/invoice/profile/reminder-settings) alike, after the user asked
+  for consistent real validation and error handling everywhere. Don't reintroduce native
+  `required`/`type="email"` HTML validation, and don't add a new form on plain `FormData` without
+  a specific reason — that's exactly the inconsistency that got fixed. Any form on this pattern
+  must call the `useActionState` dispatcher inside `startTransition(...)`, not as a bare function
+  call — see the "Gotcha" note in ARCHITECTURE.md's "Forms & validation" section. A `Calendar`/
+  `Popover` date picker and Sentry config are still deliberately left out.
+- Every optional-string Zod field (phone, notes, invoice number, payment link, ...) must
+  transform blank input to `null`, never `undefined` — see `optionalText()`/`optionalUrl` in
+  `lib/validations/shared.ts`. `undefined` gets dropped by `toFormData()` (`lib/utils.ts`)
+  entirely, which silently breaks *clearing* the field on an update.
+- The dashboard shell is a full-width header (big flush-left logo, Upgrade/account menu) with a
+  left sidebar for nav below it — went through a sidebar → horizontal-top-nav → header+sidebar
+  cycle based on user feedback each time. See "UI structure" in `ARCHITECTURE.md` before changing
+  this layout again.
+- Signup's `signUp()` call must keep checking `data.user.identities?.length === 0` for the
+  duplicate-email case — Supabase returns no `error` for that case by design. See "Server
+  Actions" in `ARCHITECTURE.md`.
+- **This installed `radix-ui` version's `Select`/`Switch` post nothing to native `FormData` on
+  their own** — no hidden bubble input, `name` prop does nothing by itself. This broke reminder
+  settings, profile currency, and invoice creation for real before being caught. Now that those
+  forms are on react-hook-form (`Controller` for `Select`, `watch`/`setValue` for `Switch`), this
+  doesn't come up in practice — but if a *new* form is ever added on plain `FormData` (not
+  react-hook-form) with a `Select`/`Switch` in it, it needs a controlled `value`/`checked` + a
+  hand-written `<input type="hidden">` mirroring it, or it will silently submit nothing for that
+  field. See the "Critical gotcha" note under Stack in `ARCHITECTURE.md`.
+- List pages (invoices, customers) share a URL-param-driven search/sort/filter pattern and a
+  `ClickableTableRow` component so the whole row navigates, not just the linked text — see "List
+  pages" in `ARCHITECTURE.md` before touching either table. Don't go back to per-cell `<Link>`
+  wrapping; that was the reported "not all the row is clickable" bug.
+- Detail/edit/new dashboard pages use `BackLink` consistently, and the four client/invoice
+  add-edit pages use `FormTips` to fill the layout instead of leaving empty space — see "UI
+  structure" in `ARCHITECTURE.md`. Keep new pages consistent with this rather than one-off.
+- Password fields use `<PasswordInput>` (`components/ui/password-input.tsx`), not a bare
+  `<Input type="password">` — it adds the show/hide eye toggle. Use it for any new password field.
+- `/help` (`app/help/page.tsx`) is a public FAQ page, reachable from `SiteFooter` and the
+  dashboard account menu. Update it in place rather than creating a second help/FAQ surface.
 - If `npx shadcn add <component>` ever gets run again, check `components.json` still says
   `"style": "radix-nova"` afterwards — the CLI's default has switched away from Radix before.
 - Don't reintroduce a card-required trial or a `'trialing'`/`'incomplete'` subscription status —
   the pricing model is free-tier + Pro now (see `PROJECT.md`), not trial-then-subscribe.
-- This is a git repo (initialized for the manual security pass). No remote is configured yet —
-  ask before adding one or pushing; that hasn't been requested. Uncommitted changes may exist —
-  check `git status` before assuming the working tree matches the last commit.
+- This is a git repo with a remote: `origin` → `github.com/andreaseracleous99/chasry-webapp`
+  (private), `origin/HEAD` set so diff-based tooling (`/security-review`, etc.) works. Don't push
+  without being asked — commits happen locally by default; ask before `git push`.
+- `.env.local` has real (non-placeholder) Supabase credentials for local dev as of this writing —
+  don't overwrite it with placeholder values when testing; if you need a placeholder env for a
+  quick build check, restore the real values afterward rather than leaving it stubbed out.

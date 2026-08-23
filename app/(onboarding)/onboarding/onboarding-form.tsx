@@ -1,9 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, startTransition } from "react";
+import { useTranslations } from "next-intl";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -14,74 +17,103 @@ import {
 } from "@/components/ui/select";
 import { completeOnboarding, type OnboardingState } from "./actions";
 import { FREE_INVOICE_LIMIT } from "@/lib/plan";
+import { profileSchema, type ProfileInput } from "@/lib/validations/profile";
+import { toFormData } from "@/lib/utils";
+import type { z } from "zod";
+
+type ProfileFormValues = z.input<typeof profileSchema>;
 
 const CURRENCIES = ["EUR", "USD", "GBP"];
 
-function detectTimezone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  } catch {
-    return "UTC";
-  }
-}
-
-export function OnboardingForm({ defaultBusinessName }: { defaultBusinessName: string }) {
+export function OnboardingForm({
+  defaultBusinessName,
+}: {
+  defaultBusinessName: string;
+}) {
+  const hasBusinessName = defaultBusinessName.trim().length > 0;
   const [state, formAction, pending] = useActionState<OnboardingState, FormData>(
     completeOnboarding,
     null
   );
+  const t = useTranslations("onboarding");
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ProfileFormValues, unknown, ProfileInput>({
+    resolver: zodResolver(profileSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    defaultValues: {
+      business_name: defaultBusinessName,
+      currency: "EUR",
+    },
+  });
+
+  const onValid = (data: ProfileInput) => startTransition(() => formAction(toFormData(data)));
 
   return (
-    <form action={formAction} className="mt-8 space-y-4">
+    <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
 
-      <div className="space-y-1.5">
-        <Label htmlFor="business_name">Business name</Label>
-        <Input
-          id="business_name"
-          name="business_name"
-          defaultValue={defaultBusinessName}
-          placeholder="Your business or freelance name"
-          required
+      {hasBusinessName ? (
+        <>
+          <input type="hidden" {...register("business_name")} />
+          <p className="text-sm text-muted-foreground">
+            {t.rich("businessNameConfirm", {
+              name: defaultBusinessName,
+              strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+            })}
+          </p>
+        </>
+      ) : (
+        <FormField
+          label={t("businessNameLabel")}
+          htmlFor="business_name"
+          error={errors.business_name?.message}
+          hint={errors.business_name ? undefined : t("businessNameHint")}
+        >
+          <Input
+            id="business_name"
+            placeholder={t("businessNamePlaceholder")}
+            className="h-11"
+            aria-invalid={!!errors.business_name}
+            {...register("business_name")}
+          />
+        </FormField>
+      )}
+
+      <FormField label={t("currency")} htmlFor="currency" error={errors.currency?.message}>
+        <Controller
+          name="currency"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="currency" className="h-11 w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
-        <p className="text-xs text-muted-foreground">
-          This is how you&rsquo;ll appear to clients in reminder emails.
-        </p>
-      </div>
+      </FormField>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="currency">Currency</Label>
-          <Select name="currency" defaultValue="EUR">
-            <SelectTrigger id="currency" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="timezone">Timezone</Label>
-          <input type="hidden" name="timezone" value={detectTimezone()} />
-          <Input id="timezone" value={detectTimezone()} disabled />
-        </div>
-      </div>
-
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Saving…" : "Go to dashboard"}
+      <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+        {pending ? t("submitting") : t("submit")}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
-        Free for up to {FREE_INVOICE_LIMIT} active invoices. Upgrade to Pro anytime from Settings.
+        {t("freeNotice", { limit: FREE_INVOICE_LIMIT })}
       </p>
     </form>
   );

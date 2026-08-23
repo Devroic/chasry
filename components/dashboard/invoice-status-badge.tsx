@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { daysUntil } from "@/lib/format";
 import type { InvoiceStatus } from "@/types/database.types";
@@ -7,7 +8,7 @@ export function invoiceDisplayStatus(status: InvoiceStatus, dueDate: string) {
   return daysUntil(dueDate) < 0 ? "overdue" : "unpaid";
 }
 
-export function InvoiceStatusBadge({
+export async function InvoiceStatusBadge({
   status,
   dueDate,
 }: {
@@ -15,6 +16,7 @@ export function InvoiceStatusBadge({
   dueDate: string;
 }) {
   const display = invoiceDisplayStatus(status, dueDate);
+  const t = await getTranslations("invoices");
 
   const styles: Record<string, string> = {
     paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -24,10 +26,10 @@ export function InvoiceStatusBadge({
   };
 
   const labels: Record<string, string> = {
-    paid: "Paid",
-    overdue: "Overdue",
-    unpaid: "Unpaid",
-    canceled: "Canceled",
+    paid: t("statusPaid"),
+    overdue: t("statusOverdue"),
+    unpaid: t("statusUnpaid"),
+    canceled: t("statusCanceled"),
   };
 
   return (

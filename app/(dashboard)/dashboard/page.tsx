@@ -1,14 +1,15 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireOnboardedUser } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
-import { InvoiceStatusBadge } from "@/components/dashboard/invoice-status-badge";
+import { InvoiceListItem } from "@/components/dashboard/invoice-list-item";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 
 export default async function DashboardPage({
   searchParams,
@@ -17,6 +18,7 @@ export default async function DashboardPage({
 }) {
   const { upgraded } = await searchParams;
   const { supabase, user, profile } = await requireOnboardedUser();
+  const t = await getTranslations("dashboard");
 
   const [{ data: unpaidInvoices }, { count: customerCount }, { count: invoiceCount }] =
     await Promise.all([
@@ -58,17 +60,13 @@ export default async function DashboardPage({
     <div className="space-y-8">
       {upgraded && pro && (
         <Alert className="border-brand-secondary-tint bg-brand-primary-tint">
-          <AlertDescription className="text-brand-primary">
-            You&rsquo;re on Pro now — unlimited clients and invoices.
-          </AlertDescription>
+          <AlertDescription className="text-brand-primary">{t("upgradedBanner")}</AlertDescription>
         </Alert>
       )}
 
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Here&rsquo;s what&rsquo;s outstanding right now.
-        </p>
+        <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {showChecklist && (
@@ -79,57 +77,52 @@ export default async function DashboardPage({
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Outstanding" value={formatMoney(totalOutstanding, currency)} />
+        <StatCard label={t("statOutstanding")} value={formatMoney(totalOutstanding, currency)} />
         <StatCard
-          label="Overdue invoices"
+          label={t("statOverdue")}
           value={String(overdue.length)}
           tone={overdue.length > 0 ? "warning" : "default"}
         />
         <StatCard
-          label="Unpaid invoices"
+          label={t("statUnpaid")}
           value={String(invoices.length)}
-          hint={!pro ? `${invoices.length} of ${FREE_INVOICE_LIMIT} on the free plan` : undefined}
+          hint={
+            !pro
+              ? t("freeLimitHint", { count: invoices.length, limit: FREE_INVOICE_LIMIT })
+              : undefined
+          }
           tone={!pro && invoices.length >= FREE_INVOICE_LIMIT ? "warning" : "default"}
         />
       </div>
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">Due soon</h2>
+          <h2 className="text-base font-semibold text-foreground">{t("dueSoon")}</h2>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/invoices">View all</Link>
+            <Link href="/invoices">{t("viewAll")}</Link>
           </Button>
         </div>
 
         {invoices.length === 0 ? (
           <EmptyState
-            title="No unpaid invoices yet"
-            description="Already chasing someone for a late payment? Log it here — Chasry works on invoices you're already waiting on, not just new ones."
-            actionLabel="Add an invoice"
+            title={t("emptyTitle")}
+            description={t("emptyDescription")}
+            actionLabel={t("emptyCta")}
             actionHref="/invoices/new"
           />
         ) : (
           <Card className="divide-y divide-border p-0">
             {(overdue.length > 0 ? [...overdue, ...upcoming] : upcoming).map((invoice) => (
-              <Link
+              <InvoiceListItem
                 key={invoice.id}
-                href={`/invoices/${invoice.id}`}
-                className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-muted/50"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {customerName.get(invoice.customer_id) ?? "Client"}
-                    {invoice.invoice_number ? ` · ${invoice.invoice_number}` : ""}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Due {formatDate(invoice.due_date)}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-sm font-medium text-foreground">
-                    {formatMoney(Number(invoice.amount), invoice.currency)}
-                  </span>
-                  <InvoiceStatusBadge status="unpaid" dueDate={invoice.due_date} />
-                </div>
-              </Link>
+                id={invoice.id}
+                customerName={customerName.get(invoice.customer_id) ?? t("clientFallback")}
+                invoiceNumber={invoice.invoice_number}
+                dueDate={invoice.due_date}
+                amount={Number(invoice.amount)}
+                currency={invoice.currency}
+                status="unpaid"
+              />
             ))}
           </Card>
         )}

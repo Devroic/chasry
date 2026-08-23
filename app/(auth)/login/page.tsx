@@ -1,61 +1,100 @@
 "use client";
 
+import { Suspense, startTransition } from "react";
 import Link from "next/link";
 import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { login, type AuthFormState } from "@/app/(auth)/actions";
+import { loginSchema, type LoginInput } from "@/lib/validations/auth";
+import { toFormData } from "@/lib/utils";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(login, null);
+  const next = useSearchParams().get("next");
+  const t = useTranslations("auth.login");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+  });
+
+  const onValid = (data: LoginInput) =>
+    startTransition(() => formAction(toFormData({ ...data, next })));
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-foreground">Welcome back</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Log in to manage your invoices.</p>
+      <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{t("title")}</h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>
 
-      <form action={formAction} className="mt-8 space-y-4">
+      <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
         {state?.error && (
           <Alert variant="destructive">
             <AlertDescription>{state.error}</AlertDescription>
           </Alert>
         )}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" autoComplete="email" required />
-        </div>
+        <FormField label={t("email")} htmlFor="email" error={errors.email?.message}>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            className="h-11"
+            aria-invalid={!!errors.email}
+            {...register("email")}
+          />
+        </FormField>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+        <FormField
+          label={t("password")}
+          htmlFor="password"
+          error={errors.password?.message}
+          labelAction={
             <Link
               href="/reset-password"
               className="text-xs font-medium text-brand-primary hover:underline"
             >
-              Forgot password?
+              {t("forgotPassword")}
             </Link>
-          </div>
-          <Input
+          }
+        >
+          <PasswordInput
             id="password"
-            name="password"
-            type="password"
             autoComplete="current-password"
-            required
+            className="h-11"
+            aria-invalid={!!errors.password}
+            {...register("password")}
           />
-        </div>
+        </FormField>
 
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Logging in…" : "Log in"}
+        <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+          {pending ? t("submitting") : t("submit")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        New to Chasry?{" "}
+        {t("newToChasry")}{" "}
         <Link href="/signup" className="font-medium text-brand-primary hover:underline">
-          Start your free trial
+          {t("signUpNow")}
         </Link>
       </p>
     </div>

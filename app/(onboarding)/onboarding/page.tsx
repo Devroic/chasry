@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 
@@ -17,12 +18,12 @@ export default async function OnboardingPage() {
 
   if (profile?.onboarded_at) redirect("/dashboard");
 
+  const t = await getTranslations("onboarding");
+
   return (
     <>
-      <h1 className="text-2xl font-semibold text-foreground">Set up your account</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        A couple of details and you&rsquo;re in — free to use, no card required.
-      </p>
+      <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{t("title")}</h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>
       <OnboardingForm defaultBusinessName={profile?.business_name ?? ""} />
     </>
   );

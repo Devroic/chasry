@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,7 +18,7 @@ export function ConfirmDeleteButton({
   action,
   title,
   description,
-  triggerLabel = "Delete",
+  triggerLabel,
 }: {
   action: () => Promise<void>;
   title: string;
@@ -26,12 +27,13 @@ export function ConfirmDeleteButton({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("common");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-          <Trash2 /> {triggerLabel}
+          <Trash2 /> {triggerLabel ?? t("delete")}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -41,14 +43,14 @@ export function ConfirmDeleteButton({
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             variant="destructive"
             disabled={pending}
             onClick={() => startTransition(async () => action())}
           >
-            {pending ? "Deleting…" : "Delete"}
+            {pending ? t("deleting") : t("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

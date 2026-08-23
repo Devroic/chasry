@@ -1,43 +1,45 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function OnboardingChecklist({
+export async function OnboardingChecklist({
   hasCustomer,
   hasInvoice,
 }: {
   hasCustomer: boolean;
   hasInvoice: boolean;
 }) {
+  const t = await getTranslations("dashboard");
   const steps = [
     {
       done: hasCustomer,
-      title: "Add your first client",
-      description: "Their name and email — that's all Chasry needs.",
+      title: t("checklist.addClientTitle"),
+      description: t("checklist.addClientDescription"),
       href: "/customers/new",
-      cta: "Add a client",
+      cta: t("checklist.addClientCta"),
     },
     {
       done: hasInvoice,
-      title: "Log an unpaid invoice",
-      description: "Amount and due date — past-due ones count too. Thirty seconds of work.",
+      title: t("checklist.addInvoiceTitle"),
+      description: t("checklist.addInvoiceDescription"),
       href: "/invoices/new",
-      cta: "Add an invoice",
+      cta: t("checklist.addInvoiceCta"),
     },
     {
       done: false,
-      title: "Check your reminder schedule",
-      description: "Defaults to 7 and 3 days before, then 1 and 14 days after — getting firmer automatically.",
+      title: t("checklist.checkScheduleTitle"),
+      description: t("checklist.checkScheduleDescription"),
       href: "/settings/reminders",
-      cta: "Review schedule",
+      cta: t("checklist.checkScheduleCta"),
     },
   ];
 
   return (
     <Card className="p-5">
-      <h2 className="mb-4 text-sm font-semibold text-foreground">Get set up</h2>
+      <h2 className="mb-4 text-sm font-semibold text-foreground">{t("getSetUp")}</h2>
       <ol className="space-y-4">
         {steps.map((step) => (
           <li key={step.title} className="flex items-start gap-3">

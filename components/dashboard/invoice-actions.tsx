@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Check, Pencil, RotateCcw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteButton } from "@/components/dashboard/confirm-delete-button";
@@ -23,6 +24,9 @@ export function InvoiceActions({
 }) {
   const [markPending, startMark] = useTransition();
   const [previewPending, startPreview] = useTransition();
+  const t = useTranslations("invoices.actions");
+  const tErrors = useTranslations("invoiceActionErrors");
+  const tCommon = useTranslations("common");
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -33,11 +37,11 @@ export function InvoiceActions({
           onClick={() =>
             startMark(async () => {
               await markInvoicePaid(invoiceId);
-              toast.success("Marked as paid — reminders stopped.");
+              toast.success(t("markPaidToast"));
             })
           }
         >
-          <Check /> Mark as paid
+          <Check /> {t("markPaid")}
         </Button>
       ) : status === "paid" ? (
         <Button
@@ -48,14 +52,14 @@ export function InvoiceActions({
             startMark(async () => {
               try {
                 await reopenInvoice(invoiceId);
-                toast.info("Reopened — reminders will resume.");
+                toast.info(t("reopenToast"));
               } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Couldn't reopen this invoice.");
+                toast.error(err instanceof Error ? err.message : tErrors("reopenFailed"));
               }
             })
           }
         >
-          <RotateCcw /> Reopen
+          <RotateCcw /> {t("reopen")}
         </Button>
       ) : null}
 
@@ -66,23 +70,23 @@ export function InvoiceActions({
         onClick={() =>
           startPreview(async () => {
             await sendPreviewReminder(invoiceId);
-            toast.success("Preview sent to your email.");
+            toast.success(t("sendPreviewToast"));
           })
         }
       >
-        <Send /> {previewPending ? "Sending…" : "Send me a preview"}
+        <Send /> {previewPending ? t("sending") : t("sendPreview")}
       </Button>
 
       <Button variant="outline" size="sm" asChild>
         <Link href={`/invoices/${invoiceId}/edit`}>
-          <Pencil /> Edit
+          <Pencil /> {tCommon("edit")}
         </Link>
       </Button>
 
       <ConfirmDeleteButton
         action={deleteInvoice.bind(null, invoiceId)}
-        title="Delete this invoice?"
-        description="This can't be undone. Reminder history for this invoice will also be removed."
+        title={t("deleteTitle")}
+        description={t("deleteDescription")}
       />
     </div>
   );

@@ -2,32 +2,43 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/client";
+import { updatePasswordSchema } from "@/lib/validations/auth";
+import type { z } from "zod";
+
+type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 
 export default function ResetPasswordConfirmPage() {
   const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const t = useTranslations("auth.resetPasswordConfirm");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<UpdatePasswordInput>({
+    resolver: zodResolver(updatePasswordSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+  });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (password.length < 8) {
-      setError("Use at least 8 characters.");
-      return;
-    }
+  async function onValid(data: UpdatePasswordInput) {
     setPending(true);
-    setError(null);
+    setServerError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({ password: data.password });
 
     if (error) {
-      setError("That reset link has expired. Request a new one.");
+      setServerError(t("expiredError"));
       setPending(false);
       return;
     }
@@ -37,33 +48,35 @@ export default function ResetPasswordConfirmPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-foreground">Set a new password</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Choose a new password for your Chasry account.
-      </p>
+      <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+        {t("title")}
+      </h1>
+      <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-        {error && (
+      <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
+        {serverError && (
           <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{serverError}</AlertDescription>
           </Alert>
         )}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="password">New password</Label>
-          <Input
+        <FormField
+          label={t("newPassword")}
+          htmlFor="password"
+          error={errors.password?.message}
+          hint={errors.password ? undefined : t("passwordHint")}
+        >
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
-            minLength={8}
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            className="h-11"
+            aria-invalid={!!errors.password}
+            {...register("password")}
           />
-        </div>
+        </FormField>
 
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Saving…" : "Save new password"}
+        <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+          {pending ? t("submitting") : t("submit")}
         </Button>
       </form>
     </div>

@@ -7,6 +7,7 @@ import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { invoiceSchema } from "@/lib/validations/invoice";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
 import { formatDate, formatMoney } from "@/lib/format";
+import { decodeReminderOverride } from "@/lib/reminder-override";
 import ReminderBeforeDueEmail from "@/emails/reminder-before-due";
 
 export type InvoiceFormState = { error?: string } | null;
@@ -17,10 +18,9 @@ function parseInvoiceForm(formData: FormData) {
     invoice_number: formData.get("invoice_number"),
     amount: formData.get("amount"),
     currency: formData.get("currency") || "EUR",
-    issued_date: formData.get("issued_date"),
     due_date: formData.get("due_date"),
-    payment_link: formData.get("payment_link"),
     notes: formData.get("notes"),
+    ...decodeReminderOverride(formData),
   });
 }
 
@@ -170,7 +170,7 @@ export async function sendPreviewReminder(invoiceId: string) {
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("invoice_number, amount, currency, due_date, customer_id, payment_link")
+    .select("invoice_number, amount, currency, due_date, customer_id")
     .eq("id", invoiceId)
     .eq("user_id", user.id)
     .single();
@@ -178,7 +178,7 @@ export async function sendPreviewReminder(invoiceId: string) {
 
   const { data: customer } = await supabase
     .from("customers")
-    .select("name")
+    .select("name, payment_link")
     .eq("id", invoice.customer_id)
     .single();
 
@@ -195,7 +195,7 @@ export async function sendPreviewReminder(invoiceId: string) {
       amount: formatMoney(Number(invoice.amount), invoice.currency),
       dueDateLabel: `Due ${formatDate(invoice.due_date)}`,
       daysUntilDue: 7,
-      paymentLink: invoice.payment_link ?? profile.payment_link ?? undefined,
+      paymentLink: customer?.payment_link ?? profile.payment_link ?? undefined,
     }),
   });
 }

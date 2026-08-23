@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, LogOut, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Menu, LogOut, ChevronDown, Settings, Sparkles, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -16,96 +17,103 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { DashboardNav } from "./dashboard-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
-import { isPro, planLabel } from "@/lib/plan";
+import { isPro } from "@/lib/plan";
 import type { SubscriptionStatus } from "@/types/database.types";
 
 export function DashboardShell({
   businessName,
   email,
   subscriptionStatus,
+  footer,
   children,
 }: {
   businessName: string;
   email: string;
   subscriptionStatus: SubscriptionStatus;
+  footer: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const t = useTranslations("header");
   const initial = businessName.trim().charAt(0).toUpperCase() || "?";
+  const pro = isPro(subscriptionStatus);
 
   return (
-    <div className="min-h-screen bg-muted/40">
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-border bg-sidebar px-4 py-6 lg:flex">
-        <Link href="/dashboard" className="mb-8 flex items-center px-2">
-          <Image
-            src="/brand/logo-light-bg.png"
-            alt="Chasry"
-            width={120}
-            height={32}
-            className="h-7 w-auto"
-          />
-        </Link>
-        <DashboardNav />
-        <div className="mt-auto pt-4">
-          <UserMenu
-            businessName={businessName}
-            email={email}
-            initial={initial}
-            subscriptionStatus={subscriptionStatus}
-          />
-        </div>
-      </aside>
-
-      <div className="lg:pl-60">
-        {/* Mobile topbar */}
-        <header className="flex items-center justify-between border-b border-border bg-background px-4 py-3 lg:hidden">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
+      <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-sm">
+        <div className="flex h-20 items-center justify-between px-4 sm:px-6">
           <Link href="/dashboard" className="flex items-center">
             <Image
               src="/brand/logo-light-bg.png"
               alt="Chasry"
-              width={110}
-              height={30}
-              className="h-6 w-auto"
+              width={220}
+              height={60}
+              className="h-10 w-auto sm:h-14 dark:hidden"
+              priority
+            />
+            <Image
+              src="/brand/logo-dark-bg.png"
+              alt="Chasry"
+              width={220}
+              height={60}
+              className="hidden h-10 w-auto sm:h-14 dark:block"
+              priority
             />
           </Link>
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Open menu">
-                <Menu className="size-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-4">
-              <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <Link
-                href="/dashboard"
-                className="mb-8 flex items-center px-2"
-                onClick={() => setMobileOpen(false)}
-              >
-                <Image
-                  src="/brand/logo-light-bg.png"
-                  alt="Chasry"
-                  width={120}
-                  height={32}
-                  className="h-7 w-auto"
-                />
-              </Link>
-              <DashboardNav onNavigate={() => setMobileOpen(false)} />
-              <div className="mt-8">
-                <UserMenu
-                  businessName={businessName}
-                  email={email}
-                  initial={initial}
-                  subscriptionStatus={subscriptionStatus}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </header>
 
-        <main className="px-4 py-8 sm:px-8">{children}</main>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LanguageSwitcher />
+            <ThemeToggle />
+            {!pro && (
+              <Button asChild size="sm" className="hidden sm:inline-flex">
+                <Link href="/settings/billing">
+                  <Sparkles /> {t("upgradeToPro")}
+                </Link>
+              </Button>
+            )}
+
+            <UserMenu
+              businessName={businessName}
+              email={email}
+              initial={initial}
+              subscriptionStatus={subscriptionStatus}
+              onNavigate={() => setMobileOpen(false)}
+            />
+
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t("openMenu")}>
+                  <Menu className="size-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-4">
+                <SheetTitle className="sr-only">Navigation</SheetTitle>
+                {!pro && (
+                  <Button asChild className="mt-8 mb-4 w-full" onClick={() => setMobileOpen(false)}>
+                    <Link href="/settings/billing">
+                      <Sparkles /> {t("upgradeToPro")}
+                    </Link>
+                  </Button>
+                )}
+                <DashboardNav onNavigate={() => setMobileOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto flex w-full max-w-7xl flex-1">
+        <aside className="hidden w-60 shrink-0 flex-col border-r border-border px-4 py-6 lg:flex">
+          <DashboardNav />
+        </aside>
+
+        <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">{children}</main>
       </div>
+
+      {footer}
     </div>
   );
 }
@@ -115,58 +123,66 @@ function UserMenu({
   email,
   initial,
   subscriptionStatus,
+  onNavigate,
 }: {
   businessName: string;
   email: string;
   initial: string;
   subscriptionStatus: SubscriptionStatus;
+  onNavigate: () => void;
 }) {
   const pro = isPro(subscriptionStatus);
+  const t = useTranslations("header");
+  const tCommon = useTranslations("common");
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-muted">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white">
+        <button
+          className="flex items-center gap-1.5 rounded-full p-1 hover:bg-muted"
+          aria-label={t("accountMenu")}
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white dark:bg-[#3f63b8]">
             {initial}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5">
-              <span className="block truncate text-sm font-medium text-foreground">
-                {businessName}
-              </span>
-              <Badge
-                variant="outline"
-                className={
-                  pro
-                    ? "border-transparent bg-brand-secondary-tint text-brand-primary-hover"
-                    : "text-muted-foreground"
-                }
-              >
-                {planLabel(subscriptionStatus)}
-              </Badge>
-            </span>
-            <span className="block truncate text-xs text-muted-foreground">{email}</span>
           </span>
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        <DropdownMenuLabel>{email}</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel>
+          <span className="flex items-center gap-1.5">
+            <span className="truncate">{businessName}</span>
+            <Badge
+              variant="outline"
+              className={
+                pro
+                  ? "border-transparent bg-brand-secondary-tint text-brand-primary-hover"
+                  : "text-muted-foreground"
+              }
+            >
+              {pro ? tCommon("pro") : tCommon("free")}
+            </Badge>
+          </span>
+          <span className="block truncate text-xs font-normal text-muted-foreground">
+            {email}
+          </span>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/settings/profile">Settings</Link>
+        <DropdownMenuItem asChild onClick={onNavigate}>
+          <Link href="/settings/profile" className="flex items-center gap-2">
+            <Settings className="size-4" /> {t("settings")}
+          </Link>
         </DropdownMenuItem>
-        {!pro && (
-          <DropdownMenuItem asChild>
-            <Link href="/settings/billing">Upgrade to Pro</Link>
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem asChild onClick={onNavigate}>
+          <Link href="/help" className="flex items-center gap-2">
+            <LifeBuoy className="size-4" /> {t("helpAndFaqs")}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild variant="destructive">
+        <DropdownMenuItem asChild variant="destructive" onClick={onNavigate}>
           <form action={logout} className="w-full">
             <button type="submit" className="flex w-full items-center gap-2">
-              <LogOut className="size-4" /> Log out
+              <LogOut className="size-4" /> {t("logOut")}
             </button>
           </form>
         </DropdownMenuItem>

@@ -15,3 +15,18 @@ export const optionalUrl = z
   .optional()
   .or(z.literal(""))
   .transform((v) => (v ? v : null));
+
+/**
+ * An optional free-text field (notes, invoice number, etc). Same `null`-not-
+ * `undefined` reasoning as `optionalUrl` above — this is the pattern every
+ * optional-string field in the app should use, not a one-off.
+ */
+export function optionalText(max: number) {
+  return z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null));
+}

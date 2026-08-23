@@ -18,7 +18,6 @@ export interface Database {
           id: string;
           business_name: string | null;
           email: string;
-          timezone: string;
           currency: string;
           payment_link: string | null;
           stripe_customer_id: string | null;
@@ -42,6 +41,9 @@ export interface Database {
           email: string;
           phone: string | null;
           notes: string | null;
+          payment_link: string | null;
+          reminder_offsets: number[] | null;
+          reminder_enabled: boolean | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["customers"]["Row"]> & {
@@ -59,11 +61,12 @@ export interface Database {
           invoice_number: string | null;
           amount: number;
           currency: string;
-          issued_date: string;
           due_date: string;
           status: InvoiceStatus;
           payment_link: string | null;
           notes: string | null;
+          reminder_offsets: number[] | null;
+          reminder_enabled: boolean | null;
           paid_at: string | null;
           created_at: string;
           updated_at: string;

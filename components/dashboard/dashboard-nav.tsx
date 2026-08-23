@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 
 export function DashboardNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   return (
     <nav className="flex flex-col gap-1">
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
@@ -25,7 +27,7 @@ export function DashboardNav({ onNavigate }: { onNavigate?: () => void }) {
             )}
           >
             <Icon className="size-4" />
-            {label}
+            {t(labelKey)}
           </Link>
         );
       })}

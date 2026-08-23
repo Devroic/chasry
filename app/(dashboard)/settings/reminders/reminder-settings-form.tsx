@@ -1,27 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
+import { useTranslations } from "next-intl";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ReminderOffsetSwitches } from "@/components/dashboard/reminder-offset-switches";
 import { updateReminderSettings, type ReminderSettingsState } from "./actions";
-import { SERIOUSLY_OVERDUE_THRESHOLD_DAYS } from "@/lib/reminders";
-
-const GENTLE_OFFSETS = [
-  { value: -7, label: "7 days before due" },
-  { value: -3, label: "3 days before due" },
-  { value: -1, label: "1 day before due" },
-  { value: 0, label: "On the due date" },
-  { value: 1, label: "1 day after due" },
-  { value: 3, label: "3 days after due" },
-  { value: 7, label: "7 days after due" },
-];
-
-const FIRM_OFFSETS = [
-  { value: 14, label: "14 days after due" },
-  { value: 30, label: "30 days after due" },
-];
+import { reminderOffsetsSchema, type ReminderOffsetsInput } from "@/lib/validations/invoice";
 
 export function ReminderSettingsForm({
   defaultOffsets,
@@ -34,9 +23,36 @@ export function ReminderSettingsForm({
     updateReminderSettings,
     null
   );
+  const t = useTranslations("settings.reminders");
+  const tCommon = useTranslations("common");
+  const { control, watch, setValue, handleSubmit } = useForm<ReminderOffsetsInput>({
+    resolver: zodResolver(reminderOffsetsSchema),
+    defaultValues: { enabled: defaultEnabled, offsets: defaultOffsets },
+  });
+  const offsets = watch("offsets");
+
+  function toggleOffset(value: number, checked: boolean) {
+    setValue(
+      "offsets",
+      checked ? [...offsets, value] : offsets.filter((v) => v !== value),
+      { shouldValidate: true }
+    );
+  }
+
+  // The server action still reads individual `offset_${n}` keys, so the
+  // validated {enabled, offsets} shape is translated into that FormData
+  // format here rather than changing the action's contract.
+  const onValid = (data: ReminderOffsetsInput) => {
+    const formData = new FormData();
+    formData.set("enabled", data.enabled ? "on" : "");
+    for (const offset of data.offsets) {
+      formData.set(`offset_${offset}`, "on");
+    }
+    startTransition(() => formAction(formData));
+  };
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={handleSubmit(onValid)} noValidate className="space-y-6">
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
@@ -51,50 +67,23 @@ export function ReminderSettingsForm({
       <div className="flex items-center justify-between rounded-lg border border-border p-4">
         <div>
           <Label htmlFor="enabled" className="text-sm font-medium">
-            Reminders enabled
+            {t("enabledLabel")}
           </Label>
-          <p className="text-xs text-muted-foreground">Turn off to pause all reminder emails.</p>
+          <p className="text-xs text-muted-foreground">{t("enabledHint")}</p>
         </div>
-        <Switch id="enabled" name="enabled" defaultChecked={defaultEnabled} />
+        <Controller
+          name="enabled"
+          control={control}
+          render={({ field }) => (
+            <Switch id="enabled" checked={field.value} onCheckedChange={field.onChange} />
+          )}
+        />
       </div>
 
-      <div className="space-y-3">
-        {GENTLE_OFFSETS.map((option) => (
-          <div key={option.value} className="flex items-center justify-between">
-            <Label htmlFor={`offset_${option.value}`} className="text-sm font-normal">
-              {option.label}
-            </Label>
-            <Switch
-              id={`offset_${option.value}`}
-              name={`offset_${option.value}`}
-              defaultChecked={defaultOffsets.includes(option.value)}
-            />
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          After {SERIOUSLY_OVERDUE_THRESHOLD_DAYS}+ days, reminders read more direct automatically
-        </p>
-        <div className="space-y-3">
-          {FIRM_OFFSETS.map((option) => (
-            <div key={option.value} className="flex items-center justify-between">
-              <Label htmlFor={`offset_${option.value}`} className="text-sm font-normal">
-                {option.label}
-              </Label>
-              <Switch
-                id={`offset_${option.value}`}
-                name={`offset_${option.value}`}
-                defaultChecked={defaultOffsets.includes(option.value)}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+      <ReminderOffsetSwitches idPrefix="offset" offsets={offsets} onToggle={toggleOffset} />
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save schedule"}
+        {pending ? tCommon("saving") : t("submit")}
       </Button>
     </form>
   );

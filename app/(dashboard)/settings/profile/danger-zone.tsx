@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,31 +17,25 @@ import { deleteAccount } from "./actions";
 
 export function DangerZone() {
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("settings.dangerZone");
 
   return (
     <Card className="border-destructive/30">
       <CardHeader>
-        <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
+        <CardTitle className="text-base text-destructive">{t("title")}</CardTitle>
       </CardHeader>
-      <CardContent className="flex items-center justify-between gap-4">
-        <p className="text-sm text-muted-foreground">
-          Permanently delete your account, clients, invoices, and reminder history. This
-          can&rsquo;t be undone.
-        </p>
+      <CardContent className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">{t("description")}</p>
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="destructive" className="shrink-0">
-              Delete account
+              {t("deleteAccount")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete your Chasry account?</DialogTitle>
-              <DialogDescription>
-                This permanently deletes your account, every client, every invoice, and all
-                reminder history, and cancels your subscription immediately. There&rsquo;s no
-                undo.
-              </DialogDescription>
+              <DialogTitle>{t("confirmTitle")}</DialogTitle>
+              <DialogDescription>{t("confirmDescription")}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
@@ -48,7 +43,7 @@ export function DangerZone() {
                 disabled={pending}
                 onClick={() => startTransition(async () => deleteAccount())}
               >
-                {pending ? "Deleting…" : "Yes, delete everything"}
+                {pending ? t("deleting") : t("confirmSubmit")}
               </Button>
             </DialogFooter>
           </DialogContent>

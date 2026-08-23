@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { customerSchema } from "@/lib/validations/customer";
+import { decodeReminderOverride } from "@/lib/reminder-override";
 
 export type CustomerFormState = { error?: string } | null;
 
@@ -13,7 +14,14 @@ function parseCustomerForm(formData: FormData) {
     email: formData.get("email"),
     phone: formData.get("phone"),
     notes: formData.get("notes"),
+    payment_link: formData.get("payment_link"),
+    ...decodeReminderOverride(formData),
   });
+}
+
+/** Postgres unique-violation on `customers_user_id_email_key` → a friendly message. */
+function isDuplicateEmailError(error: { code?: string } | null) {
+  return error?.code === "23505";
 }
 
 export async function createCustomer(
@@ -30,7 +38,12 @@ export async function createCustomer(
     .select("id")
     .single();
 
-  if (error || !data) return { error: "Couldn't save this client. Try again." };
+  if (error || !data) {
+    if (isDuplicateEmailError(error)) {
+      return { error: "You already have a client with this email." };
+    }
+    return { error: "Couldn't save this client. Try again." };
+  }
 
   revalidatePath("/customers");
 
@@ -56,7 +69,12 @@ export async function updateCustomer(
     .eq("id", customerId)
     .eq("user_id", user.id);
 
-  if (error) return { error: "Couldn't save changes. Try again." };
+  if (error) {
+    if (isDuplicateEmailError(error)) {
+      return { error: "You already have a client with this email." };
+    }
+    return { error: "Couldn't save changes. Try again." };
+  }
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${customerId}`);

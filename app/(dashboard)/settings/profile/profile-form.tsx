@@ -1,9 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, startTransition } from "react";
+import { useTranslations } from "next-intl";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -13,6 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateProfile, type ProfileFormState } from "./actions";
+import { profileSchema, type ProfileInput } from "@/lib/validations/profile";
+import { toFormData } from "@/lib/utils";
+import type { z } from "zod";
+
+type ProfileFormValues = z.input<typeof profileSchema>;
 
 const CURRENCIES = ["EUR", "USD", "GBP"];
 
@@ -22,7 +31,6 @@ export function ProfileForm({
 }: {
   defaultValues: {
     business_name: string;
-    timezone: string;
     currency: string;
     payment_link: string;
   };
@@ -32,9 +40,28 @@ export function ProfileForm({
     updateProfile,
     null
   );
+  const t = useTranslations("settings.profile");
+  const tCommon = useTranslations("common");
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ProfileFormValues, unknown, ProfileInput>({
+    resolver: zodResolver(profileSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    defaultValues: {
+      business_name: defaultValues.business_name,
+      currency: defaultValues.currency,
+      payment_link: defaultValues.payment_link,
+    },
+  });
+
+  const onValid = (data: ProfileInput) => startTransition(() => formAction(toFormData(data)));
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={handleSubmit(onValid)} noValidate className="space-y-4">
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
@@ -47,60 +74,56 @@ export function ProfileForm({
       )}
 
       <div className="space-y-1.5">
-        <Label>Email</Label>
+        <Label>{t("emailLabel")}</Label>
         <Input value={email} disabled />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="business_name">Business name</Label>
+      <FormField label={t("businessNameLabel")} htmlFor="business_name" error={errors.business_name?.message}>
         <Input
           id="business_name"
-          name="business_name"
-          defaultValue={defaultValues.business_name}
-          required
+          aria-invalid={!!errors.business_name}
+          {...register("business_name")}
         />
-      </div>
+      </FormField>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="currency">Currency</Label>
-          <Select name="currency" defaultValue={defaultValues.currency}>
-            <SelectTrigger id="currency" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="timezone">Timezone</Label>
-          <Input id="timezone" name="timezone" defaultValue={defaultValues.timezone} required />
-        </div>
-      </div>
+      <FormField label={t("currencyLabel")} htmlFor="currency" error={errors.currency?.message}>
+        <Controller
+          name="currency"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="currency" className="w-full sm:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </FormField>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="payment_link">Payment link (optional)</Label>
+      <FormField
+        label={t("paymentLinkLabel")}
+        htmlFor="payment_link"
+        error={errors.payment_link?.message}
+        hint={errors.payment_link ? undefined : t("paymentLinkHint")}
+      >
         <Input
           id="payment_link"
-          name="payment_link"
           type="url"
           placeholder="https://buy.stripe.com/... or https://paypal.me/you"
-          defaultValue={defaultValues.payment_link}
+          aria-invalid={!!errors.payment_link}
+          {...register("payment_link")}
         />
-        <p className="text-xs text-muted-foreground">
-          Add a Stripe Payment Link, PayPal.me, or any page clients can pay you from. When set,
-          reminder emails include a &ldquo;Pay now&rdquo; button linking here — you can also set a
-          different one per invoice.
-        </p>
-      </div>
+      </FormField>
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save changes"}
+        {pending ? tCommon("saving") : tCommon("saveChanges")}
       </Button>
     </form>
   );

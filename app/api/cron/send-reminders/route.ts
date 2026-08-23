@@ -42,10 +42,17 @@ export async function GET(request: Request) {
   // get chased too, that's the point of letting people try Chasry for free.
   // Plan only limits how many active invoices someone can have at once (see
   // lib/plan.ts), not whether reminders work on the ones they do have.
+  //
+  // `reminder_settings` is fetched for every user, not just ones with
+  // `enabled = true` (unlike before per-client/per-invoice overrides
+  // existed) — a user could have the account-wide default off but a
+  // specific client or invoice overridden back on, so the account-level
+  // row is just one input to the per-invoice resolution below, not a
+  // pre-filter.
   const [{ data: profiles, error: profilesError }, { data: settings, error: settingsError }] =
     await Promise.all([
       supabase.from("profiles").select("id, business_name, email, payment_link"),
-      supabase.from("reminder_settings").select("user_id, offsets, enabled").eq("enabled", true),
+      supabase.from("reminder_settings").select("user_id, offsets, enabled"),
     ]);
 
   if (profilesError || settingsError) {
@@ -58,7 +65,7 @@ export async function GET(request: Request) {
 
   const allUserIds = (profiles ?? []).map((p) => p.id);
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
-  const offsetsByUser = new Map((settings ?? []).map((s) => [s.user_id, s.offsets]));
+  const defaultSettingsByUser = new Map((settings ?? []).map((s) => [s.user_id, s]));
 
   if (allUserIds.length === 0) {
     return NextResponse.json({ checked: 0, sent: 0, skipped: 0, failed: 0 });
@@ -66,7 +73,9 @@ export async function GET(request: Request) {
 
   const { data: invoices, error: invoicesError } = await supabase
     .from("invoices")
-    .select("id, user_id, customer_id, invoice_number, amount, currency, due_date, payment_link")
+    .select(
+      "id, user_id, customer_id, invoice_number, amount, currency, due_date, reminder_offsets, reminder_enabled"
+    )
     .eq("status", "unpaid")
     .in("user_id", allUserIds);
 
@@ -82,7 +91,7 @@ export async function GET(request: Request) {
   const customerIds = [...new Set(invoices.map((i) => i.customer_id))];
   const { data: customers, error: customersError } = await supabase
     .from("customers")
-    .select("id, name, email")
+    .select("id, name, email, payment_link, reminder_offsets, reminder_enabled")
     .in("id", customerIds);
 
   if (customersError) {
@@ -114,10 +123,19 @@ export async function GET(request: Request) {
   const todayUtcMidnight = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
 
   for (const invoice of invoices) {
-    const offsets = offsetsByUser.get(invoice.user_id);
+    const defaultSettings = defaultSettingsByUser.get(invoice.user_id);
     const profile = profileById.get(invoice.user_id);
     const customer = customerById.get(invoice.customer_id);
-    if (!offsets || !profile || !customer) continue;
+    if (!defaultSettings || !profile || !customer) continue;
+
+    // Cascade: invoice override → client override → account default. Both
+    // `reminder_offsets`/`reminder_enabled` are always written together by
+    // the app (see lib/reminder-override.ts), so checking one for `null`
+    // is enough to tell "no override at this level" from "override, but
+    // it's an empty schedule."
+    const enabled = invoice.reminder_enabled ?? customer.reminder_enabled ?? defaultSettings.enabled;
+    if (!enabled) continue;
+    const offsets = invoice.reminder_offsets ?? customer.reminder_offsets ?? defaultSettings.offsets;
 
     // Every offset whose target date has arrived (today or earlier — earlier
     // covers an invoice logged already overdue, or a missed cron run) and
@@ -149,7 +167,7 @@ export async function GET(request: Request) {
     const businessName = profile.business_name || profile.email;
     const amountLabel = formatMoney(Number(invoice.amount), invoice.currency);
     const dueDateFormatted = formatDate(invoice.due_date);
-    const paymentLink = invoice.payment_link ?? profile.payment_link ?? undefined;
+    const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
 
     const element =
       tone === "seriously_overdue"
