@@ -28,6 +28,15 @@ export default async function BillingSettingsPage() {
     canceled: t("statusCanceled"),
   };
 
+  // Same colour vocabulary as InvoiceStatusBadge — emerald reads "healthy",
+  // red "needs attention" — so a status chip means the same thing wherever it
+  // appears. Only the two isPro() statuses can reach this map; every other
+  // status renders the neutral "Free" chip instead.
+  const proStatusStyles: Record<string, string> = {
+    active: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    past_due: "bg-red-50 text-red-700 border-red-200",
+  };
+
   return (
     <div className="space-y-6">
       {status === "past_due" && (
@@ -55,7 +64,7 @@ export default async function BillingSettingsPage() {
                     })}
               </p>
             </div>
-            <Badge variant="outline">
+            <Badge variant="outline" className={pro ? proStatusStyles[status] : undefined}>
               {pro ? (statusLabel[status] ?? status) : tCommon("free")}
             </Badge>
           </div>
