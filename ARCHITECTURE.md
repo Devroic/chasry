@@ -914,6 +914,18 @@ in the app is below the fold or in a state that's fine to lazy-load; this one is
 - **Vercel's Git integration may need reconnecting** after the org transfer — Vercel links via its
   GitHub App, and a change of owner commonly breaks it. The failure mode is silent: pushes simply
   stop triggering deploys, with no error. Check Vercel → Project → Settings → Git.
+- **If the repo is renamed `Devroic/chasry-webapp` → `Devroic/chasry`, re-point Sentry too.**
+  Planned around deployment. Like the Vercel item above, this breaks *quietly* rather than erroring:
+  - **Unaffected:** `next.config.ts`'s `org: "chasry"` / `project: "javascript-nextjs"` — those are
+    *Sentry* slugs, not GitHub names. Also unaffected is the GitHub integration's repo access, which
+    is installed org-wide over `Devroic` and already lists both `chasry` and `chasry-webapp`.
+  - **Must be updated:** the repo-*specific* settings — **Code Mappings / stack-trace linking**
+    (Settings → Integrations → GitHub → Configurations → Code Mappings) and release/suspect-commit
+    association. These name a single repo, so after a rename stack traces stop linking to source
+    and suspect commits stop resolving, with no error anywhere.
+  - Worth doing at the same time: the Sentry **project slug is still Sentry's default
+    `javascript-nextjs`**. Renaming it to match the app would be clearer — but it's referenced in
+    `next.config.ts`, so change both together or source-map uploads start failing.
 - No automated tests exist (unit or e2e).
 - `FREE_INVOICE_LIMIT = 3` is a starting guess, not validated against real usage.
 - i18n coverage stops at the page/component layer — Server Action validation errors and success
