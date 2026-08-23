@@ -79,6 +79,31 @@ See `PROJECT.md` for the reasoning. Mechanically:
 
 ## Database schema (Postgres via `supabase/migrations/0001_init.sql`)
 
+**How migrations are applied — and the gap in it.** `supabase/migrations/*.sql` is the
+version-controlled *history* of the schema: what changed, when, and why (each file leads with a
+comment explaining the reasoning). Those files are **never executed by the app** — not on boot,
+not on request. That's deliberate: this deploys to Vercel as serverless functions, so "run
+migrations at startup" would mean every cold start racing every other concurrent instance to run
+DDL, and one failure would take down the whole app rather than one deploy. Schema changes belong
+to the *deploy* step, not the *runtime*.
+
+In practice they've been applied **by hand**, pasting each file into the Supabase dashboard's SQL
+editor. That works, but it has a real weakness: **nothing records which migrations have actually
+run.** Supabase only populates its `supabase_migrations.schema_migrations` ledger for migrations
+pushed through the Supabase CLI, and this project has never been CLI-linked (no `supabase/config.toml`,
+no `.temp` state). So the local file list and the live database can silently drift — which already
+bit us: it took a live column-existence probe to establish whether `0005` had been applied, and an
+earlier note in this file confidently asserted the wrong answer. Re-running a file by mistake is
+mostly survivable because most of these are written idempotently (`drop column if exists`), but
+that's a convention, not a guarantee — `0001_init.sql` and `0003`'s `add constraint` are not.
+
+**The fix, not yet done:** link the project with the Supabase CLI (`supabase link --project-ref
+qcycitynesqtniwxpllv`) and apply future migrations with `supabase db push`, which records each one
+in the ledger and refuses to re-run what's already applied. Ideally wired into the Vercel deploy
+as a build/deploy step so schema and code ship together. Until that exists, **verify against the
+live DB rather than trusting this file or the migration list** — query the column/constraint
+directly, the way `0005` was confirmed.
+
 - `profiles` — 1:1 with `auth.users`, auto-created by the `handle_new_user` trigger.
   `subscription_status` defaults to **`'none'`** (free plan) and is one of
   `'none' | 'active' | 'past_due' | 'canceled'` — there is no `'trialing'`/`'incomplete'` value
@@ -104,12 +129,9 @@ See `PROJECT.md` for the reasoning. Mechanically:
   select list first (it was never read by the reminder engine, which is driven entirely by
   `due_date`, and wasn't surfaced in any list/sort/filter — just a rarely-touched field
   defaulting to today), then dropped via `supabase/migrations/0005_drop_invoices_issued_date.sql`,
-  same pattern as `profiles.timezone` (`0002_drop_profiles_timezone.sql`). **That migration is
-  written but not yet applied** — the Supabase dashboard SQL editor wasn't reachable through
-  browser automation when this was done (blank page after repeated navigation attempts, likely a
-  session issue, not a code problem); run it manually before assuming the column is actually
-  gone from the live DB. The app code no longer reads or writes it either way, so this is safe to
-  leave pending.
+  same pattern as `profiles.timezone` (`0002_drop_profiles_timezone.sql`). **Applied** — verified
+  by querying the column and getting Postgres `42703: column invoices.issued_date does not exist`,
+  with every other app-used column on `invoices` confirmed still present.
 - `reminder_settings` — one row per user, `offsets int[]` (negative = days before due, positive
   = after), default `{-7,-3,1}`.
 - `reminder_logs` — `unique(invoice_id, offset_days)` is the idempotency guard that stops the
@@ -713,10 +735,13 @@ in the app is below the fold or in a state that's fine to lazy-load; this one is
 
 ## Open items (not yet done)
 
-- The packaged `/security-review` skill couldn't run — it diffs against a GitHub `origin/HEAD`
-  remote, which this repo doesn't have (local-only, not pushed anywhere yet). Once it's pushed,
-  run the real skill (and consider `/code-review ultra` for a deeper multi-agent pass) rather
-  than relying solely on the manual pass above.
+- **Migrations are applied by hand with no ledger** — see "How migrations are applied" under
+  Database schema. Link the Supabase CLI and switch to `supabase db push` so applied migrations
+  are tracked and can't silently drift from `supabase/migrations/`.
+- The repo now **does** have a GitHub remote (`origin` → `andreaseracleous99/chasry-webapp`), so
+  the packaged `/security-review` skill should now run — it previously couldn't because it diffs
+  against `origin/HEAD`. Worth running it (and `/code-review ultra`) rather than continuing to
+  rely on the manual security pass above, especially over the auth/billing/RLS surface.
 - Sentry isn't actually integrated despite the env var placeholder.
 - No automated tests exist (unit or e2e).
 - `FREE_INVOICE_LIMIT = 3` is a starting guess, not validated against real usage.
