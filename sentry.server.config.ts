@@ -7,12 +7,13 @@
 // `@sentry/wizard` so next.config.ts keeps its security headers and the
 // next-intl plugin wrapper.
 import * as Sentry from "@sentry/nextjs";
+import { sentryDsn, sentryEnabled, sentryEnvironment } from "./sentry.shared";
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: sentryDsn,
 
-  // No DSN (local dev, CI) => the SDK no-ops. Nothing to guard.
-  enabled: Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN),
+  // Off in local dev, and a no-op without a DSN — see sentry.shared.ts.
+  enabled: sentryEnabled,
 
   // Errors only for now. Traces are the expensive part of the 5k/month free
   // tier and this app has no perf problem worth sampling yet; turn this up
@@ -21,8 +22,6 @@ Sentry.init({
 
   // Never let Sentry's own noise reach users or dev logs.
   debug: false,
-
-  // Environment shows up as a filter/facet in the Sentry UI, so a local
-  // mistake can't be confused with a real production incident.
-  environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+  // Facet the Sentry alert rule filters on, so only production emails.
+  environment: sentryEnvironment,
 });

@@ -3,13 +3,16 @@
 // logged on every dark-mode page load and went unnoticed for days because
 // nothing was watching the console.
 import * as Sentry from "@sentry/nextjs";
+import { sentryDsn, sentryEnabled, sentryEnvironment } from "./sentry.shared";
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  enabled: Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN),
+  dsn: sentryDsn,
+  // Off in local dev — see sentry.shared.ts.
+  enabled: sentryEnabled,
   tracesSampleRate: 0,
   debug: false,
-  environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+  // Facet the Sentry alert rule filters on, so only production emails.
+  environment: sentryEnvironment,
 
   // Session Replay is off: it records user sessions, which on this app means
   // capturing real client names, email addresses and invoice amounts into a

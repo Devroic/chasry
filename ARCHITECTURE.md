@@ -521,8 +521,24 @@ exactly what failed.
 
 **Deliberate configuration choices:**
 
-- **`enabled` is gated on the DSN**, so no DSN (local dev, CI) means the SDK no-ops. Nothing to
-  guard at call sites.
+- **Local development reports nothing.** `sentry.shared.ts` is the single gate all three configs
+  import, so they can't drift: reporting is on only when a DSN exists **and** `VERCEL_ENV` is set.
+  That variable is present on Vercel (`production`/`preview`) and absent under a plain `next dev`,
+  which is exactly the distinction wanted. Rationale: the free tier is 5,000 events/month and a
+  crash loop while developing could burn a real share of it for nothing; locally the error is
+  already in your terminal and browser console, so Sentry adds nothing but noise in the issue feed.
+  Set `SENTRY_FORCE_ENABLE=1` in `.env.local` to test Sentry locally on purpose.
+- **Preview deploys still report, but shouldn't email.** They run real code against real
+  infrastructure, so failures there are worth capturing — but they aren't user-facing. The
+  intended split is: capture at the SDK (preview + production), email only on production via the
+  alert rule's environment filter.
+  > **Not yet applied — needs a first production deploy.** Sentry's *Filter Issues → environments*
+  > dropdown only offers environments it has actually *seen*, and right now that's `development`
+  > and `setup-verification`. `production` can't be selected before the app has run there once.
+  > **After the first production deploy**, set it: Alerts → "Send a notification for high priority
+  > issues" → Edit → Filter Issues → `production`. Until then the SDK gate above is what's doing
+  > the work, and it already covers the case that prompted this (local dev noise reaching the
+  > inbox — the alert had already fired twice from local testing).
 - **`tracesSampleRate: 0`** — errors only. Traces are the main consumer of the 5k-events/month free
   tier and there's no latency problem worth sampling yet. Raise deliberately.
 - **Session Replay is off.** It records real sessions, which here would ship client names, email
