@@ -87,22 +87,33 @@ migrations at startup" would mean every cold start racing every other concurrent
 DDL, and one failure would take down the whole app rather than one deploy. Schema changes belong
 to the *deploy* step, not the *runtime*.
 
-In practice they've been applied **by hand**, pasting each file into the Supabase dashboard's SQL
-editor. That works, but it has a real weakness: **nothing records which migrations have actually
-run.** Supabase only populates its `supabase_migrations.schema_migrations` ledger for migrations
-pushed through the Supabase CLI, and this project has never been CLI-linked (no `supabase/config.toml`,
-no `.temp` state). So the local file list and the live database can silently drift — which already
-bit us: it took a live column-existence probe to establish whether `0005` had been applied, and an
-earlier note in this file confidently asserted the wrong answer. Re-running a file by mistake is
-mostly survivable because most of these are written idempotently (`drop column if exists`), but
-that's a convention, not a guarantee — `0001_init.sql` and `0003`'s `add constraint` are not.
+**Apply them with the Supabase CLI — never by pasting into the dashboard SQL editor.** The project
+is CLI-linked (`supabase/config.toml` + `supabase/.temp/`, the latter gitignored), so:
 
-**The fix, not yet done:** link the project with the Supabase CLI (`supabase link --project-ref
-qcycitynesqtniwxpllv`) and apply future migrations with `supabase db push`, which records each one
-in the ledger and refuses to re-run what's already applied. Ideally wired into the Vercel deploy
-as a build/deploy step so schema and code ship together. Until that exists, **verify against the
-live DB rather than trusting this file or the migration list** — query the column/constraint
-directly, the way `0005` was confirmed.
+```
+npm run db:status   # supabase migration list — local vs remote, side by side
+npm run db:push     # applies anything pending, records it in the ledger
+npm run db:diff     # schema drift between local migrations and the live DB
+```
+
+`db:push` writes each applied version to Supabase's `supabase_migrations.schema_migrations` ledger
+and **refuses to re-run** what's already there, which is the whole point. Add `--dry-run` to see
+what *would* apply first; that's worth doing on anything destructive.
+
+`0001`–`0006` were applied by hand before the CLI was linked, so the ledger had no record of them.
+They were reconciled with `supabase migration repair --linked --status applied 0001 … 0006`, which
+only writes ledger rows — it runs none of the SQL. **That step was mandatory, not cosmetic:** with
+an empty ledger, the first `db:push` would have tried to re-run `0001_init.sql` (`create table` on
+live tables) and `0003`'s `add constraint`, neither of which is idempotent. If you ever restore
+from a backup or point at a fresh project, expect to repair again before pushing.
+
+Why this matters, from actual experience: before the ledger existed, establishing whether `0005`
+had been applied required probing the live DB for the column, and an earlier revision of this file
+asserted the wrong answer with full confidence. `npm run db:status` now answers that in one command.
+
+**`supabase/config.toml` configures the *local* dev stack** (`supabase start`, Postgres in Docker),
+**not** the hosted project — editing `auth.minimum_password_length` there changes nothing in
+production. Remote auth/SMTP settings still live in the Supabase dashboard.
 
 - `profiles` — 1:1 with `auth.users`, auto-created by the `handle_new_user` trigger, which also
   copies `business_name` out of the signup metadata
@@ -801,9 +812,9 @@ in the app is below the fold or in a state that's fine to lazy-load; this one is
 
 ## Open items (not yet done)
 
-- **Migrations are applied by hand with no ledger** — see "How migrations are applied" under
-  Database schema. Link the Supabase CLI and switch to `supabase db push` so applied migrations
-  are tracked and can't silently drift from `supabase/migrations/`.
+- Migrations are now CLI-managed (`npm run db:push`), but that push is still **manual** — it isn't
+  wired into the Vercel deploy, so schema and code can ship out of step. Worth adding as a deploy
+  step once there's real traffic; the risk today is only forgetting to run it.
 - The repo now **does** have a GitHub remote (`origin` → `andreaseracleous99/chasry-webapp`), so
   the packaged `/security-review` skill should now run — it previously couldn't because it diffs
   against `origin/HEAD`. Worth running it (and `/code-review ultra`) rather than continuing to
