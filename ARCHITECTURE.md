@@ -80,6 +80,46 @@ See `PROJECT.md` for the reasoning. Mechanically:
   Settings → Billing, via `lib/billing.ts`'s `createCheckoutSession()` (no `trial_period_days` —
   the free plan already serves that purpose).
 
+## Stripe account configuration (as actually set up)
+
+The code was written long before the Stripe account existed, so this records what had to be
+configured *in Stripe* for it to work. Account `acct_1U7jIgRtidinAV69`, Cyprus, EUR.
+
+- **Product/price**: one product, `prod_V800ZHLx25qaAU` ("Chasry Pro"), €10.00/month.
+  - **Live price: `price_1U7k0RRtidinAV69745bycOw`** — this is what `STRIPE_PRICE_ID` must be in
+    Vercel. `.env.local` deliberately holds the *test* price instead.
+  - Test mode was **empty** until set up separately — products/prices do not cross the
+    test/live boundary, so a live-only product means nothing works locally.
+- **VAT is inclusive** (`tax_behavior: "inclusive"`), and the account default under Settings → Tax
+  is "Yes". This matters: exclusive would add VAT *on top*, so a €10 subscription would charge
+  €11.90 the moment Stripe Tax is switched on, contradicting every "€10/month" string in the app
+  and on chasry.com. Inclusive keeps the customer paying exactly €10 forever; the ~€1.60 VAT comes
+  out of Chasry's side. **Stripe Tax is not activated and there are no registrations**, so today no
+  VAT is calculated at all and €10 is €10 either way — this only bites after VAT registration.
+  Note `tax_behavior` is immutable *once set*; it was editable here only because it had never been
+  set. After real charges exist, changing it means creating a new price and archiving the old.
+- **Customer portal**: a configuration must exist or `openBillingPortal`
+  (`settings/billing/actions.ts`) throws for every user — none existed in either mode. Now
+  configured in both: invoice history, payment-method updates, customer detail updates, cancel
+  **at period end** (matches what `mapStripeStatus` expects — the user keeps Pro until the paid
+  period runs out), cancellation reason collected (free churn data), and subscription *updates*
+  disabled since there is only one plan to be on.
+- **Customer receipt emails were off** — customers would have been charged monthly and received
+  nothing, which is a standard source of "what is this charge?" disputes. "Successful payments"
+  and "Refunds" are now enabled under Settings → Business → Customer emails.
+- Payouts: automatic, weekly on Monday. Radar: **Lite** (free) — a €10/month SaaS subscription has
+  no resale value to fraudsters, card testing is covered by Lite, and EU SCA shifts most fraud
+  liability to the issuer. Statement descriptor `CHASRY.COM`, shortened `CHASRY`.
+- **Not done, and blocked on deployment**: the production webhook endpoint. It needs the live
+  Vercel URL, and it is what produces the real `STRIPE_WEBHOOK_SECRET` for production. The value
+  in `.env.local` is a locally generated one, only good for signing simulated events.
+
+**Verified end to end, not assumed** (`checkout.session.completed` → account becomes Pro): a real
+test-mode subscription was created, a properly signed event was POSTed to the local webhook, and
+`profiles` flipped `none` → `active` with `stripe_customer_id`, `stripe_subscription_id` and
+`current_period_end` all populated. A forged signature was rejected with 400. The test account was
+restored to `none` and the Stripe objects deleted afterwards.
+
 ## Database schema (Postgres via `supabase/migrations/0001_init.sql`)
 
 **How migrations are applied — and the gap in it.** `supabase/migrations/*.sql` is the
@@ -922,12 +962,21 @@ rather than something to improvise on the day.
    - `NEXT_PUBLIC_SENTRY_DSN` — without it production reports **nothing**.
    - `CRON_SECRET` — must match `.env.local`'s current value. It was regenerated (was an
      11-character word, now 32 random bytes); a mismatch means every cron run 401s.
+   - `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` — the **live** key and
+     **`price_1U7k0RRtidinAV69745bycOw`**. `.env.local` holds test-mode values on purpose; copying
+     them to Vercel would mean real customers checking out against a sandbox price.
+   - `STRIPE_WEBHOOK_SECRET` — created *by* step 2b below, not copied from `.env.local`.
    - `SENTRY_AUTH_TOKEN` *(optional)* — source maps, so stack traces aren't minified.
    - `UPSTASH_REDIS_REST_URL` / `_TOKEN` *(optional)* — switches rate limiting on.
    - Env var changes need a **redeploy** to take effect.
 2. **Reconnect Vercel's Git integration** — Vercel links through its GitHub App, and the change of
    owner during the org transfer commonly breaks it. Silent failure mode: pushes simply stop
    triggering deploys, with no error anywhere. Check Vercel → Project → Settings → Git.
+2b. **Create the live Stripe webhook endpoint** — Developers → Webhooks → `https://<app>/api/stripe/webhook`,
+   subscribed to `checkout.session.completed`, `customer.subscription.created|updated|deleted`.
+   Stripe hands back the live `whsec_…`; that is the value for `STRIPE_WEBHOOK_SECRET` in Vercel.
+   Until this exists, **people can pay and never get Pro** — the exact case the webhook's
+   `level: "fatal"` Sentry report was added for.
 3. **Run `npm run db:push`** — migrations aren't part of the deploy pipeline yet.
 
 **After the first production deploy — verify, don't assume:**

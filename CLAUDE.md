@@ -91,6 +91,19 @@ and had to be circled back for, which is why this section exists.
   `Devroic/chasry`, the landing page). GitHub redirects the old URL, so stale clones still work.
   `origin/HEAD` is set so diff-based tooling (`/security-review`, etc.) works. Don't push without
   being asked — commits happen locally by default; ask before `git push`.
+- **Never write `.env.local` with PowerShell's `Set-Content`/`Out-File -Encoding utf8`** — on
+  Windows PowerShell 5.1 that writes a **UTF-8 BOM**, and the BOM becomes part of the *first*
+  variable's name (`﻿NEXT_PUBLIC_SUPABASE_URL`), so that variable silently reads as
+  `undefined` while every other line still works. This actually happened while wiring up Stripe
+  and it broke Supabase for the whole app. Use `[IO.File]::WriteAllText($p, $text, (New-Object
+  System.Text.UTF8Encoding($false)))`, or edit the file with the Edit tool. Check with
+  `head -c 3 .env.local | od -An -tx1` — `ef bb bf` means a BOM is there.
+- **A blank dashboard in the in-app Browser pane is usually not a bug.** Pages behind
+  `(dashboard)/loading.tsx` render as a permanent spinner whenever the pane isn't displayed:
+  React reveals suspended content inside `requestAnimationFrame`, and a non-compositing tab never
+  fires it. The content is present the whole time — check `document.getElementById('S:0').textContent`
+  before debugging the app. Screenshot calls timing out with "the Browser pane is not displayed"
+  is the tell.
 - `.env.local` has real (non-placeholder) Supabase credentials for local dev as of this writing —
   don't overwrite it with placeholder values when testing; if you need a placeholder env for a
   quick build check, restore the real values afterward rather than leaving it stubbed out.
