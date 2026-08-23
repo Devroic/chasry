@@ -104,7 +104,16 @@ as a build/deploy step so schema and code ship together. Until that exists, **ve
 live DB rather than trusting this file or the migration list** — query the column/constraint
 directly, the way `0005` was confirmed.
 
-- `profiles` — 1:1 with `auth.users`, auto-created by the `handle_new_user` trigger.
+- `profiles` — 1:1 with `auth.users`, auto-created by the `handle_new_user` trigger, which also
+  copies `business_name` out of the signup metadata
+  (`auth.users.raw_user_meta_data ->> 'business_name'`, see
+  `0006_handle_new_user_business_name.sql`). **Don't move that back into app code.** It used to be
+  a `.update()` in `signup()` right after `signUp()`, which silently did nothing whenever email
+  confirmation is required (the default): there's no session at that point, so the RLS-scoped
+  client had no permission to write the row. The name was lost and onboarding asked for it a
+  second time — the bug was invisible because onboarding then saved it, so the value did
+  eventually appear. Doing it in the security-definer trigger writes it atomically with the row,
+  before RLS is ever in play.
   `subscription_status` defaults to **`'none'`** (free plan) and is one of
   `'none' | 'active' | 'past_due' | 'canceled'` — there is no `'trialing'`/`'incomplete'` value
   and no `trial_ends_at` column; both were removed when the pricing model changed from
@@ -434,15 +443,21 @@ below the `header + sidebar/main` flex row, not inside it, so it spans the full 
 the sidebar.
 
 `/help` (`app/help/page.tsx`) is a **public, un-gated page** — root-level, not inside any route
-group, so it composes `<SiteHeader>`/`<SiteFooter>` itself rather than inheriting a layout. It's
-reachable both logged out (footer "Help" link) and logged in (account dropdown "Help & FAQs"),
-which is why it's public rather than living under `(dashboard)`. Content is a static FAQ list
-(no accordion/collapse — no `Accordion` primitive is installed, and the FAQ is short enough that
-a plain Q&A list is simpler) plus a "Still stuck?" mailto CTA at the bottom. Uses the same
-`BackLink` (`href="/"`, generic "Back" label since there's no single true parent page — "/"
-already smart-redirects to `/dashboard` or `/login` depending on auth state) as every other page
-in the app, instead of the bottom-of-page "Back to Chasry" CTA it used to have — consistency with
-the rest of the app's back-navigation pattern was judged more valuable than a page-specific CTA.
+group, so it composes its own chrome rather than inheriting a layout. It's reachable both logged
+out (footer "Help" link) and logged in (account dropdown "Help & FAQs"), which is why it's public
+rather than living under `(dashboard)`. Content is a static FAQ list (no accordion/collapse — no
+`Accordion` primitive is installed, and the FAQ is short enough that a plain Q&A list is simpler)
+plus a "Still stuck?" mailto CTA at the bottom.
+
+**It renders in two different chromes depending on auth state.** A signed-in visitor gets the full
+`DashboardShell` (header + sidebar nav), identical to every other page behind login; a signed-out
+visitor gets `<SiteHeader>` plus a `BackLink` to `/`. Previously it always used the slim marketing
+header, so opening Help from inside the app made the navigation vanish and felt like being ejected
+from it. The check is `getOptionalUser()` (`lib/auth.ts` — a non-redirecting counterpart to
+`requireUser()`, sharing the same per-request cache) plus `profile.onboarded_at`: the shell is
+shown only to a **finished** account, since a half-onboarded user would otherwise get nav links
+that immediately bounce them back to `/onboarding`. Any future page that's reachable in both states
+should follow this shape rather than picking one chrome and living with it in the other.
 
 **Detail-page info grids use small `lucide-react` icons per field** (invoice detail: Wallet/
 CalendarClock/User/Link2/StickyNote; customer detail: Phone/Link2/Bell/StickyNote) — a UX pass
@@ -644,9 +659,35 @@ passes it straight in; don't recompute the day-math differently at a new call si
 
 ## Forms & validation
 
+**Pending state is `<Button loading>`, not `disabled={pending}`.** The shared `Button`
+(`components/ui/button.tsx`) takes a `loading` prop that renders a `Loader2` spinner before the
+label, sets `aria-busy`, and disables the button — so every submit, delete and destructive action
+in the app shows the same feedback instead of each form inventing its own (previously buttons only
+greyed out, which on a slow save looked like nothing had happened). Use `loading={pending}` on any
+new async action; keep `disabled` for genuine "not allowed yet" states (the invoice form uses both:
+`loading={pending} disabled={customers.length === 0}`). It's ignored under `asChild`, where the
+child owns its content.
+
+**Success feedback is a toast, not an inline `<Alert>`** — `lib/use-success-toast.ts`'s
+`useSuccessToast(state)`, used by the profile and reminder settings forms. The old inline alert
+rendered *above* the form, so on a long settings form you'd scroll down, hit Save, and see no
+confirmation at all; it also lingered as stale "Saved." text next to fields you'd since edited.
+The hook keys on the `useActionState` state object's **identity**, not the message string, so
+saving twice in a row toasts twice — a `[message]` dependency would swallow the second one.
+
 Every form the user directly complained about (auth: login/signup/reset-password/confirm;
 onboarding) uses `react-hook-form` + `zodResolver` **directly in the component** — `mode:
-"onBlur"`, `reValidateMode: "onChange"` — paired with `<FormField>`
+"onSubmit"`, `reValidateMode: "onChange"` — paired with `<FormField>`
+
+> **`mode` is `"onSubmit"`, not `"onBlur"` — don't change it back.** With `"onBlur"` (the previous
+> setting, used by all 8 forms) simply *leaving* a field ran its validation, so clicking a nav link
+> away from a half-filled "Add client" form popped a red "Name is required" on the way out — the
+> app scolding you for navigating. It also made errors appear one-at-a-time as you tabbed through,
+> so an empty form submitted blind seemed to report only the first problem. `"onSubmit"` means
+> nothing validates until the user actually presses the button, and then **every** field reports at
+> once (zod returns all issues; verified — an empty client form yields both `name` and `email`).
+> `reValidateMode: "onChange"` is kept so that *after* a failed submit, fixing a field clears its
+> error live rather than making the user re-submit to find out.
 (`components/ui/form-field.tsx`, label + input + inline red error text, `labelAction` slot for
 things like a "Forgot password?" link next to the label) and `Input`'s existing
 `aria-invalid:border-destructive` styling (already wired in the shadcn component, just needed

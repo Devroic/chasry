@@ -19,6 +19,7 @@ import {
 import { updateProfile, type ProfileFormState } from "./actions";
 import { profileSchema, type ProfileInput } from "@/lib/validations/profile";
 import { toFormData } from "@/lib/utils";
+import { useSuccessToast } from "@/lib/use-success-toast";
 import type { z } from "zod";
 
 type ProfileFormValues = z.input<typeof profileSchema>;
@@ -49,7 +50,7 @@ export function ProfileForm({
     formState: { errors },
   } = useForm<ProfileFormValues, unknown, ProfileInput>({
     resolver: zodResolver(profileSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
       business_name: defaultValues.business_name,
@@ -58,6 +59,8 @@ export function ProfileForm({
     },
   });
 
+  useSuccessToast(state);
+
   const onValid = (data: ProfileInput) => startTransition(() => formAction(toFormData(data)));
 
   return (
@@ -65,11 +68,6 @@ export function ProfileForm({
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
-        </Alert>
-      )}
-      {state?.success && (
-        <Alert>
-          <AlertDescription>{state.success}</AlertDescription>
         </Alert>
       )}
 
@@ -122,7 +120,7 @@ export function ProfileForm({
         />
       </FormField>
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" loading={pending}>
         {pending ? tCommon("saving") : tCommon("saveChanges")}
       </Button>
     </form>

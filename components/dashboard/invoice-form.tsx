@@ -35,13 +35,9 @@ type CustomerOption = {
   reminder_enabled: boolean | null;
 };
 
-function addDaysIso(days: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
 }
-
-const DUE_DATE_PRESET_DAYS = [7, 14, 30] as const;
 
 export function InvoiceForm({
   action,
@@ -81,11 +77,6 @@ export function InvoiceForm({
   const t = useTranslations("invoices.form");
   const tCommon = useTranslations("common");
   const tReminderOverride = useTranslations("reminderOverride");
-  const presetLabels: Record<(typeof DUE_DATE_PRESET_DAYS)[number], string> = {
-    7: t("preset1Week"),
-    14: t("preset2Weeks"),
-    30: t("preset1Month"),
-  };
 
   const initialCustomerId =
     searchParams.get("new_customer_id") ?? defaultValues?.customer_id ?? defaultCustomerId ?? "";
@@ -94,12 +85,11 @@ export function InvoiceForm({
     register,
     control,
     watch,
-    setValue,
     handleSubmit,
     formState: { errors },
   } = useForm<InvoiceFormValues, unknown, InvoiceInput>({
     resolver: zodResolver(invoiceSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
       // If we just created a client inline (redirected back from /customers/new),
@@ -108,7 +98,7 @@ export function InvoiceForm({
       invoice_number: defaultValues?.invoice_number ?? suggestedInvoiceNumber ?? "",
       amount: defaultValues?.amount,
       currency,
-      due_date: defaultValues?.due_date ?? addDaysIso(14),
+      due_date: defaultValues?.due_date ?? todayIso(),
       notes: defaultValues?.notes ?? "",
       reminder_offsets: null,
       reminder_enabled: null,
@@ -237,21 +227,6 @@ export function InvoiceForm({
         />
       </FormField>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">{t("presetsLabel")}</span>
-        {DUE_DATE_PRESET_DAYS.map((days) => (
-          <Button
-            key={days}
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setValue("due_date", addDaysIso(days), { shouldValidate: true })}
-          >
-            {presetLabels[days]}
-          </Button>
-        ))}
-      </div>
-
       <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
         {effectivePaymentLink
           ? t("paymentLinkNote", {
@@ -280,7 +255,7 @@ export function InvoiceForm({
         onToggleOffset={toggleOffset}
       />
 
-      <Button type="submit" disabled={pending || customers.length === 0}>
+      <Button type="submit" loading={pending} disabled={customers.length === 0}>
         {pending ? tCommon("saving") : (submitLabel ?? t("submitCreate"))}
       </Button>
     </form>

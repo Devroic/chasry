@@ -30,6 +30,18 @@ export const getProfile = cache(async (userId: string) => {
   return data;
 });
 
+/**
+ * Auth lookup that returns `null` instead of redirecting — for pages that are
+ * reachable both logged in and logged out and need to render differently
+ * (currently just `/help`, which shows the full dashboard chrome to a signed-in
+ * user and the slim marketing header to everyone else). Shares the same
+ * per-request cache as `requireUser()`, so using both costs one auth call.
+ */
+export async function getOptionalUser() {
+  const { user } = await getAuthedUser();
+  return user;
+}
+
 /** Auth check shared by every (dashboard) page: redirects to /login if unauthenticated. */
 export async function requireUser() {
   const { supabase, user } = await getAuthedUser();

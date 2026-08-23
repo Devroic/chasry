@@ -40,7 +40,7 @@ export function DangerZone() {
             <DialogFooter>
               <Button
                 variant="destructive"
-                disabled={pending}
+                loading={pending}
                 onClick={() => startTransition(async () => deleteAccount())}
               >
                 {pending ? t("deleting") : t("confirmSubmit")}

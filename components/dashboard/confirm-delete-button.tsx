@@ -47,7 +47,7 @@ export function ConfirmDeleteButton({
           </Button>
           <Button
             variant="destructive"
-            disabled={pending}
+            loading={pending}
             onClick={() => startTransition(async () => action())}
           >
             {pending ? t("deleting") : t("delete")}

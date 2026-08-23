@@ -34,7 +34,7 @@ function LoginForm() {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     reValidateMode: "onChange",
   });
 
@@ -86,7 +86,7 @@ function LoginForm() {
           />
         </FormField>
 
-        <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+        <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
           {pending ? t("submitting") : t("submit")}
         </Button>
       </form>

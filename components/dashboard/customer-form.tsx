@@ -50,7 +50,7 @@ export function CustomerForm({
     formState: { errors },
   } = useForm<CustomerFormValues, unknown, CustomerInput>({
     resolver: zodResolver(customerSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
       name: defaultValues?.name ?? "",
@@ -149,7 +149,7 @@ export function CustomerForm({
         onToggleOffset={toggleOffset}
       />
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" loading={pending}>
         {pending ? tCommon("saving") : (submitLabel ?? t("submitCreate"))}
       </Button>
     </form>

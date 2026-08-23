@@ -43,7 +43,7 @@ export function OnboardingForm({
     formState: { errors },
   } = useForm<ProfileFormValues, unknown, ProfileInput>({
     resolver: zodResolver(profileSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
       business_name: defaultBusinessName,
@@ -109,7 +109,7 @@ export function OnboardingForm({
         />
       </FormField>
 
-      <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+      <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
         {pending ? t("submitting") : t("submit")}
       </Button>
       <p className="text-center text-xs text-muted-foreground">

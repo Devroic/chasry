@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
     formState: { errors },
   } = useForm<ResetInput>({
     resolver: zodResolver(requestResetSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     reValidateMode: "onChange",
   });
 
@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
             />
           </FormField>
 
-          <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+          <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
             {pending ? t("submitting") : t("submit")}
           </Button>
         </form>

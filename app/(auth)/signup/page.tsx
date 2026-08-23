@@ -23,7 +23,7 @@ export default function SignupPage() {
     formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
     reValidateMode: "onChange",
   });
 
@@ -93,7 +93,7 @@ export default function SignupPage() {
           />
         </FormField>
 
-        <Button type="submit" className="h-11 w-full text-base font-semibold" disabled={pending}>
+        <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
           {pending ? t("submitting") : t("submit")}
         </Button>
       </form>

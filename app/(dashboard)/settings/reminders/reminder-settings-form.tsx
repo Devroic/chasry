@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReminderOffsetSwitches } from "@/components/dashboard/reminder-offset-switches";
 import { updateReminderSettings, type ReminderSettingsState } from "./actions";
 import { reminderOffsetsSchema, type ReminderOffsetsInput } from "@/lib/validations/invoice";
+import { useSuccessToast } from "@/lib/use-success-toast";
 
 export function ReminderSettingsForm({
   defaultOffsets,
@@ -30,6 +31,8 @@ export function ReminderSettingsForm({
     defaultValues: { enabled: defaultEnabled, offsets: defaultOffsets },
   });
   const offsets = watch("offsets");
+
+  useSuccessToast(state);
 
   function toggleOffset(value: number, checked: boolean) {
     setValue(
@@ -58,11 +61,6 @@ export function ReminderSettingsForm({
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
-      {state?.success && (
-        <Alert>
-          <AlertDescription>{state.success}</AlertDescription>
-        </Alert>
-      )}
 
       <div className="flex items-center justify-between rounded-lg border border-border p-4">
         <div>
@@ -82,7 +80,7 @@ export function ReminderSettingsForm({
 
       <ReminderOffsetSwitches idPrefix="offset" offsets={offsets} onToggle={toggleOffset} />
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" loading={pending}>
         {pending ? tCommon("saving") : t("submit")}
       </Button>
     </form>

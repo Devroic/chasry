@@ -74,12 +74,13 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
     return { error: "An account with that email already exists." };
   }
 
-  if (data.user) {
-    await supabase
-      .from("profiles")
-      .update({ business_name: parsed.data.business_name })
-      .eq("id", data.user.id);
-  }
+  // No profile UPDATE here on purpose. `business_name` is carried in the
+  // signUp metadata above and written into public.profiles by the
+  // handle_new_user trigger (see 0006_handle_new_user_business_name.sql).
+  // This used to do a follow-up `.update()`, which quietly did nothing
+  // whenever email confirmation is required: there's no session yet at this
+  // point, so the RLS-scoped client had no permission to write the row — and
+  // onboarding then asked for the business name a second time.
 
   // Email confirmation required (Supabase default) → session isn't active yet.
   if (!data.session) {

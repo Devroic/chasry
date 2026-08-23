@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -46,10 +47,20 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  loading = false,
+  children,
+  disabled,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    /**
+     * Shows a spinner before the label and disables the button. Lives here
+     * rather than in each form so every pending state in the app looks and
+     * behaves identically. Ignored when `asChild` is set, since the child
+     * controls its own content.
+     */
+    loading?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
 
@@ -58,9 +69,21 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      data-loading={loading || undefined}
       className={cn(buttonVariants({ variant, size, className }))}
+      disabled={asChild ? disabled : disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
-    />
+    >
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {loading && <Loader2 className="animate-spin" aria-hidden="true" />}
+          {children}
+        </>
+      )}
+    </Comp>
   )
 }
 
