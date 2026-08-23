@@ -910,6 +910,43 @@ in the app is below the fold or in a state that's fine to lazy-load; this one is
   need a fresh/unauthenticated session to reach naturally (`reset-password/confirm`,
   `signup/confirmed`, `onboarding` itself) — reviewed by code only.
 
+## Production deploy checklist
+
+Several things in this app are wired but **inert until configured in Vercel**, and every one of
+them fails *silently* rather than erroring — that's the common thread, and why this is a checklist
+rather than something to improvise on the day.
+
+**Before / during the deploy:**
+
+1. **Env vars in Vercel** — the app builds and runs fine without these, it just quietly does less:
+   - `NEXT_PUBLIC_SENTRY_DSN` — without it production reports **nothing**.
+   - `CRON_SECRET` — must match `.env.local`'s current value. It was regenerated (was an
+     11-character word, now 32 random bytes); a mismatch means every cron run 401s.
+   - `SENTRY_AUTH_TOKEN` *(optional)* — source maps, so stack traces aren't minified.
+   - `UPSTASH_REDIS_REST_URL` / `_TOKEN` *(optional)* — switches rate limiting on.
+   - Env var changes need a **redeploy** to take effect.
+2. **Reconnect Vercel's Git integration** — Vercel links through its GitHub App, and the change of
+   owner during the org transfer commonly breaks it. Silent failure mode: pushes simply stop
+   triggering deploys, with no error anywhere. Check Vercel → Project → Settings → Git.
+3. **Run `npm run db:push`** — migrations aren't part of the deploy pipeline yet.
+
+**After the first production deploy — verify, don't assume:**
+
+4. **Confirm alerts actually reach the inbox.** This is the step that's easy to skip and then
+   discover months later, during the incident it was supposed to catch. Every layer of this chain
+   is currently unproven *in production*: DSN set in Vercel → SDK enabled (`sentryEnabled` requires
+   `VERCEL_ENV` to be `production`/`preview`) → issue created → alert rule matches → email sent.
+   Trigger one deliberate error from the deployed app and check that an email actually arrives —
+   not just that the issue appears in the dashboard. Resolve the test issue afterwards.
+5. **Confirm the cron ran and checked in.** After the first 07:00 UTC run, the `send-reminders`
+   monitor should show a green run tagged `production` (it currently only has `development` runs
+   from local testing). Sentry only starts alerting on *missed* runs once it has seen real ones,
+   so until this shows up, the cron monitor is not actually protecting anything.
+6. **Scope the alert rule to production** — Alerts → "Send a notification for high priority issues"
+   → Edit → Filter Issues → `production`. This **cannot be done earlier**: Sentry's dropdown only
+   offers environments it has already received events from. Purpose is that preview deploys still
+   capture to the dashboard but don't email.
+
 ## Open items (not yet done)
 
 - Migrations are now CLI-managed (`npm run db:push`), but that push is still **manual** — it isn't
@@ -920,16 +957,14 @@ in the app is below the fold or in a state that's fine to lazy-load; this one is
   against `origin/HEAD`. Worth running it (and `/code-review ultra`) rather than continuing to
   rely on the manual security pass above, especially over the auth/billing/RLS surface.
 - Sentry is integrated (see "Error monitoring"), but **source maps aren't uploaded** — production
-  stack traces stay minified until `SENTRY_AUTH_TOKEN` is set in `.env.local` and Vercel. Also
-  remember to add `NEXT_PUBLIC_SENTRY_DSN` to Vercel's env vars, or production reports nothing.
+  stack traces stay minified until `SENTRY_AUTH_TOKEN` is set in `.env.local` and Vercel. The rest
+  of the Sentry go-live steps (DSN, alert scoping, proving alerts actually arrive) are in the
+  "Production deploy checklist" above, not repeated here.
 - **Upstash rate limiting is wired but inert.** `lib/rate-limit.ts` guards login/signup/reset
   (10/min per IP) and the cron (5/min), but with no `UPSTASH_REDIS_REST_*` env vars set it
   short-circuits to `{ success: true }` — so those endpoints are currently unthrottled. The code
   needs no change to switch on; just set the two env vars. Supabase Auth's own server-side limits
   still apply regardless, so this is mainly about protecting Vercel function invocations.
-- **Vercel's Git integration may need reconnecting** after the org transfer — Vercel links via its
-  GitHub App, and a change of owner commonly breaks it. The failure mode is silent: pushes simply
-  stop triggering deploys, with no error. Check Vercel → Project → Settings → Git.
 - **If the repo is renamed `Devroic/chasry-webapp` → `Devroic/chasry`, re-point Sentry too.**
   Planned around deployment. Like the Vercel item above, this breaks *quietly* rather than erroring:
   - **Unaffected:** `next.config.ts`'s `org: "chasry"` / `project: "javascript-nextjs"` — those are
