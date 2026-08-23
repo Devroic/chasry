@@ -412,11 +412,17 @@ passed).
 ## Theme (dark/light)
 
 `components/theme-provider.tsx` wraps `next-themes`' `ThemeProvider` with `attribute="class"`,
-`defaultTheme="system"`, `enableSystem` — this was previously pinned to light-only
-(`defaultTheme="light"`, `enableSystem={false}`) as a deliberate scope cut; the dark-mode CSS
-tokens already existed in `globals.css` from the initial brand-token setup, they just weren't
-reachable. Flipping those two props was the entire "enable" step, since the tokens were already
-correct. `components/theme-toggle.tsx` (`ThemeToggle`) is a sun/moon icon button using
+`defaultTheme="light"`, `enableSystem={false}` — a visitor with no stored preference always sees
+light, regardless of OS/browser theme. This briefly followed system preference
+(`defaultTheme="system"`, `enableSystem`) when the toggle was first added, then was switched back
+to a light default on request; `enableSystem` is off because `ThemeToggle` only ever sets an
+explicit `"light"`/`"dark"` value, never `"system"`, so leaving system-detection enabled would be
+inert. Once a user actually toggles the theme, `next-themes` persists that choice to
+`localStorage` and it's respected on every later visit — this default only applies before that
+first toggle. The dark-mode CSS tokens themselves already existed in `globals.css` from the
+initial brand-token setup and are unaffected by this default — dark mode is still fully reachable
+via the toggle, just not the theme a new visitor lands on. `components/theme-toggle.tsx`
+(`ThemeToggle`) is a sun/moon icon button using
 `useTheme()`'s `resolvedTheme`/`setTheme` — deliberately has **no** `mounted`-guard `useEffect`
 (an earlier version had one, to dodge a perceived hydration mismatch; removed after confirming
 `resolvedTheme` is `undefined` on both the server render and the client's first hydration pass,
