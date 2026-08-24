@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BackLink } from "@/components/dashboard/back-link";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { getOptionalUser, getProfile } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Privacy Policy" };
 
@@ -24,19 +26,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default async function PrivacyPage() {
   const tCommon = await getTranslations("common");
 
-  return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
-      <SiteHeader />
-      <main className="flex-1 px-6 py-16">
-        <div className="mx-auto max-w-3xl">
-          <BackLink href="/" label={tCommon("back")} />
+  // Same reasoning as /help and /terms: a signed-in, fully onboarded visitor
+  // gets the real dashboard chrome instead of the marketing header.
+  const user = await getOptionalUser();
+  const profile = user ? await getProfile(user.id) : null;
+  const inApp = Boolean(profile?.onboarded_at);
 
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Privacy Policy
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
+  const content = (
+    <>
+      <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+        Privacy Policy
+      </h1>
+      <p className="mt-2 text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
 
-          <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(13,13,13,0.04),0_12px_32px_-16px_rgba(13,13,13,0.12)] sm:p-8">
+      <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(13,13,13,0.04),0_12px_32px_-16px_rgba(13,13,13,0.12)] sm:p-8">
             <Section title="1. Who this policy covers">
               <p>
                 This policy explains what personal data Chasry (&quot;we&quot;, &quot;us&quot;)
@@ -161,7 +164,30 @@ export default async function PrivacyPage() {
                 .
               </p>
             </Section>
-          </div>
+      </div>
+    </>
+  );
+
+  if (inApp && profile) {
+    return (
+      <DashboardShell
+        businessName={profile.business_name || profile.email || user?.email || ""}
+        email={profile.email ?? user?.email ?? ""}
+        subscriptionStatus={profile.subscription_status}
+        footer={<SiteFooter />}
+      >
+        <div className="max-w-3xl">{content}</div>
+      </DashboardShell>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
+      <SiteHeader />
+      <main className="flex-1 px-6 py-16">
+        <div className="mx-auto max-w-3xl">
+          <BackLink href="/" label={tCommon("back")} className="mb-8" />
+          {content}
         </div>
       </main>
       <SiteFooter />

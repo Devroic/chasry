@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BackLink } from "@/components/dashboard/back-link";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { getOptionalUser, getProfile } from "@/lib/auth";
 import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
 
 export const metadata: Metadata = { title: "Terms of Service" };
@@ -29,19 +31,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default async function TermsPage() {
   const tCommon = await getTranslations("common");
 
-  return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
-      <SiteHeader />
-      <main className="flex-1 px-6 py-16">
-        <div className="mx-auto max-w-3xl">
-          <BackLink href="/" label={tCommon("back")} />
+  // Same reasoning as /help: a signed-in visitor gets the real dashboard
+  // chrome instead of the marketing header, so opening this from inside the
+  // app doesn't feel like being dropped outside it. Only a *finished*
+  // account gets the shell — a half-onboarded user would get nav links that
+  // just bounce them back to /onboarding.
+  const user = await getOptionalUser();
+  const profile = user ? await getProfile(user.id) : null;
+  const inApp = Boolean(profile?.onboarded_at);
 
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Terms of Service
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
+  const content = (
+    <>
+      <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+        Terms of Service
+      </h1>
+      <p className="mt-2 text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
 
-          <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(13,13,13,0.04),0_12px_32px_-16px_rgba(13,13,13,0.12)] sm:p-8">
+      <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(13,13,13,0.04),0_12px_32px_-16px_rgba(13,13,13,0.12)] sm:p-8">
             <Section title="1. Agreement to these terms">
               <p>
                 These Terms of Service (&quot;Terms&quot;) govern your use of Chasry (&quot;Chasry&quot;,
@@ -170,7 +176,30 @@ export default async function TermsPage() {
                 .
               </p>
             </Section>
-          </div>
+      </div>
+    </>
+  );
+
+  if (inApp && profile) {
+    return (
+      <DashboardShell
+        businessName={profile.business_name || profile.email || user?.email || ""}
+        email={profile.email ?? user?.email ?? ""}
+        subscriptionStatus={profile.subscription_status}
+        footer={<SiteFooter />}
+      >
+        <div className="max-w-3xl">{content}</div>
+      </DashboardShell>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
+      <SiteHeader />
+      <main className="flex-1 px-6 py-16">
+        <div className="mx-auto max-w-3xl">
+          <BackLink href="/" label={tCommon("back")} className="mb-8" />
+          {content}
         </div>
       </main>
       <SiteFooter />

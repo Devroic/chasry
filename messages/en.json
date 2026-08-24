@@ -75,14 +75,14 @@
     "freePrice": "€0",
     "freePricePeriod": "forever",
     "freeDescription": "Full functionality, up to {limit} active invoices at a time.",
-    "freeCta": "Get started",
+    "freeCta": "Start for free",
     "proTitle": "Pro",
     "proPricePeriod": "per month",
     "proDescription": "Everything in Free, plus unlimited invoices and clients.",
-    "proCta": "Get started",
+    "proNote": "Upgrade anytime after you sign up.",
     "finalCtaTitle": "Ready to stop chasing payments yourself?",
     "finalCtaSubtitle": "Add your first client in under a minute. No card required.",
-    "finalCtaButton": "Get started"
+    "finalCtaButton": "Create your account"
   },
   "auth": {
     "login": {

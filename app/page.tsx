@@ -68,13 +68,26 @@ export default async function RootPage() {
                 </Button>
               </div>
             </div>
-            <div className="flex-1">
+            <div className="relative flex-1">
+              {/*
+               * The mascot is drawn holding a solid-white envelope, which
+               * reads fine straight on light mode's near-white page but
+               * looked like a stray white shape sitting directly on dark
+               * mode's near-black background. A fixed light glow behind him
+               * (not theme-aware on purpose, its only job is giving the
+               * white parts of the artwork a surface to sit on) fixes dark
+               * mode and is only a barely-visible halo in light mode.
+               */}
+              <div
+                aria-hidden
+                className="absolute inset-8 -z-10 rounded-full bg-[#eef4fc] blur-3xl sm:inset-12"
+              />
               <Image
                 src="/brand/mascot.png"
                 alt=""
                 width={420}
                 height={430}
-                className="mx-auto w-56 sm:w-72 lg:w-80"
+                className="relative mx-auto w-56 sm:w-72 lg:w-80"
                 priority
               />
             </div>
@@ -164,9 +177,14 @@ export default async function RootPage() {
                   <span className="text-sm text-muted-foreground">{t("proPricePeriod")}</span>
                 </p>
                 <p className="mt-3 text-sm text-muted-foreground">{t("proDescription")}</p>
-                <Button asChild className="mt-6 w-full">
-                  <Link href="/signup">{t("proCta")}</Link>
-                </Button>
+                {/*
+                 * No second signup button here on purpose. Both plans lead
+                 * to the same /signup flow (there's no plan picker at
+                 * signup), so a Pro-labeled button next to the Free one
+                 * would do the exact same thing under a different label,
+                 * which reads as broken rather than as a choice.
+                 */}
+                <p className="mt-6 text-center text-xs text-muted-foreground">{t("proNote")}</p>
               </div>
             </div>
           </div>

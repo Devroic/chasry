@@ -78,7 +78,7 @@ export default async function HelpPage() {
       <SiteHeader />
       <main className="flex-1 px-6 py-16">
         <div className="mx-auto max-w-2xl">
-          <BackLink href="/" label={tCommon("back")} />
+          <BackLink href="/" label={tCommon("back")} className="mb-8" />
           {content}
         </div>
       </main>
