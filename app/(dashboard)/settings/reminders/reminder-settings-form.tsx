@@ -26,8 +26,9 @@ export function ReminderSettingsForm({
   );
   const t = useTranslations("settings.reminders");
   const tCommon = useTranslations("common");
+  const tValidation = useTranslations("validation");
   const { control, watch, setValue, handleSubmit } = useForm<ReminderOffsetsInput>({
-    resolver: zodResolver(reminderOffsetsSchema),
+    resolver: zodResolver(reminderOffsetsSchema(tValidation)),
     defaultValues: { enabled: defaultEnabled, offsets: defaultOffsets },
   });
   const offsets = watch("offsets");

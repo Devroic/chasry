@@ -22,7 +22,7 @@ import { toFormData } from "@/lib/utils";
 import { useSuccessToast } from "@/lib/use-success-toast";
 import type { z } from "zod";
 
-type ProfileFormValues = z.input<typeof profileSchema>;
+type ProfileFormValues = z.input<ReturnType<typeof profileSchema>>;
 
 const CURRENCIES = ["EUR", "USD", "GBP"];
 
@@ -43,13 +43,14 @@ export function ProfileForm({
   );
   const t = useTranslations("settings.profile");
   const tCommon = useTranslations("common");
+  const tValidation = useTranslations("validation");
   const {
     register,
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<ProfileFormValues, unknown, ProfileInput>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(profileSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {

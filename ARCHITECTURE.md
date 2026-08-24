@@ -787,11 +787,36 @@ segment. Instead:
   into `DashboardShell` as a `footer` prop (`React.ReactNode`) instead. The other three call sites
   (`(auth)`/`(onboarding)` layouts, `not-found.tsx`) are already Server Components, so they render
   `<SiteFooter />` directly, unchanged.
-- **Not yet translated**: Server Action validation/success messages (Zod schema error strings,
-  "Saved." toasts returned from `useActionState`) — these come back as plain English strings from
-  the action layer regardless of the selected locale. Translating them would mean threading a
-  locale-aware translator into every Server Action, a larger change than the page/component-level
-  coverage done here. Flagged as a follow-up, not done in this pass.
+- **Now translated**: Server Action validation/success messages (Zod schema error strings, the
+  "Saved." toasts returned from `useActionState`, and error banners like "Incorrect email or
+  password."). Every `lib/validations/*.ts` schema (`customerSchema`, `invoiceSchema`,
+  `reminderOffsetsSchema`, `signupSchema`, `loginSchema`, `requestResetSchema`,
+  `updatePasswordSchema`, `profileSchema`) is a **function that takes a `Translator`**
+  (`lib/validations/shared.ts`) and returns the Zod object, instead of a static export. A
+  `Translator` is just `(key, values?) => string`, satisfied structurally by both
+  `useTranslations()` (Client Components, real-time `zodResolver` field validation) and an awaited
+  `getTranslations()` (Server Actions, the server-side re-validation every action does on its own
+  per `server-auth-actions`). Every call site now reads `schemaName(t)` instead of `schemaName`,
+  and every `z.infer<typeof schemaName>` became `z.infer<ReturnType<typeof schemaName>>`. Messages
+  live under the `validation` namespace in `messages/*.json`, shared across every form so
+  "Enter a valid email" only has one Greek translation, not four slightly different ones.
+
+  A **global Zod error map was deliberately not used**, even though Zod supports one and it would
+  have touched far fewer files. A single `z.config({ customError: ... })` is process-wide, mutable,
+  module-level state, exactly the pattern `server-no-shared-module-state` warns against, and this
+  app is a single Node process serving every locale's requests concurrently. Keying a shared
+  mutable error map off "whichever request set it last" would leak one visitor's language into
+  another's response under real concurrent load. Passing `t` explicitly into each schema call,
+  scoped to that one request or that one component render, has no such cross-request state to leak.
+
+  Server Actions that throw rather than return an error (`reopenInvoice`'s free-plan-limit check)
+  translate the message **before** throwing, server-side, so the string crossing the Server Action
+  boundary to the client's `catch` block is already correct for that request's locale.
+
+  Verified live, not assumed: on `/login`, submitting empty fields shows
+  "Εισαγάγετε έγκυρο email" and "Ο κωδικός πρόσβασης είναι υποχρεωτικός" (client-side `zodResolver`,
+  real time); submitting a genuinely wrong password shows "Λανθασμένο email ή κωδικός πρόσβασης."
+  (the Server Action's own error path, round-tripped through `supabase.auth.signInWithPassword`).
 - **Deliberately, permanently English-only**: `/terms` and `/privacy` (`app/terms/page.tsx`,
   `app/privacy/page.tsx`). Unlike the gap above, this isn't a "not yet" — legal text carries real
   risk if a translation subtly gets a term wrong, and the app already accepts partial i18n coverage
@@ -1065,6 +1090,22 @@ rather than something to improvise on the day.
 
 ## Open items (not yet done)
 
+- **`/signup` doesn't hydrate on a fresh/hard page load, in this dev environment at least.**
+  Discovered incidentally while verifying the Greek validation work below, not caused by it:
+  confirmed by fully reverting every file changed this session (`git stash`) and reproducing the
+  identical failure on the untouched original code. A hard navigation (typing the URL, a real
+  browser reload, an email link, `curl`) leaves the signup `<form>` inert. No `__react*` key ever
+  appears on the DOM node, so clicking submit just does a native, JS-free GET, visible as
+  `/signup?business_name=&email=&password=` in the address bar. `/login`, built the same way from
+  the same `lib/validations/auth.ts`, hydrates correctly on the same kind of hard load, every time.
+  Client-side navigation *to* `/signup` (a `Link` click from another already-loaded page) also
+  hydrates it fine, every time, it's specifically the very first full-document load of this one
+  route that fails. Not yet root-caused: worth checking whether it reproduces outside this sandboxed
+  dev setup (a real browser, `next build && next start`) before spending real time on it, since nearly
+  every other environment quirk hit this session turned out to be specific to this sandbox. If it
+  does reproduce for real, it blocks new users signing up from a cold link (an email, a bookmark, a
+  typed URL), which is most of them, so it would be worth prioritizing over most of the rest of this
+  list.
 - Migrations are now CLI-managed (`npm run db:push`), but that push is still **manual** — it isn't
   wired into the Vercel deploy, so schema and code can ship out of step. Worth adding as a deploy
   step once there's real traffic; the risk today is only forgetting to run it.

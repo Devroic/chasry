@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { safeNextPath } from "@/lib/supabase/middleware";
@@ -15,34 +16,43 @@ async function clientIp() {
 }
 
 export async function login(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const t = await getTranslations("validation");
+  const tErrors = await getTranslations("auth.errors");
+  const tLogin = await getTranslations("auth.login.errors");
+
   const ip = await clientIp();
   const { success } = await checkAuthRateLimit(`login:${ip}`);
-  if (!success) return { error: "Too many attempts. Try again in a minute." };
+  if (!success) return { error: tErrors("tooManyAttempts") };
 
-  const parsed = loginSchema.safeParse({
+  const parsed = loginSchema(t).safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { error: "Incorrect email or password." };
+  if (error) return { error: tLogin("incorrectCredentials") };
 
   redirect(safeNextPath(formData.get("next")?.toString()));
 }
 
 export async function signup(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const t = await getTranslations("validation");
+  const tErrors = await getTranslations("auth.errors");
+  const tSignup = await getTranslations("auth.signup");
+  const tSignupErrors = await getTranslations("auth.signup.errors");
+
   const ip = await clientIp();
   const { success } = await checkAuthRateLimit(`signup:${ip}`);
-  if (!success) return { error: "Too many attempts. Try again in a minute." };
+  if (!success) return { error: tErrors("tooManyAttempts") };
 
-  const parsed = signupSchema.safeParse({
+  const parsed = signupSchema(t).safeParse({
     business_name: formData.get("business_name"),
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const supabase = await createClient();
@@ -56,22 +66,22 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
   });
   if (error) {
     if (error.code === "user_already_exists" || error.code === "email_exists") {
-      return { error: "An account with that email already exists." };
+      return { error: tSignupErrors("accountExists") };
     }
     if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit") {
-      return { error: "Too many attempts right now. Please try again in a few minutes." };
+      return { error: tSignupErrors("rateLimited") };
     }
     if (error.code === "weak_password") {
-      return { error: "Choose a stronger password and try again." };
+      return { error: tSignupErrors("weakPassword") };
     }
-    return { error: "Couldn't create your account. Please try again." };
+    return { error: tSignupErrors("generic") };
   }
 
   // Supabase doesn't return an error for a duplicate, already-confirmed email
   // (anti-enumeration by design) — it signals this instead via an empty
   // `identities` array on an otherwise normal-looking response.
   if (data.user && data.user.identities?.length === 0) {
-    return { error: "An account with that email already exists." };
+    return { error: tSignupErrors("accountExists") };
   }
 
   // No profile UPDATE here on purpose. `business_name` is carried in the
@@ -84,7 +94,7 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
 
   // Email confirmation required (Supabase default) → session isn't active yet.
   if (!data.session) {
-    return { success: "Check your email to confirm your account, then log in." };
+    return { success: tSignup("checkEmailMessage") };
   }
 
   redirect("/onboarding");
@@ -94,12 +104,16 @@ export async function requestPasswordReset(
   _prev: AuthFormState,
   formData: FormData
 ): Promise<AuthFormState> {
+  const t = await getTranslations("validation");
+  const tErrors = await getTranslations("auth.errors");
+  const tReset = await getTranslations("auth.resetPassword");
+
   const ip = await clientIp();
   const { success } = await checkAuthRateLimit(`reset:${ip}`);
-  if (!success) return { error: "Too many attempts. Try again in a minute." };
+  if (!success) return { error: tErrors("tooManyAttempts") };
 
-  const parsed = requestResetSchema.safeParse({ email: formData.get("email") });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const parsed = requestResetSchema(t).safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const supabase = await createClient();
@@ -109,7 +123,7 @@ export async function requestPasswordReset(
 
   // Always report success, regardless of whether the email exists — avoids
   // leaking which addresses are registered.
-  return { success: "If that email has an account, we've sent a reset link." };
+  return { success: tReset("successMessage") };
 }
 
 export async function logout() {

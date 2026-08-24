@@ -1,10 +1,12 @@
 import { z } from "zod";
-import { optionalUrl } from "./shared";
+import { optionalUrl, type Translator } from "./shared";
 
-export const profileSchema = z.object({
-  business_name: z.string().trim().min(1, "Business name is required").max(200),
-  currency: z.string().trim().length(3),
-  payment_link: optionalUrl,
-});
+export function profileSchema(t: Translator) {
+  return z.object({
+    business_name: z.string().trim().min(1, t("businessNameRequired")).max(200),
+    currency: z.string().trim().length(3),
+    payment_link: optionalUrl(t),
+  });
+}
 
-export type ProfileInput = z.infer<typeof profileSchema>;
+export type ProfileInput = z.infer<ReturnType<typeof profileSchema>>;

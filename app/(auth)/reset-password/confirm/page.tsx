@@ -13,19 +13,20 @@ import { createClient } from "@/lib/supabase/client";
 import { updatePasswordSchema } from "@/lib/validations/auth";
 import type { z } from "zod";
 
-type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
+type UpdatePasswordInput = z.infer<ReturnType<typeof updatePasswordSchema>>;
 
 export default function ResetPasswordConfirmPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const t = useTranslations("auth.resetPasswordConfirm");
+  const tValidation = useTranslations("validation");
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<UpdatePasswordInput>({
-    resolver: zodResolver(updatePasswordSchema),
+    resolver: zodResolver(updatePasswordSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
   });

@@ -25,7 +25,7 @@ import { toFormData } from "@/lib/utils";
 import { encodeReminderOverride } from "@/lib/reminder-override";
 import type { z } from "zod";
 
-type InvoiceFormValues = z.input<typeof invoiceSchema>;
+type InvoiceFormValues = z.input<ReturnType<typeof invoiceSchema>>;
 
 type CustomerOption = {
   id: string;
@@ -88,6 +88,7 @@ export function InvoiceForm({
   const t = useTranslations("invoices.form");
   const tCommon = useTranslations("common");
   const tReminderOverride = useTranslations("reminderOverride");
+  const tValidation = useTranslations("validation");
 
   const initialCustomerId =
     searchParams.get("new_customer_id") ?? defaultValues?.customer_id ?? defaultCustomerId ?? "";
@@ -99,7 +100,7 @@ export function InvoiceForm({
     handleSubmit,
     formState: { errors },
   } = useForm<InvoiceFormValues, unknown, InvoiceInput>({
-    resolver: zodResolver(invoiceSchema),
+    resolver: zodResolver(invoiceSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {

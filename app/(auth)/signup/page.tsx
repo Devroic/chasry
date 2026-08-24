@@ -17,12 +17,13 @@ import { toFormData } from "@/lib/utils";
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(signup, null);
   const t = useTranslations("auth.signup");
+  const tValidation = useTranslations("validation");
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<SignupInput>({
-    resolver: zodResolver(signupSchema),
+    resolver: zodResolver(signupSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
   });

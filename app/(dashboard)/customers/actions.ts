@@ -2,14 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { customerSchema } from "@/lib/validations/customer";
 import { decodeReminderOverride } from "@/lib/reminder-override";
+import type { Translator } from "@/lib/validations/shared";
 
 export type CustomerFormState = { error?: string } | null;
 
-function parseCustomerForm(formData: FormData) {
-  return customerSchema.safeParse({
+function parseCustomerForm(formData: FormData, t: Translator) {
+  return customerSchema(t).safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
     phone: formData.get("phone"),
@@ -28,8 +30,11 @@ export async function createCustomer(
   _prev: CustomerFormState,
   formData: FormData
 ): Promise<CustomerFormState> {
-  const parsed = parseCustomerForm(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const t = await getTranslations("validation");
+  const tErrors = await getTranslations("customers.form.errors");
+
+  const parsed = parseCustomerForm(formData, t);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
   const { supabase, user } = await requireUser();
   const { data, error } = await supabase
@@ -40,9 +45,9 @@ export async function createCustomer(
 
   if (error || !data) {
     if (isDuplicateEmailError(error)) {
-      return { error: "You already have a client with this email." };
+      return { error: tErrors("duplicateEmail") };
     }
-    return { error: "Couldn't save this client. Try again." };
+    return { error: tErrors("createFailed") };
   }
 
   revalidatePath("/customers");
@@ -59,8 +64,12 @@ export async function updateCustomer(
   _prev: CustomerFormState,
   formData: FormData
 ): Promise<CustomerFormState> {
-  const parsed = parseCustomerForm(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const t = await getTranslations("validation");
+  const tErrors = await getTranslations("customers.form.errors");
+  const tCommon = await getTranslations("common");
+
+  const parsed = parseCustomerForm(formData, t);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
   const { supabase, user } = await requireUser();
   const { error } = await supabase
@@ -71,9 +80,9 @@ export async function updateCustomer(
 
   if (error) {
     if (isDuplicateEmailError(error)) {
-      return { error: "You already have a client with this email." };
+      return { error: tErrors("duplicateEmail") };
     }
-    return { error: "Couldn't save changes. Try again." };
+    return { error: tCommon("saveFailed") };
   }
 
   revalidatePath("/customers");

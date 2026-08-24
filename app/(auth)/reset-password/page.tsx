@@ -14,7 +14,7 @@ import { requestResetSchema } from "@/lib/validations/auth";
 import { toFormData } from "@/lib/utils";
 import type { z } from "zod";
 
-type ResetInput = z.infer<typeof requestResetSchema>;
+type ResetInput = z.infer<ReturnType<typeof requestResetSchema>>;
 
 export default function ResetPasswordPage() {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
@@ -22,12 +22,13 @@ export default function ResetPasswordPage() {
     null
   );
   const t = useTranslations("auth.resetPassword");
+  const tValidation = useTranslations("validation");
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<ResetInput>({
-    resolver: zodResolver(requestResetSchema),
+    resolver: zodResolver(requestResetSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
   });

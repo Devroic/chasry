@@ -28,12 +28,13 @@ function LoginForm() {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(login, null);
   const next = useSearchParams().get("next");
   const t = useTranslations("auth.login");
+  const tValidation = useTranslations("validation");
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(loginSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
   });

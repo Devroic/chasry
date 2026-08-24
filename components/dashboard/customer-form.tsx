@@ -17,7 +17,7 @@ import { toFormData } from "@/lib/utils";
 import { encodeReminderOverride } from "@/lib/reminder-override";
 import type { z } from "zod";
 
-type CustomerFormValues = z.input<typeof customerSchema>;
+type CustomerFormValues = z.input<ReturnType<typeof customerSchema>>;
 
 export function CustomerForm({
   action,
@@ -48,12 +48,13 @@ export function CustomerForm({
   const t = useTranslations("customers.form");
   const tCommon = useTranslations("common");
   const tReminderOverride = useTranslations("reminderOverride");
+  const tValidation = useTranslations("validation");
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<CustomerFormValues, unknown, CustomerInput>({
-    resolver: zodResolver(customerSchema),
+    resolver: zodResolver(customerSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {

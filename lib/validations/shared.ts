@@ -1,20 +1,32 @@
 import { z } from "zod";
 
 /**
+ * Structurally satisfied by both `useTranslations()` (Client Components)
+ * and an awaited `getTranslations()` (Server Components/Actions) — schemas
+ * take one of these instead of hardcoding English messages, so the same
+ * schema definition produces locale-correct errors on both the client
+ * (real-time field validation) and the server (the re-validation every
+ * Server Action does on its own, per `server-auth-actions`).
+ */
+export type Translator = (key: string, values?: Record<string, string | number>) => string;
+
+/**
  * An optional URL field from a form. Transforms blank to `null`, not
  * `undefined` — these forms always submit the field and re-save the whole
  * row, and Supabase's `.update()` JSON-serializes the payload, which drops
  * `undefined` keys entirely. Using `undefined` here would make clearing a
  * previously-set link silently do nothing instead of clearing it.
  */
-export const optionalUrl = z
-  .string()
-  .trim()
-  .max(500)
-  .url("Enter a full link, starting with https://")
-  .optional()
-  .or(z.literal(""))
-  .transform((v) => (v ? v : null));
+export function optionalUrl(t: Translator) {
+  return z
+    .string()
+    .trim()
+    .max(500)
+    .url(t("urlInvalid"))
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null));
+}
 
 /**
  * An optional free-text field (notes, invoice number, etc). Same `null`-not-

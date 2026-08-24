@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { reminderOffsetsSchema } from "@/lib/validations/invoice";
 
@@ -12,11 +13,15 @@ export async function updateReminderSettings(
   _prev: ReminderSettingsState,
   formData: FormData
 ): Promise<ReminderSettingsState> {
+  const t = await getTranslations("validation");
+  const tCommon = await getTranslations("common");
+  const tReminders = await getTranslations("settings.reminders");
+
   const selected = PRESET_OFFSETS.filter((offset) => formData.get(`offset_${offset}`) === "on");
   const enabled = formData.get("enabled") === "on";
 
-  const parsed = reminderOffsetsSchema.safeParse({ offsets: selected, enabled });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const parsed = reminderOffsetsSchema(t).safeParse({ offsets: selected, enabled });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
   const { supabase, user } = await requireUser();
   const { error } = await supabase
@@ -24,8 +29,8 @@ export async function updateReminderSettings(
     .update(parsed.data)
     .eq("user_id", user.id);
 
-  if (error) return { error: "Couldn't save changes. Try again." };
+  if (error) return { error: tCommon("saveFailed") };
 
   revalidatePath("/settings/reminders");
-  return { success: "Reminder schedule saved", description: "Chasry will use this from the next daily run." };
+  return { success: tReminders("savedTitle"), description: tReminders("savedDescription") };
 }

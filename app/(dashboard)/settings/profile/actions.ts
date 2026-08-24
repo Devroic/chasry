@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { profileSchema } from "@/lib/validations/profile";
 import { stripe } from "@/lib/stripe";
@@ -12,19 +13,23 @@ export async function updateProfile(
   _prev: ProfileFormState,
   formData: FormData
 ): Promise<ProfileFormState> {
-  const parsed = profileSchema.safeParse({
+  const t = await getTranslations("validation");
+  const tCommon = await getTranslations("common");
+  const tProfile = await getTranslations("settings.profile");
+
+  const parsed = profileSchema(t).safeParse({
     business_name: formData.get("business_name"),
     currency: formData.get("currency"),
     payment_link: formData.get("payment_link"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
   const { supabase, user } = await requireUser();
   const { error } = await supabase.from("profiles").update(parsed.data).eq("id", user.id);
-  if (error) return { error: "Couldn't save changes. Try again." };
+  if (error) return { error: tCommon("saveFailed") };
 
   revalidatePath("/settings/profile");
-  return { success: "Profile saved", description: "Your business details are up to date." };
+  return { success: tProfile("savedTitle"), description: tProfile("savedDescription") };
 }
 
 export async function deleteAccount() {

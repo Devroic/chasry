@@ -2,18 +2,20 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { invoiceSchema } from "@/lib/validations/invoice";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
 import { formatDate, formatMoney } from "@/lib/format";
 import { decodeReminderOverride } from "@/lib/reminder-override";
+import type { Translator } from "@/lib/validations/shared";
 import ReminderBeforeDueEmail from "@/emails/reminder-before-due";
 
 export type InvoiceFormState = { error?: string } | null;
 
-function parseInvoiceForm(formData: FormData) {
-  return invoiceSchema.safeParse({
+function parseInvoiceForm(formData: FormData, t: Translator) {
+  return invoiceSchema(t).safeParse({
     customer_id: formData.get("customer_id"),
     invoice_number: formData.get("invoice_number"),
     amount: formData.get("amount"),
@@ -28,8 +30,11 @@ export async function createInvoice(
   _prev: InvoiceFormState,
   formData: FormData
 ): Promise<InvoiceFormState> {
-  const parsed = parseInvoiceForm(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const t = await getTranslations("validation");
+  const tErrors = await getTranslations("invoices.form.errors");
+
+  const parsed = parseInvoiceForm(formData, t);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
   const { supabase, user } = await requireUser();
 
@@ -39,7 +44,7 @@ export async function createInvoice(
     .eq("id", parsed.data.customer_id)
     .eq("user_id", user.id)
     .single();
-  if (!customer) return { error: "Choose a valid client." };
+  if (!customer) return { error: tErrors("invalidClient") };
 
   // Server-side enforcement of the free-plan invoice limit — the UI already
   // hides the form at this point, but this is the real gate.
@@ -55,7 +60,7 @@ export async function createInvoice(
       .eq("user_id", user.id)
       .eq("status", "unpaid");
     if ((count ?? 0) >= FREE_INVOICE_LIMIT) {
-      return { error: `Free plan is limited to ${FREE_INVOICE_LIMIT} active invoices. Upgrade to Pro for unlimited.` };
+      return { error: tErrors("limitReachedCreate", { limit: FREE_INVOICE_LIMIT }) };
     }
   }
 
@@ -65,7 +70,7 @@ export async function createInvoice(
     .select("id")
     .single();
 
-  if (error || !data) return { error: "Couldn't save this invoice. Try again." };
+  if (error || !data) return { error: tErrors("createFailed") };
 
   revalidatePath("/invoices");
   revalidatePath("/dashboard");
@@ -77,8 +82,12 @@ export async function updateInvoice(
   _prev: InvoiceFormState,
   formData: FormData
 ): Promise<InvoiceFormState> {
-  const parsed = parseInvoiceForm(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const t = await getTranslations("validation");
+  const tErrors = await getTranslations("invoices.form.errors");
+  const tCommon = await getTranslations("common");
+
+  const parsed = parseInvoiceForm(formData, t);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
   const { supabase, user } = await requireUser();
 
@@ -88,7 +97,7 @@ export async function updateInvoice(
     .eq("id", parsed.data.customer_id)
     .eq("user_id", user.id)
     .single();
-  if (!customer) return { error: "Choose a valid client." };
+  if (!customer) return { error: tErrors("invalidClient") };
 
   const { error } = await supabase
     .from("invoices")
@@ -96,7 +105,7 @@ export async function updateInvoice(
     .eq("id", invoiceId)
     .eq("user_id", user.id);
 
-  if (error) return { error: "Couldn't save changes. Try again." };
+  if (error) return { error: tCommon("saveFailed") };
 
   revalidatePath("/invoices");
   revalidatePath(`/invoices/${invoiceId}`);
@@ -134,9 +143,8 @@ export async function reopenInvoice(invoiceId: string) {
       .eq("user_id", user.id)
       .eq("status", "unpaid");
     if ((count ?? 0) >= FREE_INVOICE_LIMIT) {
-      throw new Error(
-        `Free plan is limited to ${FREE_INVOICE_LIMIT} active invoices. Upgrade to Pro to reopen this one.`
-      );
+      const tErrors = await getTranslations("invoices.form.errors");
+      throw new Error(tErrors("limitReachedReopen", { limit: FREE_INVOICE_LIMIT }));
     }
   }
 
