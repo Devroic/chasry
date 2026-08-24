@@ -761,6 +761,11 @@ segment. Instead:
   the action layer regardless of the selected locale. Translating them would mean threading a
   locale-aware translator into every Server Action, a larger change than the page/component-level
   coverage done here. Flagged as a follow-up, not done in this pass.
+- **Deliberately, permanently English-only**: `/terms` and `/privacy` (`app/terms/page.tsx`,
+  `app/privacy/page.tsx`). Unlike the gap above, this isn't a "not yet" — legal text carries real
+  risk if a translation subtly gets a term wrong, and the app already accepts partial i18n coverage
+  elsewhere for a similar reason. The `SiteHeader`/`SiteFooter`/`BackLink` chrome around both pages
+  stays fully translated as normal; only the body content of the two legal pages is English-only.
 
 ## List pages (invoices, customers)
 
@@ -899,6 +904,37 @@ that came up converting them, worth knowing before touching these forms again:
   the "Radix doesn't post to native FormData" problem doesn't apply once a form is on this
   pattern. It still applies to any *new* form that stays on plain `FormData` — the gotcha note
   is left in place for that case.
+
+## Public landing page (`app/page.tsx`) and legal pages
+
+`/` used to be an unconditional redirect: logged in went to `/dashboard`, logged out went straight
+to `/login`, with no page of its own. There was nothing to see, so a first-time visitor had no way
+to learn what Chasry does before being asked to create an account.
+
+It's now a real page for a logged-out visitor (a logged-in one still redirects straight to
+`/dashboard`, unchanged): hero with both CTAs (`/signup` and `/login`), three feature cards, a
+three-step "how it works" section, and a pricing teaser, all reading `FREE_INVOICE_LIMIT` and
+`PRO_PRICE_LABEL` from `lib/plan.ts` rather than hardcoding numbers that could drift from the real
+plan. All copy is grounded in facts already established elsewhere in the app (the onboarding
+checklist's three steps, the payment-link FAQ answer, the free/Pro description on Settings →
+Billing) rather than new marketing claims. This is deliberately not a clone of chasry.com's own
+marketing site, which already exists and is out of scope per `PROJECT.md`; it's a lighter page
+whose only job is explaining the product before asking for a signup.
+
+`SiteHeader` gained an optional `actions` prop (`React.ReactNode`, appended after the theme/language
+controls) so this page could add a "Log in" link without changing the header's default behavior
+everywhere else it's used (auth pages, onboarding, `/help`, `not-found.tsx`).
+
+`/terms` and `/privacy` are new too, using the same `SiteHeader`/`SiteFooter`/`BackLink` shell as
+`/help`'s logged-out chrome. Both are grounded in what the app's stack and code actually do (the
+subprocessors listed are literally Supabase, Stripe, Resend, Sentry, and Vercel; the "Chasry never
+touches your money" claim matches the payment-link design described under "Reminder engine" above)
+rather than generic boilerplate. Neither page names a registered legal entity or address, and the
+governing-law clause names Cyprus only because that's the one concrete signal available (the Stripe
+account's own country). Both are placeholders pending confirmation, and **both pages should get a
+real legal review before being relied on**, especially the GDPR sections, since Chasry processes
+personal data (name, email, phone) about a *third party* (the account holder's own client) who never
+interacts with Chasry directly and never separately consented to it.
 
 ## `not-found.tsx`
 
