@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Wallet, CalendarClock, User, Link2, StickyNote } from "lucide-react";
 import { requireOnboardedUser } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -39,6 +39,7 @@ export default async function InvoiceDetailPage({
 
   const t = await getTranslations("invoices");
   const tCommon = await getTranslations("common");
+  const locale = await getLocale();
 
   const [{ data: customer }, { data: logs }] = await Promise.all([
     supabase
@@ -101,7 +102,7 @@ export default async function InvoiceDetailPage({
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
               <CalendarClock className="size-3.5" /> {t("detail.due")}
             </p>
-            <p className="text-sm text-foreground">{formatDate(invoice.due_date)}</p>
+            <p className="text-sm text-foreground">{formatDate(invoice.due_date, locale)}</p>
             {invoice.status === "unpaid" && (
               <p className="text-xs text-muted-foreground">
                 {dueStatusLabel(daysUntil(invoice.due_date), t)}

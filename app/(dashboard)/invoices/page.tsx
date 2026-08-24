@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -38,6 +38,7 @@ export default async function InvoicesPage({
   const sortDir: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
   const { supabase, user } = await requireUser();
   const t = await getTranslations("invoices");
+  const locale = await getLocale();
   const filterLabels: Record<(typeof FILTERS)[number], string> = {
     all: t("filterAll"),
     unpaid: t("filterUnpaid"),
@@ -211,7 +212,7 @@ export default async function InvoicesPage({
                       {invoice.invoice_number || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      <div>{formatDate(invoice.due_date)}</div>
+                      <div>{formatDate(invoice.due_date, locale)}</div>
                       {invoice.status === "unpaid" && (
                         <div className="text-xs">
                           {dueStatusLabel(daysUntil(invoice.due_date), t)}

@@ -1,6 +1,6 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireOnboardedUser } from "@/lib/auth";
-import { isPro, FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
+import { isPro, FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +13,7 @@ export default async function BillingSettingsPage() {
   const { supabase, user, profile } = await requireOnboardedUser();
   const t = await getTranslations("settings.billing");
   const tCommon = await getTranslations("common");
+  const locale = await getLocale();
 
   const { count: activeInvoiceCount } = await supabase
     .from("invoices")
@@ -64,7 +65,7 @@ export default async function BillingSettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-foreground">
-                {pro ? t("proLabel", { price: PRO_PRICE_LABEL }) : t("freeLabel")}
+                {pro ? t("proLabel", { price: PRO_PRICE_AMOUNT }) : t("freeLabel")}
               </p>
               <p className="text-xs text-muted-foreground">
                 {pro
@@ -82,7 +83,7 @@ export default async function BillingSettingsPage() {
 
           {status === "active" && nextPaymentDate && (
             <p className="text-xs text-muted-foreground">
-              {t("nextPayment", { date: formatDate(nextPaymentDate) })}
+              {t("nextPayment", { date: formatDate(nextPaymentDate, locale) })}
             </p>
           )}
 

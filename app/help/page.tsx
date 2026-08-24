@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getOptionalUser, getProfile } from "@/lib/auth";
-import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
+import { FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 
 const SUPPORT_EMAIL = "info@chasry.com";
 
@@ -20,7 +20,7 @@ export default async function HelpPage() {
     question: faq.question,
     answer: faq.answer
       .replace("{limit}", String(FREE_INVOICE_LIMIT))
-      .replace("{price}", PRO_PRICE_LABEL),
+      .replace("{price}", PRO_PRICE_AMOUNT),
   }));
 
   const user = await getOptionalUser();

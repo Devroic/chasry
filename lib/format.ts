@@ -1,3 +1,10 @@
+import type { Locale } from "./locale";
+
+const DATE_LOCALE_TAGS: Record<Locale, string> = {
+  en: "en-IE",
+  el: "el-GR",
+};
+
 export function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat("en-IE", {
     style: "currency",
@@ -6,8 +13,13 @@ export function formatMoney(amount: number, currency: string) {
   }).format(amount);
 }
 
-export function formatDate(date: string | Date) {
-  return new Intl.DateTimeFormat("en-IE", {
+/**
+ * `locale` takes a plain `string` (not the narrower `Locale` type) because
+ * next-intl's `getLocale()` returns `string`, not a type narrowed to our own
+ * LOCALES constant. Falls back to English for anything unrecognized.
+ */
+export function formatDate(date: string | Date, locale: string = "en") {
+  return new Intl.DateTimeFormat(DATE_LOCALE_TAGS[locale as Locale] ?? DATE_LOCALE_TAGS.en, {
     day: "numeric",
     month: "short",
     year: "numeric",

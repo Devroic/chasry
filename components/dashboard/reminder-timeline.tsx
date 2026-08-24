@@ -1,5 +1,5 @@
 import { CheckCircle2, Circle, XCircle, Clock } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { addDaysUtc } from "@/lib/reminders";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ export async function ReminderTimeline({
 }) {
   const t = await getTranslations("offsetPicker");
   const tTimeline = await getTranslations("reminderTimeline");
+  const locale = await getLocale();
   const logByOffset = new Map(logs.map((l) => [l.offset_days, l]));
   const sorted = [...offsets].sort((a, b) => a - b);
 
@@ -46,7 +47,7 @@ export async function ReminderTimeline({
 
         if (log?.status === "sent") {
           icon = <CheckCircle2 className="size-4 text-emerald-600" />;
-          status = tTimeline("sent", { date: formatDate(log.sent_at) });
+          status = tTimeline("sent", { date: formatDate(log.sent_at, locale) });
           tone = "text-foreground";
         } else if (log?.status === "failed") {
           icon = <XCircle className="size-4 text-destructive" />;
@@ -73,14 +74,14 @@ export async function ReminderTimeline({
               {icon}
               <span className="flex-1 text-foreground">{offsetLabel(t, offsetDays)}</span>
               <span className="hidden text-xs text-muted-foreground sm:inline">
-                {formatDate(targetDate)}
+                {formatDate(targetDate, locale)}
               </span>
               <span className={cn("hidden text-xs sm:inline sm:w-32 sm:shrink-0 sm:text-right", tone)}>
                 {status}
               </span>
             </div>
             <div className="mt-0.5 flex items-center justify-between pl-7 text-xs text-muted-foreground sm:hidden">
-              <span>{formatDate(targetDate)}</span>
+              <span>{formatDate(targetDate, locale)}</span>
               <span className={tone}>{status}</span>
             </div>
           </li>

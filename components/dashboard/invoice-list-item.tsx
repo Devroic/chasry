@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { InvoiceStatusBadge } from "@/components/dashboard/invoice-status-badge";
 import { formatDate, formatMoney, daysUntil } from "@/lib/format";
 import { dueStatusLabel } from "@/lib/reminders";
@@ -29,6 +29,7 @@ export async function InvoiceListItem({
   status: InvoiceStatus;
 }) {
   const t = await getTranslations("invoices");
+  const locale = await getLocale();
 
   return (
     <Link
@@ -41,7 +42,7 @@ export async function InvoiceListItem({
           {invoiceNumber ? ` · ${invoiceNumber}` : ""}
         </p>
         <p className="text-xs text-muted-foreground">
-          {formatDate(dueDate)}
+          {formatDate(dueDate, locale)}
           {status === "unpaid" ? ` · ${dueStatusLabel(daysUntil(dueDate), t)}` : ""}
         </p>
       </div>

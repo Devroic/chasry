@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Plus, Pencil, Phone, Link2, Bell, StickyNote } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { BackLink } from "@/components/dashboard/back-link";
@@ -69,6 +69,7 @@ export default async function CustomerDetailPage({
   const tInvoices = await getTranslations("invoices");
   const tReminderOverride = await getTranslations("reminderOverride");
   const tCommon = await getTranslations("common");
+  const locale = await getLocale();
 
   return (
     <div>
@@ -205,7 +206,7 @@ export default async function CustomerDetailPage({
                       {invoice.invoice_number || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(invoice.due_date)}
+                      {formatDate(invoice.due_date, locale)}
                     </TableCell>
                     <TableCell>{formatMoney(Number(invoice.amount), invoice.currency)}</TableCell>
                     <TableCell>

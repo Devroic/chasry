@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
-import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
+import { FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 import { startCheckout } from "@/app/(dashboard)/settings/billing/actions";
 
 export async function UpgradePrompt({ activeCount }: { activeCount: number }) {
@@ -14,7 +14,7 @@ export async function UpgradePrompt({ activeCount }: { activeCount: number }) {
         {t("title", { count: activeCount, limit: FREE_INVOICE_LIMIT })}
       </h3>
       <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-        {t("description", { price: PRO_PRICE_LABEL })}
+        {t("description", { price: PRO_PRICE_AMOUNT })}
       </p>
       <form action={startCheckout} className="mt-5">
         <Button type="submit">{t("cta")}</Button>

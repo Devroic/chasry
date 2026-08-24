@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createClient } from "@/lib/supabase/server";
-import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
+import { FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 
 const FEATURE_ICONS = [Bell, Clock, ShieldCheck];
 
@@ -172,7 +172,7 @@ export default async function RootPage() {
                 </h3>
                 <p className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-4xl font-extrabold text-foreground">
-                    {PRO_PRICE_LABEL.split("/")[0]}
+                    {PRO_PRICE_AMOUNT}
                   </span>
                   <span className="text-sm text-muted-foreground">{t("proPricePeriod")}</span>
                 </p>

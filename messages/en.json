@@ -202,7 +202,7 @@
       },
       {
         "question": "What happens when I hit the free limit?",
-        "answer": "Mark an existing invoice as paid to free up a slot, or upgrade to Pro ({price}) for unlimited invoices and clients. There's no trial, because the free plan already lets you try everything before you'd need to."
+        "answer": "Mark an existing invoice as paid to free up a slot, or upgrade to Pro ({price}/month) for unlimited invoices and clients. There's no trial, because the free plan already lets you try everything before you'd need to."
       },
       {
         "question": "When exactly do reminders get sent?",
@@ -477,7 +477,7 @@
     "billing": {
       "pastDueWarning": "Your last payment failed. Update your card from Manage billing below to keep Pro active. You'll drop back to the free plan's {limit}-invoice limit if it isn't resolved.",
       "planTitle": "Chasry plan",
-      "proLabel": "Pro ({price})",
+      "proLabel": "Pro ({price}/month)",
       "freeLabel": "Free",
       "proDescription": "Unlimited clients and invoices.",
       "freeDescription": "Up to {limit} active invoices at a time ({used} used). Unlimited clients.",
@@ -500,7 +500,7 @@
   },
   "upgradePrompt": {
     "title": "You're using all {count} of your {limit} free invoices",
-    "description": "Mark one as paid, or upgrade to Pro for unlimited invoices and clients: {price}, cancel anytime.",
+    "description": "Mark one as paid, or upgrade to Pro for unlimited invoices and clients: {price}/month, cancel anytime.",
     "cta": "Upgrade to Pro"
   }
 }
