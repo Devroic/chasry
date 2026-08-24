@@ -30,7 +30,6 @@
   "header": {
     "upgradeToPro": "Upgrade to Pro",
     "settings": "Settings",
-    "helpAndFaqs": "Help & FAQs",
     "logOut": "Log out",
     "lightMode": "Switch to light mode",
     "darkMode": "Switch to dark mode",
@@ -82,7 +81,7 @@
     "proNote": "Upgrade anytime after you sign up.",
     "finalCtaTitle": "Ready to stop chasing payments yourself?",
     "finalCtaSubtitle": "Add your first client in under a minute. No card required.",
-    "finalCtaButton": "Create your account"
+    "finalCtaButton": "Get started"
   },
   "auth": {
     "login": {

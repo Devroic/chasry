@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Settings,
   Sparkles,
-  LifeBuoy,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -224,11 +223,6 @@ function UserMenu({
         <DropdownMenuItem asChild onClick={onNavigate}>
           <Link href="/settings/profile" className="flex items-center gap-2">
             <Settings className="size-4" /> {t("settings")}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild onClick={onNavigate}>
-          <Link href="/help" className="flex items-center gap-2">
-            <LifeBuoy className="size-4" /> {t("helpAndFaqs")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

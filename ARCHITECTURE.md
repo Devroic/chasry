@@ -443,11 +443,17 @@ pass: Settings/Billing/Reminders are occasional, account-level configuration, no
 daily like the three sidebar items, so it doesn't deserve equal billing with them in the primary
 nav — this matches the common SaaS pattern (Linear, Notion, Stripe) of keeping account-scoped
 settings behind the avatar rather than in primary nav. `UserMenu` now carries Settings (→
-`/settings/profile`), Help & FAQs, and Log out — the standalone "Billing" shortcut was folded into
-the new Settings entry (billing is one tab inside Settings, and the "Upgrade to Pro" header button
-already covers the direct-to-billing case) to keep the menu from growing back to duplicate paths.
-Keep Settings in exactly one place; don't add it back to `nav-items.ts` without also removing it
-from `UserMenu`.
+`/settings/profile`) and Log out — the standalone "Billing" shortcut was folded into the new
+Settings entry (billing is one tab inside Settings, and the "Upgrade to Pro" header button already
+covers the direct-to-billing case) to keep the menu from growing back to duplicate paths. Keep
+Settings in exactly one place; don't add it back to `nav-items.ts` without also removing it from
+`UserMenu`.
+
+`UserMenu` used to also carry a "Help & FAQs" entry pointing at `/help`, removed once `SiteFooter`
+started rendering on every dashboard page too (see below): a signed-in user already has Help one
+click away from any page via the footer, so the dropdown entry was a second path to the same
+place. `Settings`, not `Help`, is what stays account-menu-only, since Settings has no other
+consistent entry point the way Help now does.
 
 Detail/edit/new pages under `(dashboard)` use `components/dashboard/back-link.tsx` (a small
 "← Clients" / "← Invoices" / "← \<name\>" link above `PageHeader`) consistently — customer
@@ -496,22 +502,32 @@ layout/shell, `flex-1` on `<main>`, footer last) — in `DashboardShell` this me
 below the `header + sidebar/main` flex row, not inside it, so it spans the full width undivided by
 the sidebar.
 
-`/help` (`app/help/page.tsx`) is a **public, un-gated page** — root-level, not inside any route
-group, so it composes its own chrome rather than inheriting a layout. It's reachable both logged
-out (footer "Help" link) and logged in (account dropdown "Help & FAQs"), which is why it's public
-rather than living under `(dashboard)`. Content is a static FAQ list (no accordion/collapse — no
-`Accordion` primitive is installed, and the FAQ is short enough that a plain Q&A list is simpler)
-plus a "Still stuck?" mailto CTA at the bottom.
+`/help` (`app/help/page.tsx`), `/terms` (`app/terms/page.tsx`), and `/privacy`
+(`app/privacy/page.tsx`) are **public, un-gated pages**, root-level, not inside any route group, so
+each composes its own chrome rather than inheriting a layout. All three are linked from
+`SiteFooter`, which is why they're public rather than living under `(dashboard)`: that footer
+renders on every page in the app, logged in or out (see below), so a link placed there is already
+reachable from anywhere without a second entry point elsewhere. `UserMenu` used to carry its own
+separate "Help & FAQs" item pointing at the same page, removed once the footer link made it
+redundant. See the `UserMenu` note above.
 
-**It renders in two different chromes depending on auth state.** A signed-in visitor gets the full
-`DashboardShell` (header + sidebar nav), identical to every other page behind login; a signed-out
-visitor gets `<SiteHeader>` plus a `BackLink` to `/`. Previously it always used the slim marketing
-header, so opening Help from inside the app made the navigation vanish and felt like being ejected
-from it. The check is `getOptionalUser()` (`lib/auth.ts` — a non-redirecting counterpart to
-`requireUser()`, sharing the same per-request cache) plus `profile.onboarded_at`: the shell is
-shown only to a **finished** account, since a half-onboarded user would otherwise get nav links
-that immediately bounce them back to `/onboarding`. Any future page that's reachable in both states
-should follow this shape rather than picking one chrome and living with it in the other.
+**All three render in two different chromes depending on auth state**, identically to each other.
+A signed-in visitor gets the full `DashboardShell` (header + sidebar nav), identical to every other
+page behind login; a signed-out visitor gets the slim `<SiteHeader>`. Previously `/help` always used
+the slim marketing header, so opening it from inside the app made the navigation vanish and felt
+like being ejected from it. The check is `getOptionalUser()` (`lib/auth.ts`, a non-redirecting
+counterpart to `requireUser()`, sharing the same per-request cache) plus `profile.onboarded_at`: the
+shell is shown only to a **finished** account, since a half-onboarded user would otherwise get nav
+links that immediately bounce them back to `/onboarding`. Any future page that's reachable in both
+states should follow this shape rather than picking one chrome and living with it in the other.
+
+None of the three use `BackLink` on their signed-out chrome. They did originally, but `SiteHeader`
+already wraps its logo in a link to `/` on every page it's used on, so a `BackLink` pointing at the
+same `/` was a second, redundant way to do the exact thing the logo already does. A real reported
+observation, not a hypothetical. `BackLink` is still exactly right on the four dashboard detail/new
+pages that use it (`customers/[id]`, `customers/new`, `invoices/[id]`, `invoices/new`): those point
+at a specific list, not at `/`, and nothing else in that chrome offers an equivalent shortcut back to
+it.
 
 **Detail-page info grids use small `lucide-react` icons per field** (invoice detail: Wallet/
 CalendarClock/User/Link2/StickyNote; customer detail: Phone/Link2/Bell/StickyNote) — a UX pass

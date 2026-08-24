@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { BackLink } from "@/components/dashboard/back-link";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getOptionalUser, getProfile } from "@/lib/auth";
 import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
@@ -17,7 +16,6 @@ const SUPPORT_EMAIL = "info@chasry.com";
  */
 export default async function HelpPage() {
   const t = await getTranslations("help");
-  const tCommon = await getTranslations("common");
   const faqs = (t.raw("faqs") as { question: string; answer: string }[]).map((faq) => ({
     question: faq.question,
     answer: faq.answer
@@ -77,10 +75,7 @@ export default async function HelpPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
       <SiteHeader />
       <main className="flex-1 px-6 py-16">
-        <div className="mx-auto max-w-2xl">
-          <BackLink href="/" label={tCommon("back")} className="mb-8" />
-          {content}
-        </div>
+        <div className="mx-auto max-w-2xl">{content}</div>
       </main>
       <SiteFooter />
     </div>

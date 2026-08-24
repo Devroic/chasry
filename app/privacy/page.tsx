@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { BackLink } from "@/components/dashboard/back-link";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getOptionalUser, getProfile } from "@/lib/auth";
 
@@ -24,8 +22,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default async function PrivacyPage() {
-  const tCommon = await getTranslations("common");
-
   // Same reasoning as /help and /terms: a signed-in, fully onboarded visitor
   // gets the real dashboard chrome instead of the marketing header.
   const user = await getOptionalUser();
@@ -185,10 +181,7 @@ export default async function PrivacyPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
       <SiteHeader />
       <main className="flex-1 px-6 py-16">
-        <div className="mx-auto max-w-3xl">
-          <BackLink href="/" label={tCommon("back")} className="mb-8" />
-          {content}
-        </div>
+        <div className="mx-auto max-w-3xl">{content}</div>
       </main>
       <SiteFooter />
     </div>

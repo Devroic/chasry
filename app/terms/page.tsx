@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { BackLink } from "@/components/dashboard/back-link";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getOptionalUser, getProfile } from "@/lib/auth";
 import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
@@ -29,8 +27,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default async function TermsPage() {
-  const tCommon = await getTranslations("common");
-
   // Same reasoning as /help: a signed-in visitor gets the real dashboard
   // chrome instead of the marketing header, so opening this from inside the
   // app doesn't feel like being dropped outside it. Only a *finished*
@@ -197,10 +193,7 @@ export default async function TermsPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
       <SiteHeader />
       <main className="flex-1 px-6 py-16">
-        <div className="mx-auto max-w-3xl">
-          <BackLink href="/" label={tCommon("back")} className="mb-8" />
-          {content}
-        </div>
+        <div className="mx-auto max-w-3xl">{content}</div>
       </main>
       <SiteFooter />
     </div>
