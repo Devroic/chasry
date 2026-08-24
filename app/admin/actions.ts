@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { linkStripeCustomerSchema } from "@/lib/validations/admin";
@@ -20,12 +21,15 @@ export async function linkStripeCustomer(
 ): Promise<LinkStripeCustomerState> {
   await requireAdmin();
 
-  const parsed = linkStripeCustomerSchema.safeParse({
+  const t = await getTranslations("validation");
+  const tForm = await getTranslations("admin.linkForm");
+
+  const parsed = linkStripeCustomerSchema(t).safeParse({
     userId: formData.get("userId"),
     stripeCustomerId: formData.get("stripeCustomerId"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return { error: parsed.error.issues[0]?.message ?? tForm("invalidInput") };
   }
 
   const supabase = createAdminClient();
@@ -42,11 +46,9 @@ export async function linkStripeCustomer(
     .is("stripe_customer_id", null)
     .select("id");
 
-  if (error) return { error: "Couldn't save that, try again." };
-  if (!data.length) {
-    return { error: "No unlinked user found with that ID, it may already have a Stripe customer linked." };
-  }
+  if (error) return { error: tForm("genericError") };
+  if (!data.length) return { error: tForm("alreadyLinkedError") };
 
   revalidatePath(`/admin/users/${parsed.data.userId}`);
-  return { success: "Stripe customer linked." };
+  return { success: tForm("successMessage") };
 }

@@ -30,6 +30,7 @@
   },
   "header": {
     "upgradeToPro": "Upgrade to Pro",
+    "admin": "Admin",
     "settings": "Settings",
     "logOut": "Log out",
     "lightMode": "Switch to light mode",
@@ -58,7 +59,8 @@
     "customerRequired": "Choose a client",
     "amountPositive": "Amount must be greater than 0",
     "dueDateRequired": "Due date is required",
-    "tooManyOffsets": "Up to 10 reminders per invoice"
+    "tooManyOffsets": "Up to 10 reminders per invoice",
+    "stripeCustomerIdInvalid": "Must look like a Stripe customer ID, e.g. cus_ABC123."
   },
   "landing": {
     "heroTitle": "Log it once. Chasry chases it for you.",
@@ -182,7 +184,7 @@
   },
   "notFound": {
     "eyebrow": "404",
-    "title": "This page went unpaid.",
+    "title": "We couldn't track this page down.",
     "subtitle": "We looked everywhere, but there's nothing at this address. It may have moved, or the link might be off.",
     "cta": "Back to Chasry"
   },
@@ -502,5 +504,104 @@
     "title": "You're using all {count} of your {limit} free invoices",
     "description": "Mark one as paid, or upgrade to Pro for unlimited invoices and clients: {price}/month, cancel anytime.",
     "cta": "Upgrade to Pro"
+  },
+  "admin": {
+    "shell": {
+      "badge": "Admin",
+      "backToApp": "Back to app",
+      "logOut": "Log out",
+      "tabOverview": "Overview",
+      "tabUsers": "Users",
+      "tabPlaybook": "Playbook"
+    },
+    "status": {
+      "pro": "Pro",
+      "pastDue": "Past due",
+      "canceled": "Canceled",
+      "free": "Free"
+    },
+    "overview": {
+      "title": "Overview",
+      "subtitle": "Numbers Stripe alone cannot give you, free-tier users included.",
+      "registeredUsers": "Registered users",
+      "proActive": "Pro (active)",
+      "pastDue": "Past due",
+      "free": "Free",
+      "canceled": "Canceled",
+      "stuckOnboarding": "Stuck mid-onboarding",
+      "newThisWeek": "New this week",
+      "newThisMonth": "New this month",
+      "estimatedMrr": "Estimated MRR",
+      "mrrDescription": "{count, plural, one {# paying account} other {# paying accounts}} × {price}/month. Past-due accounts are counted, they are still billed until Stripe finishes retrying the payment."
+    },
+    "users": {
+      "title": "Users",
+      "registeredCount": "{count, plural, one {# registered} other {# registered}}",
+      "searchPlaceholder": "Search by name or email",
+      "noResults": "No matching users.",
+      "columnName": "Name",
+      "columnEmail": "Email",
+      "columnPlan": "Plan",
+      "columnActiveInvoices": "Active invoices",
+      "columnJoined": "Joined"
+    },
+    "userDetail": {
+      "backLabel": "Users",
+      "email": "Email",
+      "activeInvoices": "Active invoices",
+      "onboarded": "Onboarded",
+      "notYet": "Not yet",
+      "joined": "Joined",
+      "plan": "Plan",
+      "nextPayment": "Next payment",
+      "noneScheduled": "None scheduled",
+      "stripeSubscription": "Stripe subscription",
+      "none": "None",
+      "stripeCustomer": "Stripe customer",
+      "noneLinkedYet": "None linked yet",
+      "linkTitle": "Link a Stripe customer"
+    },
+    "linkForm": {
+      "label": "Stripe customer ID",
+      "hint": "Link this before creating a subscription for them in Stripe, the webhook matches on this field.",
+      "submit": "Link customer",
+      "submitting": "Linking…",
+      "successMessage": "Stripe customer linked.",
+      "genericError": "Couldn't save that, try again.",
+      "alreadyLinkedError": "No unlinked user found with that ID, it may already have a Stripe customer linked.",
+      "invalidInput": "Invalid input."
+    },
+    "playbook": {
+      "title": "Stripe Playbook",
+      "intro": "Quick reference for handling a subscriber billing request. Every action below happens directly in the <stripeLink>Stripe Dashboard</stripeLink>. This page is steps only, it does not change anything itself.",
+      "cancelTitle": "Cancel a subscription",
+      "cancelP1": "Prefer letting them self serve: Settings, then Billing, then <kbd>Manage billing</kbd> in the app opens the Customer Portal, which already lets them cancel at period end.",
+      "cancelP2": "To do it for them: Dashboard, Customers, find them, open the subscription, then the menu.",
+      "cancelStep1": "Choose Cancel subscription.",
+      "cancelStep2": "Pick <strong>cancel at period end</strong> (usual choice, they keep Pro until the period they paid for ends) or <strong>cancel immediately</strong>.",
+      "cancelP3": "Either way they drop to the free plan, never locked out of the app entirely.",
+      "pauseTitle": "Pause a subscription",
+      "pauseWarning": "Pausing stops billing. It does not revoke Pro access in the app.",
+      "pauseP1": "The subscription status stays active while paused, so they keep unlimited invoices the whole time. Use this only when the intent is to stop charging them while leaving everything else as is. If they should actually lose access, cancel instead.",
+      "pauseP2": "Dashboard, Customer, subscription, then the menu, then <kbd>Pause payments</kbd>. Resume the same way.",
+      "extendTitle": "Extend a subscription",
+      "extendWarning": "Use a balance credit, not a second coupon. Coupons do not stack.",
+      "extendP1": "Dashboard, Customer, Balance, add a negative amount, one month is minus ten euros, two months is minus twenty. Stripe automatically applies it to whatever invoice comes due next. The Billing page in the app picks this up on its own, nothing else to do.",
+      "extendP2": "A coupon (Product catalog, Coupons, percent off, repeating duration) works for a fixed-length discount, but a second coupon on top of an existing one does not add its months on top. Only the balance credit reliably stacks.",
+      "giftTitle": "Gift a subscription",
+      "giftBest": "Best option: give them a promo code and have them redeem it themselves.",
+      "giftP1": "Create a Coupon (100 percent off, forever for a permanent gift or repeating for a set number of months), then a Promotion Code from it, and send them the code to enter at checkout when they click <kbd>Upgrade to Pro</kbd> in the app. This goes through the real checkout flow and links their account correctly, no extra steps needed.",
+      "giftHandsOff": "If it needs to be fully hands off instead, order matters:",
+      "giftStep1": "On their <userLink>user page</userLink>, link their Stripe customer ID first, before creating the subscription.",
+      "giftStep2": "Then create the subscription in Stripe and attach the coupon.",
+      "giftP2": "The app only recognizes which Stripe customer belongs to which account through that link. Creating the subscription first leaves it unmatched, and their access never updates.",
+      "refundsTitle": "Refunds",
+      "refundsP1": "Dashboard, Payments, find the charge, then Refund, full or partial. A refund does not cancel the subscription on its own. If they should also lose access, cancel it separately.",
+      "otherTitle": "Other things worth knowing",
+      "otherItem1": "Card updates and invoice history are self service via the Customer Portal, no action needed.",
+      "otherItem2": "Past due still counts as Pro in the app. That is the retry grace period Stripe already gives them, not a cutoff. Nudge them to update their card via the Portal if it drags on.",
+      "otherItem3": "Billing email is a separate field on the Stripe Customer from their Chasry login email. Update it directly on the customer if they ask.",
+      "otherItem4": "Do not edit the live Pro price. Create a new price and migrate deliberately if it ever needs to change."
+    }
   }
 }

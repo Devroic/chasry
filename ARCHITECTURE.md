@@ -277,9 +277,14 @@ production. Remote auth/SMTP settings still live in the Supabase dashboard.
 A single-operator internal tool, not part of the product a subscriber ever sees, added after the
 free/Pro user base grew past what Stripe's own dashboard could show (Stripe only knows about
 paying customers, it has no idea how many people are on the free plan or stuck mid-onboarding).
-Deliberately **not** wired into `next-intl` (always English) and does not reuse `DashboardShell`
-(a separate `AdminShell` in `components/admin/`, plain top tab bar, no sidebar/mobile-nav
-machinery) — both were judged unnecessary complexity for a section only one person ever sees.
+Does not reuse `DashboardShell` (a separate `AdminShell` in `components/admin/`, plain top tab
+bar, no sidebar/mobile-nav machinery, judged unnecessary complexity for a section only one person
+ever sees) but **is** wired into `next-intl` the normal way (`getTranslations` in the Server
+Component pages, `useTranslations` in `AdminShell` and `LinkStripeCustomerForm`, a `LanguageSwitcher`
+in `AdminShell`'s header next to `ThemeToggle`) — briefly English-only when first built, revisited
+once real Greek-speaking usage made that limitation actually felt. All admin copy lives under the
+`admin` namespace in `messages/*.json`, and `lib/validations/admin.ts` follows the same
+Translator-factory pattern as every other form's schema.
 
 - **Auth gate**: `requireAdmin()` in `lib/auth.ts`, calls `requireUser()` first (redirects a
   logged-out visitor to `/login`, same as everywhere else), then checks the session's email

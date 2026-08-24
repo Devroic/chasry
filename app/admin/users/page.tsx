@@ -1,3 +1,4 @@
+import { getTranslations, getLocale } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ClickableTableRow } from "@/components/dashboard/clickable-table-row";
 import { SortableHead } from "@/components/dashboard/sortable-head";
@@ -13,13 +14,6 @@ export const metadata = { title: "Users" };
 const SORT_FIELDS = ["name", "email", "status", "joined"] as const;
 type SortField = (typeof SORT_FIELDS)[number];
 
-const STATUS_LABEL: Record<string, string> = {
-  active: "Pro",
-  past_due: "Past due",
-  canceled: "Canceled",
-  none: "Free",
-};
-
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
   past_due: "bg-red-50 text-red-700 border-red-200",
@@ -33,6 +27,16 @@ export default async function AdminUsersPage({
   const { q = "", sort = "joined", dir = "desc" } = await searchParams;
   const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "joined";
   const sortDir: "asc" | "desc" = dir === "asc" ? "asc" : "desc";
+
+  const t = await getTranslations("admin.users");
+  const tStatus = await getTranslations("admin.status");
+  const locale = await getLocale();
+  const statusLabel: Record<string, string> = {
+    active: tStatus("pro"),
+    past_due: tStatus("pastDue"),
+    canceled: tStatus("canceled"),
+    none: tStatus("free"),
+  };
 
   const supabase = createAdminClient();
   const [{ data: profilesRaw }, { data: invoicesRaw }] = await Promise.all([
@@ -81,12 +85,12 @@ export default async function AdminUsersPage({
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Users</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{profiles.length} registered</p>
+          <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("registeredCount", { count: profiles.length })}</p>
         </div>
         <TableSearch
           action="/admin/users"
-          placeholder="Search by name or email"
+          placeholder={t("searchPlaceholder")}
           defaultValue={q}
           hiddenParams={{ sort, dir }}
         />
@@ -94,30 +98,35 @@ export default async function AdminUsersPage({
 
       {sorted.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          No matching users.
+          {t("noResults")}
         </p>
       ) : (
         <Card className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead label="Name" active={sortField === "name"} dir={sortDir} href={sortHref("name")} />
                 <SortableHead
-                  label="Email"
+                  label={t("columnName")}
+                  active={sortField === "name"}
+                  dir={sortDir}
+                  href={sortHref("name")}
+                />
+                <SortableHead
+                  label={t("columnEmail")}
                   active={sortField === "email"}
                   dir={sortDir}
                   href={sortHref("email")}
                   className="hidden sm:table-cell"
                 />
                 <SortableHead
-                  label="Plan"
+                  label={t("columnPlan")}
                   active={sortField === "status"}
                   dir={sortDir}
                   href={sortHref("status")}
                 />
-                <TableHead className="hidden md:table-cell">Active invoices</TableHead>
+                <TableHead className="hidden md:table-cell">{t("columnActiveInvoices")}</TableHead>
                 <SortableHead
-                  label="Joined"
+                  label={t("columnJoined")}
                   active={sortField === "joined"}
                   dir={sortDir}
                   href={sortHref("joined")}
@@ -134,14 +143,14 @@ export default async function AdminUsersPage({
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={STATUS_STYLE[profile.subscription_status]}>
-                      {STATUS_LABEL[profile.subscription_status] ?? profile.subscription_status}
+                      {statusLabel[profile.subscription_status] ?? profile.subscription_status}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {activeInvoiceCounts.get(profile.id) ?? 0}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatDate(profile.created_at)}
+                    {formatDate(profile.created_at, locale)}
                   </TableCell>
                 </ClickableTableRow>
               ))}

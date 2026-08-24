@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PRO_PRICE_AMOUNT } from "@/lib/plan";
@@ -20,6 +21,7 @@ function daysAgoTimestamp(days: number) {
 }
 
 export default async function AdminOverviewPage() {
+  const t = await getTranslations("admin.overview");
   const supabase = createAdminClient();
   const { data } = await supabase.from("profiles").select("subscription_status, created_at, onboarded_at");
   const profiles = data ?? [];
@@ -37,38 +39,35 @@ export default async function AdminOverviewPage() {
   const newThisWeek = profiles.filter((p) => new Date(p.created_at).getTime() >= weekAgo).length;
   const newThisMonth = profiles.filter((p) => new Date(p.created_at).getTime() >= monthAgo).length;
 
-  const mrr = (active + pastDue) * Number(PRO_PRICE_AMOUNT.replace(/[^\d.]/g, ""));
+  const payingCount = active + pastDue;
+  const mrr = payingCount * Number(PRO_PRICE_AMOUNT.replace(/[^\d.]/g, ""));
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Overview</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Numbers Stripe alone cannot give you, free-tier users included.
-        </p>
+        <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <Metric label="Registered users" value={total} />
-        <Metric label="Pro (active)" value={active} />
-        <Metric label="Past due" value={pastDue} tone={pastDue > 0 ? "warn" : undefined} />
-        <Metric label="Free" value={free} />
-        <Metric label="Canceled" value={canceled} />
-        <Metric label="Stuck mid-onboarding" value={stuckOnboarding} tone={stuckOnboarding > 0 ? "warn" : undefined} />
-        <Metric label="New this week" value={newThisWeek} />
-        <Metric label="New this month" value={newThisMonth} />
+        <Metric label={t("registeredUsers")} value={total} />
+        <Metric label={t("proActive")} value={active} />
+        <Metric label={t("pastDue")} value={pastDue} tone={pastDue > 0 ? "warn" : undefined} />
+        <Metric label={t("free")} value={free} />
+        <Metric label={t("canceled")} value={canceled} />
+        <Metric label={t("stuckOnboarding")} value={stuckOnboarding} tone={stuckOnboarding > 0 ? "warn" : undefined} />
+        <Metric label={t("newThisWeek")} value={newThisWeek} />
+        <Metric label={t("newThisMonth")} value={newThisMonth} />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Estimated MRR</CardTitle>
+          <CardTitle className="text-base">{t("estimatedMrr")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-3xl font-semibold text-foreground">€{mrr.toLocaleString("en-IE")}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {active + pastDue} paying account{active + pastDue === 1 ? "" : "s"} × {PRO_PRICE_AMOUNT}
-            /month. Past-due accounts are counted, they are still billed until Stripe finishes
-            retrying the payment.
+            {t("mrrDescription", { count: payingCount, price: PRO_PRICE_AMOUNT })}
           </p>
         </CardContent>
       </Card>

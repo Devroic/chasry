@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, startTransition } from "react";
+import { useActionState, startTransition, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
@@ -13,6 +13,8 @@ import { linkStripeCustomerSchema, type LinkStripeCustomerInput } from "@/lib/va
 import { toFormData } from "@/lib/utils";
 
 export function LinkStripeCustomerForm({ userId }: { userId: string }) {
+  const t = useTranslations("admin.linkForm");
+  const tValidation = useTranslations("validation");
   const [state, formAction, pending] = useActionState<LinkStripeCustomerState, FormData>(
     linkStripeCustomer,
     null
@@ -22,7 +24,7 @@ export function LinkStripeCustomerForm({ userId }: { userId: string }) {
     handleSubmit,
     formState: { errors },
   } = useForm<LinkStripeCustomerInput>({
-    resolver: zodResolver(linkStripeCustomerSchema),
+    resolver: zodResolver(linkStripeCustomerSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: { userId, stripeCustomerId: "" },
@@ -43,10 +45,10 @@ export function LinkStripeCustomerForm({ userId }: { userId: string }) {
       {state?.error && <p className="text-xs font-medium text-destructive">{state.error}</p>}
       <input type="hidden" {...register("userId")} />
       <FormField
-        label="Stripe customer ID"
+        label={t("label")}
         htmlFor="stripeCustomerId"
         error={errors.stripeCustomerId?.message}
-        hint={errors.stripeCustomerId ? undefined : "Link this before creating a subscription for them in Stripe, the webhook matches on this field."}
+        hint={errors.stripeCustomerId ? undefined : t("hint")}
       >
         <Input
           id="stripeCustomerId"
@@ -56,7 +58,7 @@ export function LinkStripeCustomerForm({ userId }: { userId: string }) {
         />
       </FormField>
       <Button type="submit" size="sm" loading={pending}>
-        {pending ? "Linking..." : "Link customer"}
+        {pending ? t("submitting") : t("submit")}
       </Button>
     </form>
   );

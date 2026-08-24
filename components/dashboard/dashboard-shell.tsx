@@ -229,7 +229,7 @@ function UserMenu({
         {isAdmin && (
           <DropdownMenuItem asChild onClick={onNavigate}>
             <Link href="/admin" className="flex items-center gap-2">
-              <ShieldCheck className="size-4" /> Admin
+              <ShieldCheck className="size-4" /> {t("admin")}
             </Link>
           </DropdownMenuItem>
         )}

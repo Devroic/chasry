@@ -3,28 +3,31 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { LogOut, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
 import { cn } from "@/lib/utils";
-
-const TABS = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/playbook", label: "Playbook" },
-];
 
 /**
  * Deliberately not the customer-facing DashboardShell: this is a single-
  * operator internal tool, not part of the product a subscriber ever sees,
- * so it skips i18n (English-only) and the sidebar/mobile-nav machinery in
- * favor of a plain top tab bar. Dark mode still applies, since that's a
- * root-level class on <html>, not something this component opts into.
+ * so it skips the sidebar/mobile-nav machinery in favor of a plain top tab
+ * bar. It does still use next-intl and carries its own theme/language
+ * controls, same as everywhere else in the app.
  */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations("admin.shell");
+
+  const tabs = [
+    { href: "/admin", label: t("tabOverview") },
+    { href: "/admin/users", label: t("tabUsers") },
+    { href: "/admin/playbook", label: t("tabPlaybook") },
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -48,27 +51,28 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               priority
             />
             <Badge variant="outline" className="text-muted-foreground">
-              Admin
+              {t("badge")}
             </Badge>
           </div>
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <ThemeToggle />
             <Button asChild variant="ghost" size="sm">
               <Link href="/dashboard">
-                <ArrowLeft /> Back to app
+                <ArrowLeft /> {t("backToApp")}
               </Link>
             </Button>
             <form action={logout}>
               <Button type="submit" variant="ghost" size="sm">
-                <LogOut /> Log out
+                <LogOut /> {t("logOut")}
               </Button>
             </form>
           </div>
         </div>
 
         <nav className="mx-auto flex max-w-6xl gap-1 px-4 sm:px-6">
-          {TABS.map((tab) => {
+          {tabs.map((tab) => {
             const active = tab.href === "/admin" ? pathname === "/admin" : pathname.startsWith(tab.href);
             return (
               <Link
