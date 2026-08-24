@@ -125,20 +125,22 @@ export function DashboardShell({
       <div className="mx-auto flex w-full max-w-7xl flex-1">
         <aside
           className={cn(
-            "hidden shrink-0 flex-col border-r border-border py-6 transition-[width] duration-200 lg:flex",
+            // Sticky and bounded to the viewport (header is h-20 = 5rem), not
+            // the flex row's natural `align-items: stretch` height, which
+            // matches `main` and is only as tall as the page's content. That
+            // stretched height is what pushed a bottom-pinned button off
+            // screen on a real, content-heavy dashboard: `main` was much
+            // taller than the viewport, so "bottom of aside" was far below
+            // the fold. Bounding `aside` to the viewport means "bottom" is
+            // the bottom of what's actually visible, and `sticky` keeps it
+            // there while the page scrolls, the same way the header does.
+            "sticky top-20 hidden h-[calc(100vh-5rem)] shrink-0 flex-col overflow-y-auto border-r border-border py-6 transition-[width] duration-200 lg:flex",
             sidebarCollapsed ? "w-16 px-2" : "w-60 px-4"
           )}
         >
-          {/*
-           * Top, not bottom: `aside` stretches to match `main`'s full height
-           * (the flex row's default `align-items: stretch`), which on a page
-           * with real content is much taller than the viewport. A
-           * bottom-pinned button (`mt-auto`) ended up scrolled far below the
-           * fold on an actual dashboard, effectively invisible — a real
-           * report, not a hypothetical. Top keeps it reachable regardless of
-           * how long the page is.
-           */}
-          <div className={cn("mb-4 flex", sidebarCollapsed ? "justify-center" : "justify-end")}>
+          <DashboardNav collapsed={sidebarCollapsed} />
+
+          <div className={cn("mt-auto flex pt-4", sidebarCollapsed ? "justify-center" : "justify-end")}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -159,8 +161,6 @@ export function DashboardShell({
               </TooltipContent>
             </Tooltip>
           </div>
-
-          <DashboardNav collapsed={sidebarCollapsed} />
         </aside>
 
         <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">{children}</main>
