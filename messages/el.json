@@ -482,6 +482,8 @@
       "proDescription": "Απεριόριστοι πελάτες και τιμολόγια.",
       "freeDescription": "Έως {limit} ενεργά τιμολόγια τη φορά ({used} σε χρήση). Απεριόριστοι πελάτες.",
       "renews": "Ανανεώνεται στις {date}.",
+      "nextPaymentFree": "Επόμενη πληρωμή: δωρεάν ({date}), υπάρχει έκπτωση σε αυτή τη συνδρομή.",
+      "nextPaymentDue": "Επόμενη πληρωμή: {amount} στις {date}.",
       "manageBilling": "Διαχείριση χρέωσης",
       "upgradeToPro": "Αναβάθμιση σε Pro",
       "statusActive": "Ενεργό",

@@ -482,6 +482,8 @@
       "proDescription": "Unlimited clients and invoices.",
       "freeDescription": "Up to {limit} active invoices at a time ({used} used). Unlimited clients.",
       "renews": "Renews {date}.",
+      "nextPaymentFree": "Next payment: free ({date}), a discount is applied to this subscription.",
+      "nextPaymentDue": "Next payment: {amount} on {date}.",
       "manageBilling": "Manage billing",
       "upgradeToPro": "Upgrade to Pro",
       "statusActive": "Active",

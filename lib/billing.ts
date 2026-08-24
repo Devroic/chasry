@@ -32,3 +32,26 @@ export async function createCheckoutSession({
     cancel_url: `${appUrl}${cancelPath}`,
   });
 }
+
+/**
+ * What the *next* invoice will actually charge, not just when the current
+ * billing period ends. These are two different questions once a discount is
+ * involved: a coupon changes the amount due, never the monthly cycle itself,
+ * so `current_period_end` alone (what we already store from the webhook) is
+ * true but easy to misread as "you'll be charged on this date" even during a
+ * fully comped month. Returns `null` rather than throwing on any Stripe
+ * error (a subscription mid-cancellation has no upcoming invoice to preview,
+ * for one), so a call site can always fall back to the plain period-end date.
+ */
+export async function getUpcomingInvoicePreview(subscriptionId: string) {
+  try {
+    const upcoming = await stripe.invoices.createPreview({ subscription: subscriptionId });
+    return {
+      amountDue: upcoming.amount_due / 100,
+      currency: upcoming.currency.toUpperCase(),
+      periodEnd: new Date(upcoming.period_end * 1000).toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
