@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Matches chasry.com's landing page — same typeface, same weight range.
 const inter = Inter({
@@ -45,8 +46,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
-            {children}
-            <Toaster position="top-center" richColors />
+            <TooltipProvider>
+              {children}
+              <Toaster position="top-center" richColors />
+            </TooltipProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

@@ -4,10 +4,20 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Menu, LogOut, ChevronDown, Settings, Sparkles, LifeBuoy } from "lucide-react";
+import {
+  Menu,
+  LogOut,
+  ChevronDown,
+  Settings,
+  Sparkles,
+  LifeBuoy,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +31,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
 import { isPro } from "@/lib/plan";
+import { cn } from "@/lib/utils";
 import type { SubscriptionStatus } from "@/types/database.types";
 
 export function DashboardShell({
@@ -37,6 +48,12 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Desktop-only: manually toggled, defaults open. Resets on a full reload
+  // rather than persisting to disk — the sidebar only has three links, so
+  // that's a fair trade against the hydration-mismatch risk of reading
+  // localStorage before the first client render (see ThemeToggle's history
+  // in ARCHITECTURE.md for why that risk is taken seriously here).
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const t = useTranslations("header");
   const initial = businessName.trim().charAt(0).toUpperCase() || "?";
   const pro = isPro(subscriptionStatus);
@@ -106,8 +123,35 @@ export function DashboardShell({
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl flex-1">
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-border px-4 py-6 lg:flex">
-          <DashboardNav />
+        <aside
+          className={cn(
+            "hidden shrink-0 flex-col border-r border-border py-6 transition-[width] duration-200 lg:flex",
+            sidebarCollapsed ? "w-16 px-2" : "w-60 px-4"
+          )}
+        >
+          <DashboardNav collapsed={sidebarCollapsed} />
+
+          <div className={cn("mt-auto flex", sidebarCollapsed ? "justify-center" : "justify-end")}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+                  aria-label={sidebarCollapsed ? t("expandSidebar") : t("collapseSidebar")}
+                >
+                  {sidebarCollapsed ? (
+                    <PanelLeftOpen className="size-4" />
+                  ) : (
+                    <PanelLeftClose className="size-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {sidebarCollapsed ? t("expandSidebar") : t("collapseSidebar")}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </aside>
 
         <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">{children}</main>

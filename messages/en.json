@@ -36,7 +36,9 @@
     "darkMode": "Switch to dark mode",
     "language": "Language",
     "accountMenu": "Account menu",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar"
   },
   "footer": {
     "help": "Help",
