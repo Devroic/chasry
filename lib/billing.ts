@@ -35,19 +35,25 @@ export async function createCheckoutSession({
 
 /**
  * The date real money next changes hands, not just the next billing-cycle
- * boundary. Those are the same date for an undiscounted subscription, but
- * not for one on a coupon: the cycle still rolls monthly regardless of any
- * discount, so `current_period_end` alone can show a date that's actually
- * another free month, exactly what happened with a 3-month 100%-off coupon
- * here — the very next cycle boundary was still fully covered.
+ * boundary. Those are the same date for an undiscounted, uncredited
+ * subscription, but two separate mechanisms can push a real charge further
+ * out without ever changing the monthly cycle itself: a coupon (a
+ * `repeating`-duration discount has a real `end` date, computed by Stripe)
+ * and a customer balance credit (a flat amount that gets consumed by
+ * whichever invoice comes due next, however far out that is — see
+ * `settings/billing`'s admin notes on gifting a subscription). Both were
+ * used together on the account this was built against: a 3-month coupon,
+ * then a €10 balance credit added afterward to cover one more month on top.
  *
  * Resolution: preview the next invoice. If it's already a real charge,
- * that invoice's date is correct as-is. If it's €0, the next REAL charge is
- * whenever the active discount stops applying — Stripe computes that end
- * date itself for a `repeating`-duration coupon, so it's read directly
- * rather than re-derived. A `forever`-duration coupon has no such end (by
- * design, nothing is ever going to be charged), so that case returns `null`
- * rather than a fabricated date.
+ * that invoice's date is correct as-is. If it's €0, find how far the
+ * coupon pushes things out (its Stripe-computed `end`, or the immediate
+ * next invoice's own date if there's no coupon at all — balance alone is
+ * covering it), then add however many further consecutive monthly invoices
+ * the remaining balance credit is large enough to zero out on top of that.
+ * A `forever`-duration coupon with no balance behind it has no computable
+ * end at all (by design, nothing is ever going to be charged), so that
+ * case returns `null` rather than a fabricated date.
  */
 export async function getNextRealPaymentDate(subscriptionId: string): Promise<string | null> {
   try {
@@ -57,14 +63,44 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
     }
 
     const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-      expand: ["discounts"],
+      expand: ["discounts", "customer"],
     });
     const discountEnds = (subscription.discounts ?? [])
       .map((d) => (typeof d === "string" ? null : d.end))
       .filter((end): end is number => end != null);
-    if (discountEnds.length === 0) return null;
 
-    return new Date(Math.max(...discountEnds) * 1000).toISOString();
+    // Discount coverage is exclusive of its end date (the invoice *at* that
+    // timestamp is the first one not covered), so that's a clean base to
+    // layer balance-covered months on top of. With no discount at all, the
+    // immediate upcoming invoice is itself already balance-covered — one
+    // month's worth of credit is already spoken for by it.
+    const hasDiscount = discountEnds.length > 0;
+    const baseSeconds = hasDiscount ? Math.max(...discountEnds) : upcoming.period_end;
+
+    const customer = subscription.customer;
+    const priceCents = subscription.items.data[0]?.price.unit_amount ?? 0;
+    if (customer && typeof customer !== "string" && !customer.deleted && priceCents > 0) {
+      // Stripe stores a credit as a negative balance.
+      const creditCents = Math.max(0, -customer.balance);
+      const consumedByThisInvoice = hasDiscount ? 0 : priceCents;
+      const extraMonths = Math.floor((creditCents - consumedByThisInvoice) / priceCents);
+      if (extraMonths > 0) {
+        const covered = new Date(baseSeconds * 1000);
+        covered.setUTCMonth(covered.getUTCMonth() + extraMonths + (hasDiscount ? 0 : 1));
+        return covered.toISOString();
+      }
+      if (!hasDiscount) {
+        // No discount, and the credit didn't stretch past this one invoice —
+        // it's already covered above by the amount_due === 0 branch, so the
+        // next one after it (one more cycle) is the first real charge.
+        const nextCycle = new Date(baseSeconds * 1000);
+        nextCycle.setUTCMonth(nextCycle.getUTCMonth() + 1);
+        return nextCycle.toISOString();
+      }
+    }
+
+    if (!hasDiscount) return null;
+    return new Date(baseSeconds * 1000).toISOString();
   } catch {
     return null;
   }
