@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, formatMoney } from "@/lib/format";
-import { getUpcomingInvoicePreview } from "@/lib/billing";
+import { formatDate } from "@/lib/format";
 import { startCheckout, openBillingPortal } from "./actions";
 
 export default async function BillingSettingsPage() {
@@ -22,17 +21,6 @@ export default async function BillingSettingsPage() {
 
   const status = profile.subscription_status;
   const pro = isPro(status);
-
-  // Live, not derived from stored data: a coupon changes what the next
-  // invoice actually charges without touching the billing cycle itself, so
-  // current_period_end alone can't tell you whether the next date is a real
-  // charge or another free month. null on any Stripe error (a subscription
-  // mid-cancellation has nothing upcoming to preview) falls back to the
-  // plain period-end line below rather than breaking the page.
-  const upcomingInvoice =
-    status === "active" && profile.stripe_subscription_id
-      ? await getUpcomingInvoicePreview(profile.stripe_subscription_id)
-      : null;
 
   const statusLabel: Record<string, string> = {
     active: t("statusActive"),
@@ -83,14 +71,7 @@ export default async function BillingSettingsPage() {
 
           {status === "active" && profile.current_period_end && (
             <p className="text-xs text-muted-foreground">
-              {upcomingInvoice
-                ? upcomingInvoice.amountDue === 0
-                  ? t("nextPaymentFree", { date: formatDate(upcomingInvoice.periodEnd) })
-                  : t("nextPaymentDue", {
-                      amount: formatMoney(upcomingInvoice.amountDue, upcomingInvoice.currency),
-                      date: formatDate(upcomingInvoice.periodEnd),
-                    })
-                : t("renews", { date: formatDate(profile.current_period_end) })}
+              {t("nextPayment", { date: formatDate(profile.current_period_end) })}
             </p>
           )}
 
