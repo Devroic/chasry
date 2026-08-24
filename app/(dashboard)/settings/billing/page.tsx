@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
+import { getNextRealPaymentDate } from "@/lib/billing";
 import { startCheckout, openBillingPortal } from "./actions";
 
 export default async function BillingSettingsPage() {
@@ -21,6 +22,16 @@ export default async function BillingSettingsPage() {
 
   const status = profile.subscription_status;
   const pro = isPro(status);
+
+  // Falls back to the stored period-end date on any failure (including a
+  // subscription that genuinely has nothing upcoming to preview) — same
+  // safety net as before, just now correct for a subscription mid-coupon
+  // too, where the next *cycle* boundary and the next *charge* aren't the
+  // same date.
+  const nextPaymentDate =
+    status === "active" && profile.stripe_subscription_id
+      ? ((await getNextRealPaymentDate(profile.stripe_subscription_id)) ?? profile.current_period_end)
+      : profile.current_period_end;
 
   const statusLabel: Record<string, string> = {
     active: t("statusActive"),
@@ -69,9 +80,9 @@ export default async function BillingSettingsPage() {
             </Badge>
           </div>
 
-          {status === "active" && profile.current_period_end && (
+          {status === "active" && nextPaymentDate && (
             <p className="text-xs text-muted-foreground">
-              {t("nextPayment", { date: formatDate(profile.current_period_end) })}
+              {t("nextPayment", { date: formatDate(nextPaymentDate) })}
             </p>
           )}
 
