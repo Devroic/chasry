@@ -129,9 +129,16 @@ export function DashboardShell({
             sidebarCollapsed ? "w-16 px-2" : "w-60 px-4"
           )}
         >
-          <DashboardNav collapsed={sidebarCollapsed} />
-
-          <div className={cn("mt-auto flex", sidebarCollapsed ? "justify-center" : "justify-end")}>
+          {/*
+           * Top, not bottom: `aside` stretches to match `main`'s full height
+           * (the flex row's default `align-items: stretch`), which on a page
+           * with real content is much taller than the viewport. A
+           * bottom-pinned button (`mt-auto`) ended up scrolled far below the
+           * fold on an actual dashboard, effectively invisible — a real
+           * report, not a hypothetical. Top keeps it reachable regardless of
+           * how long the page is.
+           */}
+          <div className={cn("mb-4 flex", sidebarCollapsed ? "justify-center" : "justify-end")}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -152,6 +159,8 @@ export function DashboardShell({
               </TooltipContent>
             </Tooltip>
           </div>
+
+          <DashboardNav collapsed={sidebarCollapsed} />
         </aside>
 
         <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">{children}</main>
