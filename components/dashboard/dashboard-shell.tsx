@@ -12,6 +12,7 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,12 +38,14 @@ export function DashboardShell({
   businessName,
   email,
   subscriptionStatus,
+  isAdmin,
   footer,
   children,
 }: {
   businessName: string;
   email: string;
   subscriptionStatus: SubscriptionStatus;
+  isAdmin?: boolean;
   footer: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -96,6 +99,7 @@ export function DashboardShell({
               email={email}
               initial={initial}
               subscriptionStatus={subscriptionStatus}
+              isAdmin={isAdmin}
               onNavigate={() => setMobileOpen(false)}
             />
 
@@ -175,12 +179,14 @@ function UserMenu({
   email,
   initial,
   subscriptionStatus,
+  isAdmin,
   onNavigate,
 }: {
   businessName: string;
   email: string;
   initial: string;
   subscriptionStatus: SubscriptionStatus;
+  isAdmin?: boolean;
   onNavigate: () => void;
 }) {
   const pro = isPro(subscriptionStatus);
@@ -220,6 +226,13 @@ function UserMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {isAdmin && (
+          <DropdownMenuItem asChild onClick={onNavigate}>
+            <Link href="/admin" className="flex items-center gap-2">
+              <ShieldCheck className="size-4" /> Admin
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild onClick={onNavigate}>
           <Link href="/settings/profile" className="flex items-center gap-2">
             <Settings className="size-4" /> {t("settings")}

@@ -272,6 +272,56 @@ production. Remote auth/SMTP settings still live in the Supabase dashboard.
   Don't reintroduce ad hoc `supabase.from("profiles").select(...)` calls in dashboard pages;
   extend `getProfile`'s column list in `lib/auth.ts` instead so the cache stays the one source.
 
+## Internal admin section (`/admin`)
+
+A single-operator internal tool, not part of the product a subscriber ever sees, added after the
+free/Pro user base grew past what Stripe's own dashboard could show (Stripe only knows about
+paying customers, it has no idea how many people are on the free plan or stuck mid-onboarding).
+Deliberately **not** wired into `next-intl` (always English) and does not reuse `DashboardShell`
+(a separate `AdminShell` in `components/admin/`, plain top tab bar, no sidebar/mobile-nav
+machinery) — both were judged unnecessary complexity for a section only one person ever sees.
+
+- **Auth gate**: `requireAdmin()` in `lib/auth.ts`, calls `requireUser()` first (redirects a
+  logged-out visitor to `/login`, same as everywhere else), then checks the session's email
+  against `ADMIN_EMAILS` (comma-separated env var) via `isAdminEmail()`. A logged-in non-admin gets
+  a plain `notFound()` (404), not a redirect, so probing the URL doesn't even confirm the section
+  exists. Every `/admin` page and the one Server Action call this themselves, the layout-level
+  check is not the only gate, matching this app's existing rule that every mutation/page
+  authenticates itself rather than trusting a parent layout alone.
+- **Data access**: admin pages read across every user's data (`profiles`, `invoices`), which RLS
+  would otherwise block, so they use `createAdminClient()` (the service-role client from
+  `lib/supabase/admin.ts`, previously only imported by the cron job and the Stripe webhook) after
+  `requireAdmin()` has already verified the caller. The client's doc comment was updated to
+  reflect this as a second legitimate consumer, don't add a third without the same admin gate in
+  front of it.
+- **Pages**: `/admin` (overview metrics, one bulk `profiles` fetch reduced in JS rather than
+  several `count()` queries, fine at this app's current scale per `PROJECT.md`), `/admin/users`
+  (the same URL-param search/sort/`ClickableTableRow` pattern the customers/invoices lists use),
+  `/admin/users/[id]` (a user's full status plus a deep link to their Stripe customer in the real
+  Stripe Dashboard, mutations happen there, not by rebuilding Stripe's UI here), and
+  `/admin/playbook` (a production-toned, in-app copy of `STRIPE-PLAYBOOK.md`'s steps, so the
+  operator doesn't have to open the repo to remember how to cancel/pause/extend/gift a
+  subscription).
+- **The one mutating action**: `linkStripeCustomer` in `app/admin/actions.ts`, sets a user's
+  `profiles.stripe_customer_id` directly. This exists because the Stripe webhook only matches an
+  incoming event back to a Chasry account via that column (see `checkout.session.completed`'s
+  handler in `app/api/stripe/webhook/route.ts`), which is only ever written automatically through
+  the app's own Checkout flow. Gifting a subscription to someone who has never checked out means
+  linking this by hand *before* creating their subscription in Stripe, see `STRIPE-PLAYBOOK.md`.
+  The action re-checks `.is("stripe_customer_id", null)` server-side (not just the UI, which only
+  renders the form when unset), a caught real gap where the action would otherwise have silently
+  overwritten an existing correct link on a resubmit, orphaning that user's real Stripe customer
+  from the webhook match.
+- **Not exposed in primary nav**: `nav-items.ts` (shared by every subscriber) is untouched. Instead
+  `DashboardShell` takes an optional `isAdmin` prop, computed once in `app/(dashboard)/layout.tsx`
+  via `isAdminEmail()`, threaded down to `UserMenu` to conditionally show an "Admin" entry in the
+  account dropdown, invisible to everyone else.
+- Verified via a manual security pass (not `/security-review`'s automated diff review, run
+  separately for this section since the diff also carried 18 prior unrelated commits): confirmed
+  a logged-out request to `/admin` redirects to `/login`, `createAdminClient()` has no reachable
+  path that skips `requireAdmin()`, and no component in this section uses
+  `dangerouslySetInnerHTML`.
+
 ## API surface
 
 **Route Handlers** (only because an external system calls in, not our own UI):

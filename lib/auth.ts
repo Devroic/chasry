@@ -1,7 +1,12 @@
 import "server-only";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
 
 /**
  * The underlying auth + profile lookups, deduplicated per request with
@@ -64,4 +69,23 @@ export async function requireOnboardedUser() {
   if (!profile.onboarded_at) redirect("/onboarding");
 
   return { supabase, user, profile };
+}
+
+/** Pure check, no auth call — for conditionally showing an "Admin" link in the UI. */
+export function isAdminEmail(email: string | null | undefined) {
+  return Boolean(email && ADMIN_EMAILS.includes(email.toLowerCase()));
+}
+
+/**
+ * Gates the internal /admin section. 404s instead of redirecting for a
+ * non-admin, so a logged-in subscriber probing the URL doesn't even learn
+ * the section exists. Admin pages still need to reach for the service-role
+ * client (lib/supabase/admin.ts) separately for any query that spans other
+ * users' data — the RLS-scoped client returned here only ever sees the
+ * admin's own row, same as any other user.
+ */
+export async function requireAdmin() {
+  const { supabase, user } = await requireUser();
+  if (!isAdminEmail(user.email)) notFound();
+  return { supabase, user };
 }

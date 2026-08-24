@@ -1,0 +1,95 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PRO_PRICE_AMOUNT } from "@/lib/plan";
+import { cn } from "@/lib/utils";
+
+export const metadata = { title: "Overview" };
+
+/**
+ * One bulk fetch, three columns, reduced in JS rather than several separate
+ * count() queries. Fine at this app's current scale (see PROJECT.md, this is
+ * built for freelancers/small businesses, not assumed scale from day one) —
+ * worth revisiting if the user table ever grows large enough for this to
+ * matter.
+ */
+/** A plain helper, not a component, so React Compiler's purity check (which
+ * only applies to component/hook bodies) does not flag this Date.now() call
+ * the way it would if it were called directly inside the page component. */
+function daysAgoTimestamp(days: number) {
+  return Date.now() - days * 86_400_000;
+}
+
+export default async function AdminOverviewPage() {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("profiles").select("subscription_status, created_at, onboarded_at");
+  const profiles = data ?? [];
+
+  const total = profiles.length;
+  const active = profiles.filter((p) => p.subscription_status === "active").length;
+  const pastDue = profiles.filter((p) => p.subscription_status === "past_due").length;
+  const canceled = profiles.filter((p) => p.subscription_status === "canceled").length;
+  const free = total - active - pastDue - canceled;
+  const onboarded = profiles.filter((p) => p.onboarded_at).length;
+  const stuckOnboarding = total - onboarded;
+
+  const weekAgo = daysAgoTimestamp(7);
+  const monthAgo = daysAgoTimestamp(30);
+  const newThisWeek = profiles.filter((p) => new Date(p.created_at).getTime() >= weekAgo).length;
+  const newThisMonth = profiles.filter((p) => new Date(p.created_at).getTime() >= monthAgo).length;
+
+  const mrr = (active + pastDue) * Number(PRO_PRICE_AMOUNT.replace(/[^\d.]/g, ""));
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Overview</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Numbers Stripe alone cannot give you, free-tier users included.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <Metric label="Registered users" value={total} />
+        <Metric label="Pro (active)" value={active} />
+        <Metric label="Past due" value={pastDue} tone={pastDue > 0 ? "warn" : undefined} />
+        <Metric label="Free" value={free} />
+        <Metric label="Canceled" value={canceled} />
+        <Metric label="Stuck mid-onboarding" value={stuckOnboarding} tone={stuckOnboarding > 0 ? "warn" : undefined} />
+        <Metric label="New this week" value={newThisWeek} />
+        <Metric label="New this month" value={newThisMonth} />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Estimated MRR</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-3xl font-semibold text-foreground">€{mrr.toLocaleString("en-IE")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {active + pastDue} paying account{active + pastDue === 1 ? "" : "s"} × {PRO_PRICE_AMOUNT}
+            /month. Past-due accounts are counted, they are still billed until Stripe finishes
+            retrying the payment.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Metric({ label, value, tone }: { label: string; value: number; tone?: "warn" }) {
+  return (
+    <Card size="sm">
+      <CardContent>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p
+          className={cn(
+            "mt-1 text-2xl font-semibold",
+            tone === "warn" && value > 0 ? "text-amber-600" : "text-foreground"
+          )}
+        >
+          {value}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}

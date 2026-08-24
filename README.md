@@ -94,6 +94,9 @@ This prints a webhook signing secret starting with `whsec_...` — use that as
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional): from an Upstash Redis
   database. Without these, rate limiting is a no-op — fine for local dev, not recommended left
   off in production.
+- `ADMIN_EMAILS`: comma-separated list of email addresses allowed into the internal `/admin`
+  section (user counts, subscription lookups, the Stripe playbook). Anyone else hitting `/admin`
+  gets a plain 404, not a redirect. Set the same value in Vercel.
 
 ## 7. Run it
 
