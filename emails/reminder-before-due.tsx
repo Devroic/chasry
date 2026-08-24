@@ -36,7 +36,7 @@ export default function ReminderBeforeDueEmail({
       <ReminderHeading>Hi {clientName}, just a friendly reminder</ReminderHeading>
       <ReminderText>
         This invoice from {businessName} is due in {daysUntilDue} {dayWord}. No action needed if
-        it&rsquo;s already scheduled — this is just a heads-up.
+        it&rsquo;s already scheduled, this is just a heads-up.
       </ReminderText>
       <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />
       {paymentLink && <PayNowButton href={paymentLink} />}

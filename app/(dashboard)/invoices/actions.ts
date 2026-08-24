@@ -55,7 +55,7 @@ export async function createInvoice(
       .eq("user_id", user.id)
       .eq("status", "unpaid");
     if ((count ?? 0) >= FREE_INVOICE_LIMIT) {
-      return { error: `Free plan is limited to ${FREE_INVOICE_LIMIT} active invoices — upgrade to Pro for unlimited.` };
+      return { error: `Free plan is limited to ${FREE_INVOICE_LIMIT} active invoices. Upgrade to Pro for unlimited.` };
     }
   }
 
@@ -135,7 +135,7 @@ export async function reopenInvoice(invoiceId: string) {
       .eq("status", "unpaid");
     if ((count ?? 0) >= FREE_INVOICE_LIMIT) {
       throw new Error(
-        `Free plan is limited to ${FREE_INVOICE_LIMIT} active invoices — upgrade to Pro to reopen this one.`
+        `Free plan is limited to ${FREE_INVOICE_LIMIT} active invoices. Upgrade to Pro to reopen this one.`
       );
     }
   }

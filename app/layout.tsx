@@ -17,7 +17,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.chasry.com";
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: "Chasry — Remember to get paid",
+    default: "Chasry: Remember to get paid",
     template: "%s · Chasry",
   },
   description:

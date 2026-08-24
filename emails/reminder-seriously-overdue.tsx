@@ -28,7 +28,7 @@ export default function ReminderSeriouslyOverdueEmail({
 }: Partial<ReminderSeriouslyOverdueProps>) {
   return (
     <ReminderLayout
-      previewText={`Invoice is now ${daysOverdue} days overdue — please arrange payment`}
+      previewText={`Invoice is now ${daysOverdue} days overdue, please arrange payment`}
       businessName={businessName}
     >
       <ReminderHeading>Hi {clientName}, this payment is significantly overdue</ReminderHeading>

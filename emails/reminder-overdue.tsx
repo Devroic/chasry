@@ -36,7 +36,7 @@ export default function ReminderOverdueEmail({
       <ReminderHeading>Hi {clientName}, this invoice is now overdue</ReminderHeading>
       <ReminderText>
         This invoice from {businessName} was due {daysOverdue} {dayWord} ago and hasn&rsquo;t
-        been marked as paid yet. If you&rsquo;ve already sent payment, thank you — feel free to
+        been marked as paid yet. If you&rsquo;ve already sent payment, thank you, feel free to
         ignore this. Otherwise, please arrange payment when you get a chance.
       </ReminderText>
       <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />

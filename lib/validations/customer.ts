@@ -8,7 +8,7 @@ export const customerSchema = z.object({
     .string()
     .trim()
     .max(30)
-    .regex(/^[0-9+()\s-]*$/, "Numbers only — use +, spaces, or dashes if needed")
+    .regex(/^[0-9+()\s-]*$/, "Numbers only. Use +, spaces, or dashes if needed")
     .optional()
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),

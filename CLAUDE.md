@@ -91,6 +91,11 @@ and had to be circled back for, which is why this section exists.
   `Devroic/chasry`, the landing page). GitHub redirects the old URL, so stale clones still work.
   `origin/HEAD` is set so diff-based tooling (`/security-review`, etc.) works. Don't push without
   being asked — commits happen locally by default; ask before `git push`.
+- **No dashes as sentence punctuation in user-facing copy.** `messages/en.json`, `messages/el.json`,
+  the `emails/` templates, Zod messages and Server Action error strings use commas, colons, or two
+  sentences instead. The whole app was swept once already; don't reintroduce the habit when adding a
+  string. The one deliberate exception is the `"—"` glyph standing in for an empty table cell
+  (`{customer.phone || "—"}`), which is a "no value" marker rather than punctuation.
 - **Never write `.env.local` with PowerShell's `Set-Content`/`Out-File -Encoding utf8`** — on
   Windows PowerShell 5.1 that writes a **UTF-8 BOM**, and the BOM becomes part of the *first*
   variable's name (`﻿NEXT_PUBLIC_SUPABASE_URL`), so that variable silently reads as

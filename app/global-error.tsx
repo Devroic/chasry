@@ -43,7 +43,7 @@ export default function GlobalError({
             Something went wrong
           </h1>
           <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "#475569" }}>
-            Sorry — that&rsquo;s on us, not you. We&rsquo;ve been notified and we&rsquo;re looking
+            Sorry, that&rsquo;s on us, not you. We&rsquo;ve been notified and we&rsquo;re looking
             into it. Your invoices and reminders are unaffected.
           </p>
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages --

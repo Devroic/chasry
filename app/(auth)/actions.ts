@@ -59,7 +59,7 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
       return { error: "An account with that email already exists." };
     }
     if (error.code === "over_email_send_rate_limit" || error.code === "over_request_rate_limit") {
-      return { error: "Too many attempts right now — please try again in a few minutes." };
+      return { error: "Too many attempts right now. Please try again in a few minutes." };
     }
     if (error.code === "weak_password") {
       return { error: "Choose a stronger password and try again." };

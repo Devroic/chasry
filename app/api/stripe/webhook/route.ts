@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   // share the branch above and was reported nowhere — the deploy would look
   // healthy while silently dropping every payment event.
   if (!webhookSecret) {
-    Sentry.captureException(new Error("STRIPE_WEBHOOK_SECRET is not set — all Stripe webhooks are being rejected"), {
+    Sentry.captureException(new Error("STRIPE_WEBHOOK_SECRET is not set, so all Stripe webhooks are being rejected"), {
       level: "fatal",
       tags: { integration: "stripe", stage: "config" },
     });
