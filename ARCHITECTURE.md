@@ -111,8 +111,23 @@ configured *in Stripe* for it to work. Account `acct_1U7jIgRtidinAV69`, Cyprus, 
   no resale value to fraudsters, card testing is covered by Lite, and EU SCA shifts most fraud
   liability to the issuer. Statement descriptor `CHASRY.COM`, shortened `CHASRY`.
 - **Not done, and blocked on deployment**: the production webhook endpoint. It needs the live
-  Vercel URL, and it is what produces the real `STRIPE_WEBHOOK_SECRET` for production. The value
-  in `.env.local` is a locally generated one, only good for signing simulated events.
+  Vercel URL, and it is what produces the real `STRIPE_WEBHOOK_SECRET` for production. **This is
+  entirely separate from local dev's webhook secret**, see below. They are not the same value, and
+  a value that works in one environment does not work in the other.
+- **Local dev now has a real webhook, not a simulated one.** The Stripe CLI, installed at
+  `C:\Users\andre\.local\bin\stripe.exe` (not on `PATH`, and not part of this repo, it's a
+  personal machine tool, not a project dependency, so nothing here depends on the exact path).
+  Running `stripe listen --forward-to localhost:3000/api/stripe/webhook` (see `README.md` for the
+  full local-dev setup) tunnels genuine Stripe test-mode events, anything that happens in the
+  Stripe dashboard, not just events initiated through this app's own Checkout flow, straight to
+  the local dev server. `.env.local`'s `STRIPE_WEBHOOK_SECRET` is the real secret the CLI reports
+  on startup (`stripe listen --print-secret`), not a made-up value. Confirmed working by canceling
+  a real test-mode subscription directly via the Stripe API (not through the app) and watching
+  `profiles.subscription_status` flip to `canceled` with no manual intervention:
+  `customer.subscription.created` and `.deleted` both showed up in the CLI's own log and both got a
+  real `200` back from the route. **The CLI has to actually be running** for this to work; it's a
+  separate long-lived process from `next dev`, and it dies when its terminal closes, so don't be
+  surprised if this silently stops working after a machine restart until it's started again.
 
 **Verified end to end, not assumed** (`checkout.session.completed` → account becomes Pro): a real
 test-mode subscription was created, a properly signed event was POSTed to the local webhook, and
