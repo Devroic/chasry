@@ -1,6 +1,16 @@
 @AGENTS.md
-@PROJECT.md
-@ARCHITECTURE.md
+
+# Chasry
+
+Web app: freelancers log unpaid invoices, Chasry auto-chases payment by email until paid, funded
+by free tier (3 active invoices) + €10/mo Pro. Next.js 16 (App Router, Server Actions) +
+Supabase (Postgres/Auth/RLS) + Stripe Billing + Resend + Vercel (hosting + daily cron).
+`README.md` has setup/deploy steps, don't duplicate them here.
+
+Deeper reference (full schema, Stripe account config, admin section, reminder-engine algorithm,
+pixel-level UI structure, Sentry, theme, i18n, forms, list pages) lives in `ARCHITECTURE.md` and
+`docs/*.md`, not loaded automatically. Read the relevant one only if a task needs that depth,
+most fixes don't.
 
 ## Skills to use on this repo, proactively
 
@@ -8,107 +18,71 @@ These aren't optional extras — use them without waiting to be asked, before th
 is considered done:
 
 - **Before any UI/UX work** (new pages, components, pricing/paywall surfaces, copy for
-  empty/error/upgrade states): run `ui-ux-pro-max` (search its guidelines for the specific
-  concern — pricing pages, forms, touch targets, etc.) and, for anything with real visual/brand
-  weight, `frontend-design`. Apply findings, don't just read them — e.g. this repo's `Button`
-  didn't have `cursor-pointer` and `globals.css` didn't respect `prefers-reduced-motion` until a
-  `ui-ux-pro-max` pass caught both; that pass also produced `lib/plan.ts` and `UpgradePrompt`.
-- **Before styling anything the user compares to chasry.com**: actually load the live site and
-  look at it (screenshot + computed styles — font-family, weight, colors), don't design from
-  memory of the brand palette alone. The first pass at the auth pages (a 50/50 split-screen with
-  a giant logo/mascot panel) was built without doing this and had to be thrown out and rebuilt
-  once the user pointed out it didn't match the real landing page at all. The actual site uses a
+  empty/error/upgrade states): run `ui-ux-pro-max` and, for anything with real visual/brand
+  weight, `frontend-design`. Apply findings, don't just read them.
+- **Before styling anything compared to chasry.com**: actually load the live site and look at it
+  (screenshot + computed styles), don't design from memory of the brand palette. The site uses a
   slim header with a small logo (not a half-viewport panel) and Inter at weight 800 for
-  headlines — see "UI structure" in `ARCHITECTURE.md` for what was actually found.
-- **Before finishing any change that touches auth, billing, RLS, webhooks, or Server Actions**:
-  run `/security-review`. As of this writing it needs a GitHub `origin/HEAD` remote to diff
-  against — this repo is local-only, so it currently fails with `fatal: ambiguous argument
-  'origin/HEAD...'`. Check `git remote -v` first; if a remote exists, use the real skill instead
-  of a manual pass. If it still doesn't work, do the manual equivalent (RLS coverage, admin-client
-  isolation, webhook signature checks, IDOR via `user_id` scoping, timing-safe secret comparison,
-  no `dangerouslySetInnerHTML`) and say explicitly that it was manual, not the automated tool.
+  headlines.
+- **Before finishing any change touching auth, billing, RLS, webhooks, or Server Actions**: run
+  `/security-review` (needs a GitHub `origin/HEAD` remote, this repo has one). If it can't run,
+  do the manual equivalent (RLS coverage, admin-client isolation, webhook signature checks, IDOR
+  via `user_id` scoping, timing-safe secret comparison, no `dangerouslySetInnerHTML`) and say
+  explicitly it was manual.
 - **Before finishing any change to a Server Component page, Server Action, or data-fetching
-  logic**: check the relevant `vercel-react-best-practices` rules (`server-cache-react`,
-  `async-parallel`, `server-auth-actions` are the ones that have actually caught real bugs here —
-  see `ARCHITECTURE.md`'s "Verification passes run so far"). A new dashboard page that fetches
-  `profiles` itself instead of using `requireOnboardedUser()`'s cached version is a regression of
-  exactly the bug that pass fixed.
-- **Before starting a genuinely new feature** (not a small fix): `brainstorming`, before writing
-  code.
+  logic**: check `vercel-react-best-practices` (`server-cache-react`, `async-parallel`,
+  `server-auth-actions`). A page that fetches `profiles` itself instead of
+  `requireOnboardedUser()`'s cached version is a real regression class here.
+- **Before starting a genuinely new feature** (not a small fix): `brainstorming` first.
 
-Skipping these isn't a shortcut — it's the thing that was skipped once already in this project
-and had to be circled back for, which is why this section exists.
+## Hard rules
 
-## Working on this repo
+Things that already broke silently once in this app, don't reintroduce them:
 
-- `README.md` has setup/deploy steps (accounts, env vars, migration) — don't duplicate that here.
-- `react-hook-form` + `zodResolver`, called directly in each form component (not through a shared
-  hook — see "Forms & validation" in `ARCHITECTURE.md` for why the wrapper hook was abandoned),
-  is the validation pattern for **every** form in the app now — auth, onboarding, and the
-  dashboard CRUD forms (customer/invoice/profile/reminder-settings) alike, after the user asked
-  for consistent real validation and error handling everywhere. Don't reintroduce native
-  `required`/`type="email"` HTML validation, and don't add a new form on plain `FormData` without
-  a specific reason — that's exactly the inconsistency that got fixed. Any form on this pattern
-  must call the `useActionState` dispatcher inside `startTransition(...)`, not as a bare function
-  call — see the "Gotcha" note in ARCHITECTURE.md's "Forms & validation" section. A `Calendar`/
-  `Popover` date picker and Sentry config are still deliberately left out.
-- Every optional-string Zod field (phone, notes, invoice number, payment link, ...) must
-  transform blank input to `null`, never `undefined` — see `optionalText()`/`optionalUrl` in
-  `lib/validations/shared.ts`. `undefined` gets dropped by `toFormData()` (`lib/utils.ts`)
-  entirely, which silently breaks *clearing* the field on an update.
-- The dashboard shell is a full-width header (big flush-left logo, Upgrade/account menu) with a
-  left sidebar for nav below it — went through a sidebar → horizontal-top-nav → header+sidebar
-  cycle based on user feedback each time. See "UI structure" in `ARCHITECTURE.md` before changing
-  this layout again.
-- Signup's `signUp()` call must keep checking `data.user.identities?.length === 0` for the
-  duplicate-email case — Supabase returns no `error` for that case by design. See "Server
-  Actions" in `ARCHITECTURE.md`.
-- **This installed `radix-ui` version's `Select`/`Switch` post nothing to native `FormData` on
-  their own** — no hidden bubble input, `name` prop does nothing by itself. This broke reminder
-  settings, profile currency, and invoice creation for real before being caught. Now that those
-  forms are on react-hook-form (`Controller` for `Select`, `watch`/`setValue` for `Switch`), this
-  doesn't come up in practice — but if a *new* form is ever added on plain `FormData` (not
-  react-hook-form) with a `Select`/`Switch` in it, it needs a controlled `value`/`checked` + a
-  hand-written `<input type="hidden">` mirroring it, or it will silently submit nothing for that
-  field. See the "Critical gotcha" note under Stack in `ARCHITECTURE.md`.
-- List pages (invoices, customers) share a URL-param-driven search/sort/filter pattern and a
-  `ClickableTableRow` component so the whole row navigates, not just the linked text — see "List
-  pages" in `ARCHITECTURE.md` before touching either table. Don't go back to per-cell `<Link>`
-  wrapping; that was the reported "not all the row is clickable" bug.
-- Detail/edit/new dashboard pages use `BackLink` consistently, and the four client/invoice
-  add-edit pages use `FormTips` to fill the layout instead of leaving empty space — see "UI
-  structure" in `ARCHITECTURE.md`. Keep new pages consistent with this rather than one-off.
-- Password fields use `<PasswordInput>` (`components/ui/password-input.tsx`), not a bare
-  `<Input type="password">` — it adds the show/hide eye toggle. Use it for any new password field.
-- `/help` (`app/help/page.tsx`) is a public FAQ page, reachable from `SiteFooter` and the
-  dashboard account menu. Update it in place rather than creating a second help/FAQ surface.
-- If `npx shadcn add <component>` ever gets run again, check `components.json` still says
-  `"style": "radix-nova"` afterwards — the CLI's default has switched away from Radix before.
-- Don't reintroduce a card-required trial or a `'trialing'`/`'incomplete'` subscription status —
-  the pricing model is free-tier + Pro now (see `PROJECT.md`), not trial-then-subscribe.
-- This is a git repo with a remote: `origin` → `github.com/Devroic/chasry-webapp` (**private**,
-  owned by the `Devroic` org — moved there from the personal `andreaseracleous99` account, alongside
-  `Devroic/chasry`, the landing page). GitHub redirects the old URL, so stale clones still work.
-  `origin/HEAD` is set so diff-based tooling (`/security-review`, etc.) works. Don't push without
-  being asked — commits happen locally by default; ask before `git push`.
-- **No dashes as sentence punctuation in user-facing copy.** `messages/en.json`, `messages/el.json`,
-  the `emails/` templates, Zod messages and Server Action error strings use commas, colons, or two
-  sentences instead. The whole app was swept once already; don't reintroduce the habit when adding a
-  string. The one deliberate exception is the `"—"` glyph standing in for an empty table cell
-  (`{customer.phone || "—"}`), which is a "no value" marker rather than punctuation.
-- **Never write `.env.local` with PowerShell's `Set-Content`/`Out-File -Encoding utf8`** — on
-  Windows PowerShell 5.1 that writes a **UTF-8 BOM**, and the BOM becomes part of the *first*
-  variable's name (`﻿NEXT_PUBLIC_SUPABASE_URL`), so that variable silently reads as
-  `undefined` while every other line still works. This actually happened while wiring up Stripe
-  and it broke Supabase for the whole app. Use `[IO.File]::WriteAllText($p, $text, (New-Object
-  System.Text.UTF8Encoding($false)))`, or edit the file with the Edit tool. Check with
-  `head -c 3 .env.local | od -An -tx1` — `ef bb bf` means a BOM is there.
-- **A blank dashboard in the in-app Browser pane is usually not a bug.** Pages behind
-  `(dashboard)/loading.tsx` render as a permanent spinner whenever the pane isn't displayed:
-  React reveals suspended content inside `requestAnimationFrame`, and a non-compositing tab never
-  fires it. The content is present the whole time — check `document.getElementById('S:0').textContent`
-  before debugging the app. Screenshot calls timing out with "the Browser pane is not displayed"
-  is the tell.
-- `.env.local` has real (non-placeholder) Supabase credentials for local dev as of this writing —
-  don't overwrite it with placeholder values when testing; if you need a placeholder env for a
-  quick build check, restore the real values afterward rather than leaving it stubbed out.
+- This installed `radix-ui` version's `Select`/`Switch` post nothing to native `FormData` (no
+  hidden bubble input). Every form in the app is already on `react-hook-form` + `zodResolver`
+  (unaffected, reads its own state). Any *new* form must use the same pattern, not plain
+  `FormData` with `Select`/`Switch` in it, or the field silently submits nothing.
+- Every form: `react-hook-form` + `zodResolver` directly in the component, `mode: "onSubmit"`,
+  `<FormField>`, `<PasswordInput>` for password fields. Calling the `useActionState` dispatcher
+  from `onValid` must be wrapped in `startTransition(...)` or React throws.
+- Every optional-string Zod field must transform blank input to `null`, never `undefined` — see
+  `optionalText()`/`optionalUrl` in `lib/validations/shared.ts`. `toFormData()`
+  (`lib/utils.ts`) drops `undefined` keys entirely, silently breaking "clear this field" on
+  update.
+- Every Server Action authenticates itself internally (`requireUser()`/`requireOnboardedUser()`),
+  never rely on a page/layout guard alone, Server Actions are callable directly.
+- `signUp()` returns no `error` for an already-registered, confirmed email — check
+  `data.user.identities?.length === 0` explicitly.
+- Any secret comparison (cron auth, etc.) uses `crypto.timingSafeEqual`, not `===`.
+- `lib/supabase/admin.ts` bypasses RLS. Only the cron route, the Stripe webhook, and the admin
+  section import it, never anywhere a request is on behalf of a specific browser user.
+- List pages use `ClickableTableRow` so the whole row navigates, not per-cell `<Link>`. Detail/
+  edit/new dashboard pages use `BackLink` consistently.
+- Don't reintroduce a card-required trial, a `'trialing'`/`'incomplete'` subscription status, or
+  the dropped `profiles.timezone`/`invoices.issued_date` columns, all deliberately removed.
+- Migrations: `npm run db:push`, never paste SQL into the Supabase dashboard SQL editor.
+- If `npx shadcn add <component>` runs, check `components.json` still says
+  `"style": "radix-nova"` afterwards, the CLI's default has switched away from Radix before.
+- No dashes as sentence punctuation in user-facing copy (commas, colons, or two sentences
+  instead). The `"—"` glyph for an empty table cell (`{customer.phone || "—"}`) is the one
+  deliberate exception.
+- Never write `.env.local` with PowerShell's `Set-Content`/`Out-File -Encoding utf8`, it adds a
+  UTF-8 BOM that silently breaks the first env var's name. Use
+  `[IO.File]::WriteAllText($p, $text, (New-Object System.Text.UTF8Encoding($false)))` or the Edit
+  tool. `.env.local` already has real (non-placeholder) Supabase credentials, don't overwrite
+  with placeholders.
+- A blank dashboard in the in-app Browser pane usually isn't a bug, `(dashboard)/loading.tsx`
+  renders as a permanent spinner whenever the pane isn't displayed. Check
+  `document.getElementById('S:0').textContent` before debugging.
+- Git remote is `origin` → `github.com/Devroic/chasry-webapp` (private). Don't push without being
+  asked, commits happen locally by default.
+
+## Not yet done (see `ARCHITECTURE.md` for full detail)
+
+- Production Stripe webhook endpoint doesn't exist yet, blocks real payments from ever granting
+  Pro.
+- Sentry alert rule isn't scoped to `production` yet (can't be, until the first prod deploy).
+- Upstash rate limiting is wired but inert (no env vars set).
+- No automated tests.
+- `/signup` may not hydrate on a fresh/hard page load, not yet root-caused.
