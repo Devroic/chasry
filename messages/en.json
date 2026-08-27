@@ -512,7 +512,10 @@
       "logOut": "Log out",
       "tabOverview": "Overview",
       "tabUsers": "Users",
-      "tabPlaybook": "Playbook"
+      "tabPlaybook": "Playbook",
+      "planViewLabel": "Your view",
+      "planViewFree": "Free",
+      "planViewPro": "Pro"
     },
     "status": {
       "pro": "Pro",
@@ -532,7 +535,10 @@
       "newThisWeek": "New this week",
       "newThisMonth": "New this month",
       "estimatedMrr": "Estimated MRR",
-      "mrrDescription": "{count, plural, one {# paying account} other {# paying accounts}} × {price}/month. Past-due accounts are counted, they are still billed until Stripe finishes retrying the payment."
+      "mrrDescription": "{count, plural, one {# paying account} other {# paying accounts}} × {price}/month. Past-due accounts are counted, they are still billed until Stripe finishes retrying the payment.",
+      "lifetimeRevenue": "Lifetime revenue",
+      "lifetimeRevenueDescription": "Every successful charge across every subscriber, all months summed, straight from Stripe.",
+      "lifetimeRevenueUnavailable": "Could not load from Stripe right now."
     },
     "users": {
       "title": "Users",
@@ -585,9 +591,8 @@
       "pauseP1": "The subscription status stays active while paused, so they keep unlimited invoices the whole time. Use this only when the intent is to stop charging them while leaving everything else as is. If they should actually lose access, cancel instead.",
       "pauseP2": "Dashboard, Customer, subscription, then the menu, then <kbd>Pause payments</kbd>. Resume the same way.",
       "extendTitle": "Extend a subscription",
-      "extendWarning": "Use a balance credit, not a second coupon. Coupons do not stack.",
+      "extendWarning": "The reliable way to add extra free months is a balance credit.",
       "extendP1": "Dashboard, Customer, Balance, add a negative amount, one month is minus ten euros, two months is minus twenty. Stripe automatically applies it to whatever invoice comes due next. The Billing page in the app picks this up on its own, nothing else to do.",
-      "extendP2": "A coupon (Product catalog, Coupons, percent off, repeating duration) works for a fixed-length discount, but a second coupon on top of an existing one does not add its months on top. Only the balance credit reliably stacks.",
       "giftTitle": "Gift a subscription",
       "giftBest": "Best option: give them a promo code and have them redeem it themselves.",
       "giftP1": "Create a Coupon (100 percent off, forever for a permanent gift or repeating for a set number of months), then a Promotion Code from it, and send them the code to enter at checkout when they click <kbd>Upgrade to Pro</kbd> in the app. This goes through the real checkout flow and links their account correctly, no extra steps needed.",

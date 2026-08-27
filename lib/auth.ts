@@ -1,12 +1,31 @@
 import "server-only";
 import { cache } from "react";
 import { redirect, notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import type { SubscriptionStatus } from "@/types/database.types";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
+
+export const ADMIN_PLAN_OVERRIDE_COOKIE = "chasry_admin_plan_view";
+
+/**
+ * An admin's own account always appears as Pro by default, so testing the
+ * app doesn't trip the free-plan invoice cap, with a toggle in AdminShell
+ * (setAdminPlanOverride in app/admin/actions.ts) to flip to a simulated
+ * Free view for testing that experience too. Never written to the
+ * database, this only overrides what getProfile() returns for this one
+ * request. An admin with a genuine Stripe subscription will not see its
+ * real details reflected while the override is active, an accepted
+ * trade-off for a testing feature only the admin's own account uses.
+ */
+export async function getAdminPlanOverride(): Promise<"free" | "pro"> {
+  const cookieStore = await cookies();
+  return cookieStore.get(ADMIN_PLAN_OVERRIDE_COOKIE)?.value === "free" ? "free" : "pro";
+}
 
 /**
  * The underlying auth + profile lookups, deduplicated per request with
@@ -32,6 +51,12 @@ export const getProfile = cache(async (userId: string) => {
     )
     .eq("id", userId)
     .single();
+
+  if (data && isAdminEmail(data.email)) {
+    const view = await getAdminPlanOverride();
+    return { ...data, subscription_status: (view === "free" ? "none" : "active") as SubscriptionStatus };
+  }
+
   return data;
 });
 

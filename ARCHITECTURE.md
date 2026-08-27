@@ -277,9 +277,11 @@ production. Remote auth/SMTP settings still live in the Supabase dashboard.
 A single-operator internal tool, not part of the product a subscriber ever sees, added after the
 free/Pro user base grew past what Stripe's own dashboard could show (Stripe only knows about
 paying customers, it has no idea how many people are on the free plan or stuck mid-onboarding).
-Does not reuse `DashboardShell` (a separate `AdminShell` in `components/admin/`, plain top tab
-bar, no sidebar/mobile-nav machinery, judged unnecessary complexity for a section only one person
-ever sees) but **is** wired into `next-intl` the normal way (`getTranslations` in the Server
+Does not reuse `DashboardShell` (a separate, simpler `AdminShell` in `components/admin/`: no
+collapsible toggle, and below `lg` a horizontal nav row under the header rather than a `Sheet`
+hamburger, since this section gets little mobile use) but **does** share its header +
+left-sidebar shape, on direct feedback that a top tab bar made it feel disconnected from the
+rest of the app. It's also wired into `next-intl` the normal way (`getTranslations` in the Server
 Component pages, `useTranslations` in `AdminShell` and `LinkStripeCustomerForm`, a `LanguageSwitcher`
 in `AdminShell`'s header next to `ThemeToggle`) — briefly English-only when first built, revisited
 once real Greek-speaking usage made that limitation actually felt. All admin copy lives under the
@@ -300,13 +302,27 @@ Translator-factory pattern as every other form's schema.
   reflect this as a second legitimate consumer, don't add a third without the same admin gate in
   front of it.
 - **Pages**: `/admin` (overview metrics, one bulk `profiles` fetch reduced in JS rather than
-  several `count()` queries, fine at this app's current scale per `PROJECT.md`), `/admin/users`
+  several `count()` queries, fine at this app's current scale per `PROJECT.md`, plus a lifetime
+  revenue figure from `getLifetimeRevenueCents()` in `lib/billing.ts`, which sums Stripe's own
+  `balanceTransactions` since nothing local tracks historical payment amounts), `/admin/users`
   (the same URL-param search/sort/`ClickableTableRow` pattern the customers/invoices lists use),
   `/admin/users/[id]` (a user's full status plus a deep link to their Stripe customer in the real
   Stripe Dashboard, mutations happen there, not by rebuilding Stripe's UI here), and
   `/admin/playbook` (a production-toned, in-app copy of `STRIPE-PLAYBOOK.md`'s steps, so the
   operator doesn't have to open the repo to remember how to cancel/pause/extend/gift a
   subscription).
+- **Admin accounts are excluded from every metric and from the user list** (`isAdminEmail()`
+  filter on both `/admin` and `/admin/users`). They aren't real subscribers, so counting them
+  would skew every number, and their `subscription_status` is a simulated view anyway, see below.
+- **An admin's own account renders as Pro by default**, with a Free/Pro toggle in `AdminShell`'s
+  header, so the free-plan invoice cap doesn't get in the way of using the real app, and the free
+  experience can still be tested deliberately. Implemented as a cookie
+  (`ADMIN_PLAN_OVERRIDE_COOKIE`) read by `getAdminPlanOverride()` and applied inside `getProfile()`
+  in `lib/auth.ts`, so it flows to every consumer at once and is **never written to the database**.
+  `createInvoice`/`reopenInvoice` in `app/(dashboard)/invoices/actions.ts` were switched from ad
+  hoc `profiles` queries to `getProfile()` specifically so the simulated plan is enforced
+  server-side too, not just cosmetically in the UI. Trade-off: an admin holding a genuine Stripe
+  subscription won't see its real status reflected while the override is active.
 - **The one mutating action**: `linkStripeCustomer` in `app/admin/actions.ts`, sets a user's
   `profiles.stripe_customer_id` directly. This exists because the Stripe webhook only matches an
   incoming event back to a Chasry account via that column (see `checkout.session.completed`'s

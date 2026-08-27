@@ -105,3 +105,25 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
     return null;
   }
 }
+
+/**
+ * Total gross amount ever collected across every subscriber, for the admin
+ * Overview page. Nothing in the database tracks historical payment amounts
+ * (profiles only stores the current subscription state), so this is summed
+ * directly from Stripe's own balance transaction history instead of a
+ * running total kept locally. Only successful charges are summed, refunds
+ * and disputes are not subtracted back out, this account hasn't had any,
+ * and this is meant as a simple lifetime-total figure rather than a
+ * reconciled ledger. Returned in cents, matching Stripe's own convention.
+ */
+export async function getLifetimeRevenueCents(): Promise<number | null> {
+  try {
+    let totalCents = 0;
+    for await (const txn of stripe.balanceTransactions.list({ type: "charge", limit: 100 })) {
+      totalCents += txn.amount;
+    }
+    return totalCents;
+  } catch {
+    return null;
+  }
+}

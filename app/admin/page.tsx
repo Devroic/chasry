@@ -2,6 +2,9 @@ import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PRO_PRICE_AMOUNT } from "@/lib/plan";
+import { getLifetimeRevenueCents } from "@/lib/billing";
+import { formatMoney } from "@/lib/format";
+import { isAdminEmail } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Overview" };
@@ -23,8 +26,14 @@ function daysAgoTimestamp(days: number) {
 export default async function AdminOverviewPage() {
   const t = await getTranslations("admin.overview");
   const supabase = createAdminClient();
-  const { data } = await supabase.from("profiles").select("subscription_status, created_at, onboarded_at");
-  const profiles = data ?? [];
+  const [{ data }, lifetimeRevenueCents] = await Promise.all([
+    supabase.from("profiles").select("email, subscription_status, created_at, onboarded_at"),
+    getLifetimeRevenueCents(),
+  ]);
+  // Admin accounts aren't real subscribers, counting them would skew every
+  // metric here (and an admin's own subscription_status is a simulated
+  // Free/Pro view anyway, see getAdminPlanOverride in lib/auth.ts).
+  const profiles = (data ?? []).filter((p) => !isAdminEmail(p.email));
 
   const total = profiles.length;
   const active = profiles.filter((p) => p.subscription_status === "active").length;
@@ -60,17 +69,33 @@ export default async function AdminOverviewPage() {
         <Metric label={t("newThisMonth")} value={newThisMonth} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("estimatedMrr")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-semibold text-foreground">€{mrr.toLocaleString("en-IE")}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t("mrrDescription", { count: payingCount, price: PRO_PRICE_AMOUNT })}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("estimatedMrr")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-foreground">€{mrr.toLocaleString("en-IE")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("mrrDescription", { count: payingCount, price: PRO_PRICE_AMOUNT })}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("lifetimeRevenue")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold text-foreground">
+              {lifetimeRevenueCents != null ? formatMoney(lifetimeRevenueCents / 100, "EUR") : "—"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {lifetimeRevenueCents != null ? t("lifetimeRevenueDescription") : t("lifetimeRevenueUnavailable")}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

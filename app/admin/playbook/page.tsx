@@ -68,7 +68,6 @@ export default async function AdminPlaybookPage() {
       <Section title={t("extendTitle")}>
         <p className="font-medium text-foreground">{t("extendWarning")}</p>
         <p>{t("extendP1")}</p>
-        <p>{t("extendP2")}</p>
       </Section>
 
       <Section title={t("giftTitle")}>

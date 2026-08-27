@@ -1,5 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isAdminEmail } from "@/lib/auth";
 import { ClickableTableRow } from "@/components/dashboard/clickable-table-row";
 import { SortableHead } from "@/components/dashboard/sortable-head";
 import { TableSearch } from "@/components/dashboard/table-search";
@@ -51,7 +52,9 @@ export default async function AdminUsersPage({
     activeInvoiceCounts.set(invoice.user_id, (activeInvoiceCounts.get(invoice.user_id) ?? 0) + 1);
   }
 
-  const profiles = profilesRaw ?? [];
+  // Admin accounts aren't real subscribers, and their subscription_status is
+  // a simulated Free/Pro view anyway (see getAdminPlanOverride in lib/auth.ts).
+  const profiles = (profilesRaw ?? []).filter((p) => !isAdminEmail(p.email));
   const query = q.trim().toLowerCase();
   const filtered = query
     ? profiles.filter(
@@ -141,7 +144,7 @@ export default async function AdminUsersPage({
                   <TableCell className="hidden text-muted-foreground sm:table-cell">
                     {profile.email}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pl-0">
                     <Badge variant="outline" className={STATUS_STYLE[profile.subscription_status]}>
                       {statusLabel[profile.subscription_status] ?? profile.subscription_status}
                     </Badge>

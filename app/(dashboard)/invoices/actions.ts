@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, getProfile } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { invoiceSchema } from "@/lib/validations/invoice";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
@@ -47,12 +47,10 @@ export async function createInvoice(
   if (!customer) return { error: tErrors("invalidClient") };
 
   // Server-side enforcement of the free-plan invoice limit — the UI already
-  // hides the form at this point, but this is the real gate.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("subscription_status")
-    .eq("id", user.id)
-    .single();
+  // hides the form at this point, but this is the real gate. Goes through
+  // getProfile() (not an ad hoc query) so an admin's simulated Free/Pro view
+  // (see lib/auth.ts) is honored here too, not just cosmetically in the UI.
+  const profile = await getProfile(user.id);
   if (!isPro(profile?.subscription_status ?? "none")) {
     const { count } = await supabase
       .from("invoices")
@@ -130,12 +128,9 @@ export async function reopenInvoice(invoiceId: string) {
   const { supabase, user } = await requireUser();
 
   // Reopening a paid invoice adds back an active invoice — subject to the
-  // same free-plan limit as creating a new one.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("subscription_status")
-    .eq("id", user.id)
-    .single();
+  // same free-plan limit as creating a new one. Goes through getProfile()
+  // so an admin's simulated Free/Pro view (see lib/auth.ts) applies here too.
+  const profile = await getProfile(user.id);
   if (!isPro(profile?.subscription_status ?? "none")) {
     const { count } = await supabase
       .from("invoices")

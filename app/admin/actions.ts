@@ -1,10 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, ADMIN_PLAN_OVERRIDE_COOKIE } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { linkStripeCustomerSchema } from "@/lib/validations/admin";
+
+/** Flips the admin's own simulated Free/Pro view, see getAdminPlanOverride in lib/auth.ts. */
+export async function setAdminPlanOverride(view: "free" | "pro") {
+  await requireAdmin();
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_PLAN_OVERRIDE_COOKIE, view, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+  });
+  revalidatePath("/", "layout");
+}
 
 export type LinkStripeCustomerState = { error?: string; success?: string } | null;
 
