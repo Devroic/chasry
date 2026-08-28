@@ -20,23 +20,34 @@ export interface ReminderBeforeDueProps {
 export default function ReminderBeforeDueEmail({
   businessName = "Acme Design Co.",
   clientName = "Jordan",
-  invoiceNumber = "INV-1042",
+  invoiceNumber,
   amount = "€450.00",
   dueDateLabel = "Due 29 Aug 2026",
   daysUntilDue = 7,
   paymentLink,
 }: Partial<ReminderBeforeDueProps>) {
-  const dayWord = daysUntilDue === 1 ? "day" : "days";
+  // Usually positive (still ahead) or zero (today), but a reminder can land
+  // a day or more after its own nominal target — a daily-cron catch-up, or
+  // an offset held back by a more-recent one on an invoice's first check —
+  // so this also has to read sensibly once the due date has technically
+  // already passed by send time. The verb changes tense (is due / was due),
+  // not just the trailing phrase, so the sentence stays grammatical.
+  const dueClause =
+    daysUntilDue > 0
+      ? `is due in ${daysUntilDue} ${daysUntilDue === 1 ? "day" : "days"}`
+      : daysUntilDue === 0
+        ? "is due today"
+        : `was due ${-daysUntilDue} ${-daysUntilDue === 1 ? "day" : "days"} ago`;
 
   return (
     <ReminderLayout
-      previewText={`Friendly reminder: invoice due in ${daysUntilDue} ${dayWord}`}
+      previewText={`Friendly reminder: invoice ${dueClause}`}
       businessName={businessName}
     >
       <ReminderHeading>Hi {clientName}, just a friendly reminder</ReminderHeading>
       <ReminderText>
-        This invoice from {businessName} is due in {daysUntilDue} {dayWord}. No action needed if
-        it&rsquo;s already scheduled, this is just a heads-up.
+        This invoice from {businessName} {dueClause}. No action needed if it&rsquo;s already
+        scheduled, this is just a heads-up.
       </ReminderText>
       <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />
       {paymentLink && <PayNowButton href={paymentLink} />}

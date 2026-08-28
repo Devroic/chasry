@@ -417,7 +417,9 @@
         "limitReachedCreate": "Free plan is limited to {limit} active invoices. Upgrade to Pro for unlimited.",
         "limitReachedReopen": "Free plan is limited to {limit} active invoices. Upgrade to Pro to reopen this one.",
         "notFound": "Couldn't find this invoice.",
-        "noRemindersScheduled": "No reminders are scheduled for this invoice yet."
+        "noRemindersScheduled": "No reminders are scheduled for this invoice yet.",
+        "cannotSendNow": "This reminder can't be sent right now.",
+        "sendFailed": "Couldn't send the reminder. Try again."
       }
     },
     "new": {
@@ -445,13 +447,16 @@
     "scheduled": "Scheduled",
     "sent": "Sent {date}",
     "failed": "Failed to send",
-    "skippedLaterSent": "Skipped, later one sent",
+    "skipped": "Skipped",
     "skippedPaid": "Skipped, invoice paid",
-    "missed": "Missed"
+    "sendNow": "Send now",
+    "sending": "Sending…",
+    "sendNowToast": "Reminder sent."
   },
   "invoiceActionErrors": {
     "reopenFailed": "Couldn't reopen this invoice.",
-    "previewFailed": "Couldn't send the preview."
+    "previewFailed": "Couldn't send the preview.",
+    "sendNowFailed": "Couldn't send the reminder."
   },
   "reminderOverride": {
     "customTitle": "Custom reminder schedule",

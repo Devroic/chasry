@@ -3,11 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
+import * as Sentry from "@sentry/nextjs";
 import { requireUser, getProfile } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { invoiceSchema } from "@/lib/validations/invoice";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
 import { buildReminderEmail } from "@/lib/reminder-email";
+import { addDaysUtc } from "@/lib/reminders";
 import { decodeReminderOverride } from "@/lib/reminder-override";
 import type { Translator } from "@/lib/validations/shared";
 
@@ -228,4 +230,117 @@ export async function sendPreviewReminder(invoiceId: string) {
   }
 
   return { count: offsets.length };
+}
+
+/**
+ * Manually fires one reminder whose target date is exactly today and
+ * hasn't been attempted yet. The cron (app/api/cron/send-reminders) only
+ * gets one chance per offset, its own target day, and won't catch up a
+ * day it missed — this is the escape hatch for "I created this invoice
+ * after today's daily run already happened." Mirrors the cron's own send
+ * path exactly (same buildReminderEmail, same replyTo, same reminder_logs
+ * write) so a manually-sent reminder is indistinguishable from one the
+ * cron sent itself.
+ */
+export async function sendReminderNow(invoiceId: string, offsetDays: number) {
+  const { supabase, user } = await requireUser();
+  const tErrors = await getTranslations("invoices.form.errors");
+
+  const [{ data: profile }, { data: accountSettings }] = await Promise.all([
+    supabase.from("profiles").select("business_name, email, payment_link").eq("id", user.id).single(),
+    supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
+  ]);
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select(
+      "invoice_number, amount, currency, due_date, customer_id, status, reminder_offsets, reminder_enabled"
+    )
+    .eq("id", invoiceId)
+    .eq("user_id", user.id)
+    .single();
+
+  const { data: customer } = invoice
+    ? await supabase
+        .from("customers")
+        .select("name, email, payment_link, reminder_offsets, reminder_enabled")
+        .eq("id", invoice.customer_id)
+        .single()
+    : { data: null };
+
+  if (!invoice || !profile || !customer) throw new Error(tErrors("notFound"));
+
+  // Everything below re-validates what the UI already only shows this
+  // button for — defense against the action being called directly with
+  // stale or fabricated arguments, not expected to trigger in normal use.
+  const enabled = invoice.reminder_enabled ?? customer.reminder_enabled ?? accountSettings?.enabled ?? true;
+  const offsets = invoice.reminder_offsets ?? customer.reminder_offsets ?? accountSettings?.offsets ?? [];
+  const targetMs = addDaysUtc(invoice.due_date, offsetDays).getTime();
+  const now = new Date();
+  const todayUtcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+  if (invoice.status !== "unpaid" || !enabled || !offsets.includes(offsetDays) || targetMs !== todayUtcMidnight) {
+    throw new Error(tErrors("cannotSendNow"));
+  }
+
+  const { data: existingLog } = await supabase
+    .from("reminder_logs")
+    .select("status")
+    .eq("invoice_id", invoiceId)
+    .eq("offset_days", offsetDays)
+    .maybeSingle();
+  if (existingLog) throw new Error(tErrors("cannotSendNow"));
+
+  const businessName = profile.business_name || profile.email;
+  const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
+
+  const { element, subject } = buildReminderEmail({
+    offsetDays,
+    businessName,
+    clientName: customer.name,
+    invoiceNumber: invoice.invoice_number,
+    amount: Number(invoice.amount),
+    currency: invoice.currency,
+    dueDate: invoice.due_date,
+    paymentLink,
+  });
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: REMINDERS_FROM_EMAIL,
+      to: customer.email,
+      replyTo: profile.email,
+      subject,
+      react: element,
+    });
+    if (error) throw new Error(error.message);
+
+    // Plain insert, not upsert — we already confirmed above that no row
+    // exists for this offset yet, and RLS only grants this user INSERT on
+    // reminder_logs (see migration 0010), not UPDATE, so an upsert's
+    // ON CONFLICT DO UPDATE branch would be rejected outright.
+    const { error: logError } = await supabase.from("reminder_logs").insert({
+      invoice_id: invoiceId,
+      user_id: user.id,
+      offset_days: offsetDays,
+      status: "sent",
+      resend_message_id: data?.id ?? null,
+    });
+    if (logError) throw logError;
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { job: "send-reminder-now" },
+      extra: { invoiceId, offsetDays },
+    });
+    await supabase.from("reminder_logs").insert({
+      invoice_id: invoiceId,
+      user_id: user.id,
+      offset_days: offsetDays,
+      status: "failed",
+      error: err instanceof Error ? err.message : "Unknown error",
+    });
+    throw new Error(tErrors("sendFailed"));
+  }
+
+  revalidatePath(`/invoices/${invoiceId}`);
 }

@@ -204,6 +204,7 @@ export default async function InvoiceDetailPage({
             </p>
           ) : (
             <ReminderTimeline
+              invoiceId={invoice.id}
               dueDate={invoice.due_date}
               offsets={effectiveOffsets}
               logs={logs ?? []}

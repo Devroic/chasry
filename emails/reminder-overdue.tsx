@@ -20,7 +20,7 @@ export interface ReminderOverdueProps {
 export default function ReminderOverdueEmail({
   businessName = "Acme Design Co.",
   clientName = "Jordan",
-  invoiceNumber = "INV-1042",
+  invoiceNumber,
   amount = "€450.00",
   dueDateLabel = "Was due 15 Aug 2026",
   daysOverdue = 1,

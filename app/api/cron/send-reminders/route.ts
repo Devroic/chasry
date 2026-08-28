@@ -186,15 +186,10 @@ async function runReminderSweep() {
   // now; 'failed' is retried on the next run.
   const settled = new Set<string>();
   const failedBefore = new Set<string>();
-  // Any log at all for an invoice, of any status/offset — distinguishes an
-  // invoice's very first reminder check from a later one (see `isFirstCheck`
-  // below).
-  const invoiceHasHistory = new Set<string>();
   for (const log of existingLogs ?? []) {
     const key = `${log.invoice_id}:${log.offset_days}`;
     if (log.status === "failed") failedBefore.add(key);
     else settled.add(key);
-    invoiceHasHistory.add(log.invoice_id);
   }
 
   let sent = 0;
@@ -220,67 +215,42 @@ async function runReminderSweep() {
     if (!enabled) continue;
     const offsets = invoice.reminder_offsets ?? customer.reminder_offsets ?? defaultSettings.offsets;
 
-    // Every offset whose target date has arrived (today or earlier — earlier
-    // covers an invoice logged already overdue, or a missed cron run) and
-    // hasn't been logged yet.
-    const due = offsets
-      .filter((offsetDays) => !settled.has(`${invoice.id}:${offsetDays}`))
-      .map((offsetDays) => ({ offsetDays, targetDate: addDaysUtc(invoice.due_date, offsetDays) }))
-      .filter(({ targetDate }) => targetDate.getTime() <= todayUtcMidnight)
-      // A previously-failed offset retries, but only for a bounded window.
-      // Without this, the *last* offset in a schedule (nothing newer ever
-      // supersedes it) would retry every single day forever against an
-      // address that may simply be undeliverable — burning quota and
-      // hard-bouncing daily, which damages domain sending reputation.
-      .filter(({ offsetDays, targetDate }) =>
-        failedBefore.has(`${invoice.id}:${offsetDays}`)
-          ? todayUtcMidnight - targetDate.getTime() <= FAILED_RETRY_WINDOW_MS
-          : true
-      )
-      .sort((a, b) => b.targetDate.getTime() - a.targetDate.getTime());
-
-    checked += due.length;
-    if (due.length === 0) continue;
-
-    // Multiple simultaneously-due offsets need different handling depending
-    // on whether this invoice has ever been checked before. On the very
-    // first check, it usually means the invoice was logged already overdue
-    // (backdated, or a bulk import) — sending every past milestone at once
-    // would be an email storm, so only the most current offset goes out and
-    // the rest are marked skipped. Once an invoice already has *some*
-    // history, though, >1 due offset only happens because a run was missed
-    // (e.g. an invoice created after that day's single daily cron already
-    // ran) — every one of those is a reminder the user actually configured,
-    // and none should be silently dropped just because a newer offset also
-    // became due before the gap was caught up. Sent oldest first so a
-    // multi-day catch-up still arrives in the order it was meant to.
-    const isFirstCheck = !invoiceHasHistory.has(invoice.id);
-    const toSend = isFirstCheck
-      ? due.slice(0, 1)
-      : due.slice().sort((a, b) => a.targetDate.getTime() - b.targetDate.getTime());
-    const toSkip = isFirstCheck ? due.slice(1) : [];
-
-    // Upsert, not insert: a row may already exist for this offset from an
-    // earlier failed attempt, and `unique (invoice_id, offset_days)` would
-    // reject a plain insert — which, before failures were retried at all,
-    // could never happen. Same reason applies to the sent/failed writes below.
-    for (const { offsetDays: staleOffset } of toSkip) {
-      await supabase.from("reminder_logs").upsert(
-        {
-          invoice_id: invoice.id,
-          user_id: invoice.user_id,
-          offset_days: staleOffset,
-          status: "skipped",
-        },
-        { onConflict: "invoice_id,offset_days" }
-      );
-      skipped++;
-    }
-
     const businessName = profile.business_name || profile.email;
     const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
 
-    for (const { offsetDays } of toSend) {
+    // Each offset gets exactly one chance: its own target day. Never
+    // attempted and that day has already passed (whatever the reason —
+    // a backdated invoice, a missed cron run, an invoice created right
+    // after that day's single daily run) → it's marked skipped, not sent
+    // late. That trades away catching up a reminder that missed its window
+    // for a simple, predictable rule: a reminder either fires on its day or
+    // it doesn't, nothing in between.
+    for (const offsetDays of offsets) {
+      const key = `${invoice.id}:${offsetDays}`;
+      if (settled.has(key)) continue;
+
+      const targetMs = addDaysUtc(invoice.due_date, offsetDays).getTime();
+      const isRetry = failedBefore.has(key);
+
+      if (isRetry) {
+        // A previously-failed send retries, but only for a bounded window —
+        // otherwise the last offset in a schedule (nothing ever supersedes
+        // it) would retry forever against an address that may simply be
+        // undeliverable, burning quota and hard-bouncing daily.
+        if (todayUtcMidnight - targetMs > FAILED_RETRY_WINDOW_MS) continue;
+      } else if (targetMs < todayUtcMidnight) {
+        await supabase.from("reminder_logs").upsert(
+          { invoice_id: invoice.id, user_id: invoice.user_id, offset_days: offsetDays, status: "skipped" },
+          { onConflict: "invoice_id,offset_days" }
+        );
+        skipped++;
+        checked++;
+        continue;
+      } else if (targetMs > todayUtcMidnight) {
+        continue; // still ahead, nothing to do yet
+      }
+
+      checked++;
       const { element, subject } = buildReminderEmail({
         offsetDays,
         businessName,

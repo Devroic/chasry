@@ -20,7 +20,7 @@ export interface ReminderSeriouslyOverdueProps {
 export default function ReminderSeriouslyOverdueEmail({
   businessName = "Acme Design Co.",
   clientName = "Jordan",
-  invoiceNumber = "INV-1042",
+  invoiceNumber,
   amount = "€450.00",
   dueDateLabel = "Was due 20 Jul 2026",
   daysOverdue = 30,
