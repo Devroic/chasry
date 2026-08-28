@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { requireOnboardedUser } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
@@ -8,8 +9,10 @@ import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist
 import { InvoiceListItem } from "@/components/dashboard/invoice-list-item";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { formatMoney } from "@/lib/format";
+
+export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage({
   searchParams,
@@ -59,8 +62,14 @@ export default async function DashboardPage({
   return (
     <div className="space-y-8">
       {upgraded && pro && (
-        <Alert className="border-brand-secondary-tint bg-brand-primary-tint">
-          <AlertDescription className="text-brand-primary">{t("upgradedBanner")}</AlertDescription>
+        <Alert className="border-brand-secondary-tint bg-brand-primary-tint px-4 py-3.5">
+          <Sparkles className="text-brand-primary" />
+          <AlertTitle className="text-base font-semibold text-brand-primary">
+            {t("upgradedBannerTitle")}
+          </AlertTitle>
+          <AlertDescription className="text-brand-primary/80">
+            {t("upgradedBanner")}
+          </AlertDescription>
         </Alert>
       )}
 

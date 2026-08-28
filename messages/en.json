@@ -20,7 +20,12 @@
     "none": "None",
     "pro": "Pro",
     "free": "Free",
-    "saveFailed": "Couldn't save changes. Try again."
+    "saveFailed": "Couldn't save changes. Try again.",
+    "close": "Close",
+    "loading": "Loading",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "paymentLinkPlaceholder": "https://buy.stripe.com/... or https://paypal.me/you"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -39,7 +44,8 @@
     "accountMenu": "Account menu",
     "openMenu": "Open menu",
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "navigation": "Navigation"
   },
   "footer": {
     "help": "Help",
@@ -54,13 +60,13 @@
     "businessNameRequired": "Business name is required",
     "passwordRequired": "Password is required",
     "passwordMinLength": "Use at least 8 characters",
+    "passwordsDoNotMatch": "Passwords don't match",
     "phoneInvalid": "Numbers only. Use +, spaces, or dashes if needed",
     "urlInvalid": "Enter a full link, starting with https://",
     "customerRequired": "Choose a client",
     "amountPositive": "Amount must be greater than 0",
     "dueDateRequired": "Due date is required",
-    "tooManyOffsets": "Up to 10 reminders per invoice",
-    "stripeCustomerIdInvalid": "Must look like a Stripe customer ID, e.g. cus_ABC123."
+    "tooManyOffsets": "Up to 10 reminders per invoice"
   },
   "landing": {
     "heroTitle": "Log it once. Chasry chases it for you.",
@@ -111,7 +117,8 @@
       "newToChasry": "New to Chasry?",
       "signUpNow": "Sign up now",
       "errors": {
-        "incorrectCredentials": "Incorrect email or password."
+        "incorrectCredentials": "Incorrect email or password.",
+        "emailNotConfirmed": "Confirm your email first, check your inbox for the link we sent."
       }
     },
     "signup": {
@@ -121,6 +128,7 @@
       "email": "Email",
       "password": "Password",
       "passwordHint": "At least 8 characters.",
+      "confirmPassword": "Confirm password",
       "submit": "Create account",
       "submitting": "Creating account…",
       "alreadyHaveAccount": "Already have an account?",
@@ -142,6 +150,7 @@
       "submit": "Send reset link",
       "submitting": "Sending…",
       "backToLogin": "Back to login",
+      "checkInboxTitle": "Check your inbox",
       "successMessage": "If that email has an account, we've sent a reset link."
     },
     "resetPasswordConfirm": {
@@ -151,7 +160,9 @@
       "passwordHint": "At least 8 characters.",
       "submit": "Save new password",
       "submitting": "Saving…",
-      "expiredError": "That reset link has expired. Request a new one."
+      "expiredError": "That reset link has expired. Request a new one.",
+      "samePasswordError": "Your new password must be different from your current one.",
+      "weakPasswordError": "Choose a stronger password and try again."
     },
     "signupConfirmed": {
       "confirming": "Confirming",
@@ -235,7 +246,8 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Here's what's outstanding right now.",
-    "upgradedBanner": "You're on Pro now, with unlimited clients and invoices.",
+    "upgradedBannerTitle": "You're on Pro",
+    "upgradedBanner": "Unlimited clients and invoices, starting now. Manage your subscription anytime from Settings → Billing.",
     "getSetUp": "Get set up",
     "checklist": {
       "addClientTitle": "Add your first client",
@@ -296,6 +308,7 @@
       "paymentLinkLabel": "Payment link (optional)",
       "paymentLinkHint": "Used in this client's reminders. Leave blank to use your default from Settings.",
       "notesLabel": "Notes (optional)",
+      "notesHint": "For your own reference. Never included in reminder emails.",
       "submitCreate": "Save client",
       "submitEdit": "Save changes",
       "errors": {
@@ -352,7 +365,7 @@
       "reopenToast": "Reopened. Reminders will resume.",
       "sendPreview": "Send me a preview",
       "sending": "Sending…",
-      "sendPreviewToast": "Preview sent to your email.",
+      "sendPreviewToast": "{count, plural, one {Preview sent to your email.} other {# previews sent to your email, one per scheduled reminder.}}",
       "edit": "Edit",
       "deleteTitle": "Delete this invoice?",
       "deleteDescription": "This can't be undone. Reminder history for this invoice will also be removed."
@@ -381,6 +394,7 @@
     "form": {
       "clientLabel": "Client",
       "clientLockedHint": "The client can't be changed after an invoice is created. Delete this invoice and add a new one if it went to the wrong client.",
+      "clientLockedHintPreselected": "Adding an invoice for this client. Go back and use \"Add invoice\" from the invoices list instead to pick someone else.",
       "addNewClient": "+ Add new client",
       "clientPlaceholder": "Choose a client",
       "needClientFirst": "You need a client first:",
@@ -394,13 +408,16 @@
       "paymentLinkSourceClient": "this client's payment link",
       "paymentLinkSourceAccount": "your default payment link",
       "notesLabel": "Notes (optional)",
+      "notesHint": "For your own reference. Never included in reminder emails.",
       "submitCreate": "Save invoice",
       "submitEdit": "Save changes",
       "errors": {
         "invalidClient": "Choose a valid client.",
         "createFailed": "Couldn't save this invoice. Try again.",
         "limitReachedCreate": "Free plan is limited to {limit} active invoices. Upgrade to Pro for unlimited.",
-        "limitReachedReopen": "Free plan is limited to {limit} active invoices. Upgrade to Pro to reopen this one."
+        "limitReachedReopen": "Free plan is limited to {limit} active invoices. Upgrade to Pro to reopen this one.",
+        "notFound": "Couldn't find this invoice.",
+        "noRemindersScheduled": "No reminders are scheduled for this invoice yet."
       }
     },
     "new": {
@@ -433,7 +450,8 @@
     "missed": "Missed"
   },
   "invoiceActionErrors": {
-    "reopenFailed": "Couldn't reopen this invoice."
+    "reopenFailed": "Couldn't reopen this invoice.",
+    "previewFailed": "Couldn't send the preview."
   },
   "reminderOverride": {
     "customTitle": "Custom reminder schedule",
@@ -478,6 +496,8 @@
     },
     "billing": {
       "pastDueWarning": "Your last payment failed. Update your card from Manage billing below to keep Pro active. You'll drop back to the free plan's {limit}-invoice limit if it isn't resolved.",
+      "cancelingTitle": "Subscription canceled",
+      "cancelingWarning": "Your subscription won't renew. You'll keep Pro access until {date}, then your account moves to the free plan.",
       "planTitle": "Chasry plan",
       "proLabel": "Pro ({price}/month)",
       "freeLabel": "Free",
@@ -487,6 +507,7 @@
       "manageBilling": "Manage billing",
       "upgradeToPro": "Upgrade to Pro",
       "statusActive": "Active",
+      "statusCanceling": "Canceling",
       "statusPastDue": "Payment failed, updating",
       "statusCanceled": "Canceled"
     },
@@ -537,7 +558,7 @@
       "estimatedMrr": "Estimated MRR",
       "mrrDescription": "{count, plural, one {# paying account} other {# paying accounts}} × {price}/month. Past-due accounts are counted, they are still billed until Stripe finishes retrying the payment.",
       "lifetimeRevenue": "Lifetime revenue",
-      "lifetimeRevenueDescription": "Every successful charge across every subscriber, all months summed, straight from Stripe.",
+      "lifetimeRevenueDescription": "Every charge across every subscriber, net of refunds and disputes, all months summed, straight from Stripe.",
       "lifetimeRevenueUnavailable": "Could not load from Stripe right now."
     },
     "users": {
@@ -560,22 +581,10 @@
       "joined": "Joined",
       "plan": "Plan",
       "nextPayment": "Next payment",
+      "cancels": "Cancels",
       "noneScheduled": "None scheduled",
       "stripeSubscription": "Stripe subscription",
-      "none": "None",
-      "stripeCustomer": "Stripe customer",
-      "noneLinkedYet": "None linked yet",
-      "linkTitle": "Link a Stripe customer"
-    },
-    "linkForm": {
-      "label": "Stripe customer ID",
-      "hint": "Link this before creating a subscription for them in Stripe, the webhook matches on this field.",
-      "submit": "Link customer",
-      "submitting": "Linking…",
-      "successMessage": "Stripe customer linked.",
-      "genericError": "Couldn't save that, try again.",
-      "alreadyLinkedError": "No unlinked user found with that ID, it may already have a Stripe customer linked.",
-      "invalidInput": "Invalid input."
+      "none": "None"
     },
     "playbook": {
       "title": "Stripe Playbook",
@@ -594,12 +603,8 @@
       "extendWarning": "The reliable way to add extra free months is a balance credit.",
       "extendP1": "Dashboard, Customer, Balance, add a negative amount, one month is minus ten euros, two months is minus twenty. Stripe automatically applies it to whatever invoice comes due next. The Billing page in the app picks this up on its own, nothing else to do.",
       "giftTitle": "Gift a subscription",
-      "giftBest": "Best option: give them a promo code and have them redeem it themselves.",
+      "giftBest": "The only way to gift a subscription is a promo code redeemed at checkout. Never create one directly in Stripe.",
       "giftP1": "Create a Coupon (100 percent off, forever for a permanent gift or repeating for a set number of months), then a Promotion Code from it, and send them the code to enter at checkout when they click <kbd>Upgrade to Pro</kbd> in the app. This goes through the real checkout flow and links their account correctly, no extra steps needed.",
-      "giftHandsOff": "If it needs to be fully hands off instead, order matters:",
-      "giftStep1": "On their <userLink>user page</userLink>, link their Stripe customer ID first, before creating the subscription.",
-      "giftStep2": "Then create the subscription in Stripe and attach the coupon.",
-      "giftP2": "The app only recognizes which Stripe customer belongs to which account through that link. Creating the subscription first leaves it unmatched, and their access never updates.",
       "refundsTitle": "Refunds",
       "refundsP1": "Dashboard, Payments, find the charge, then Refund, full or partial. A refund does not cancel the subscription on its own. If they should also lose access, cancel it separately.",
       "otherTitle": "Other things worth knowing",

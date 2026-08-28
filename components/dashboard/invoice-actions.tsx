@@ -69,8 +69,12 @@ export function InvoiceActions({
         disabled={previewPending}
         onClick={() =>
           startPreview(async () => {
-            await sendPreviewReminder(invoiceId);
-            toast.success(t("sendPreviewToast"));
+            try {
+              const { count } = await sendPreviewReminder(invoiceId);
+              toast.success(t("sendPreviewToast", { count }));
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : tErrors("previewFailed"));
+            }
           })
         }
       >

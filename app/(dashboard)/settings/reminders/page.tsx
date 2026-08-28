@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReminderSettingsForm } from "./reminder-settings-form";
 
+export const metadata = { title: "Reminders" };
+
 export default async function ReminderSettingsPage() {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("settings.reminders");

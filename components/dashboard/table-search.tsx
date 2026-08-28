@@ -1,6 +1,13 @@
 import { Search } from "lucide-react";
 
-/** Plain GET form — no client JS needed, works like the existing filter tabs. */
+/**
+ * Plain GET form — no client JS needed, works like the existing filter tabs.
+ * The magnifying glass is a real submit button, not just a decorative icon —
+ * a mobile keyboard's own "search"/"go" key submits the form too, but not
+ * every keyboard shows one (some show "Done" depending on autocomplete/
+ * inputmode), so there needs to be a tappable control that doesn't depend
+ * on that.
+ */
 export function TableSearch({
   action,
   placeholder,
@@ -14,7 +21,13 @@ export function TableSearch({
 }) {
   return (
     <form action={action} className="relative">
-      <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+      <button
+        type="submit"
+        aria-label={placeholder}
+        className="absolute top-1/2 left-0 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
+      >
+        <Search className="size-4" />
+      </button>
       {hiddenParams &&
         Object.entries(hiddenParams).map(([key, value]) =>
           value ? <input key={key} type="hidden" name={key} value={value} /> : null

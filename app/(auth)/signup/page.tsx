@@ -94,6 +94,20 @@ export default function SignupPage() {
           />
         </FormField>
 
+        <FormField
+          label={t("confirmPassword")}
+          htmlFor="confirm_password"
+          error={errors.confirm_password?.message}
+        >
+          <PasswordInput
+            id="confirm_password"
+            autoComplete="new-password"
+            className="h-11"
+            aria-invalid={!!errors.confirm_password}
+            {...register("confirm_password")}
+          />
+        </FormField>
+
         <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
           {pending ? t("submitting") : t("submit")}
         </Button>

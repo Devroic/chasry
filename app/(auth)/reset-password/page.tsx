@@ -35,6 +35,25 @@ export default function ResetPasswordPage() {
 
   const onValid = (data: ResetInput) => startTransition(() => formAction(toFormData(data)));
 
+  // state.success is only ever used as a "did the request succeed" signal
+  // here, never displayed directly, it's the exact string the server
+  // translated at submit time, so it would stay frozen in whatever language
+  // was active then even after switching languages afterward. Re-deriving
+  // the text from useTranslations() keeps it live, same as title/subtitle.
+  if (state?.success) {
+    return (
+      <div className="text-center">
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+          {t("checkInboxTitle")}
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">{t("successMessage")}</p>
+        <Button asChild className="mt-6 h-11 w-full text-base font-semibold">
+          <Link href="/login">{t("backToLogin")}</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
@@ -42,40 +61,32 @@ export default function ResetPasswordPage() {
       </h1>
       <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>
 
-      {state?.success ? (
-        <Alert className="mt-8">
-          <AlertDescription>{state.success}</AlertDescription>
-        </Alert>
-      ) : (
-        <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
-          {state?.error && (
-            <Alert variant="destructive">
-              <AlertDescription>{state.error}</AlertDescription>
-            </Alert>
-          )}
+      <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
+        {state?.error && (
+          <Alert variant="destructive">
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        )}
 
-          <FormField label={t("email")} htmlFor="email" error={errors.email?.message}>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="h-11"
-              aria-invalid={!!errors.email}
-              {...register("email")}
-            />
-          </FormField>
+        <FormField label={t("email")} htmlFor="email" error={errors.email?.message}>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            className="h-11"
+            aria-invalid={!!errors.email}
+            {...register("email")}
+          />
+        </FormField>
 
-          <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
-            {pending ? t("submitting") : t("submit")}
-          </Button>
-        </form>
-      )}
+        <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
+          {pending ? t("submitting") : t("submit")}
+        </Button>
+      </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        <Link href="/login" className="font-medium text-brand-primary hover:underline">
-          {t("backToLogin")}
-        </Link>
-      </p>
+      <Button asChild variant="outline" className="mt-6 h-11 w-full text-base font-semibold">
+        <Link href="/login">{t("backToLogin")}</Link>
+      </Button>
     </div>
   );
 }

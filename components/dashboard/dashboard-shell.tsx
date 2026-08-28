@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -30,6 +30,7 @@ import { DashboardNav } from "./dashboard-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
+import { LogoutPendingOverlay } from "@/components/logout-pending-overlay";
 import { isPro } from "@/lib/plan";
 import { cn } from "@/lib/utils";
 import type { SubscriptionStatus } from "@/types/database.types";
@@ -56,12 +57,15 @@ export function DashboardShell({
   // localStorage before the first client render (see ThemeToggle's history
   // in ARCHITECTURE.md for why that risk is taken seriously here).
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [loggingOut, startLogoutTransition] = useTransition();
   const t = useTranslations("header");
   const initial = businessName.trim().charAt(0).toUpperCase() || "?";
   const pro = isPro(subscriptionStatus);
+  const handleLogout = () => startLogoutTransition(() => logout());
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
+      <LogoutPendingOverlay show={loggingOut} />
       <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-sm">
         <div className="flex h-20 items-center justify-between px-4 sm:px-6">
           <Link href="/dashboard" className="flex items-center">
@@ -93,14 +97,21 @@ export function DashboardShell({
                 </Link>
               </Button>
             )}
+            {isAdmin && (
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/admin">
+                  <ShieldCheck /> {t("admin")}
+                </Link>
+              </Button>
+            )}
 
             <UserMenu
               businessName={businessName}
               email={email}
               initial={initial}
               subscriptionStatus={subscriptionStatus}
-              isAdmin={isAdmin}
               onNavigate={() => setMobileOpen(false)}
+              onLogout={handleLogout}
             />
 
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -110,7 +121,7 @@ export function DashboardShell({
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-4">
-                <SheetTitle className="sr-only">Navigation</SheetTitle>
+                <SheetTitle className="sr-only">{t("navigation")}</SheetTitle>
                 {!pro && (
                   <Button asChild className="mt-8 mb-4 w-full" onClick={() => setMobileOpen(false)}>
                     <Link href="/settings/billing">
@@ -179,15 +190,15 @@ function UserMenu({
   email,
   initial,
   subscriptionStatus,
-  isAdmin,
   onNavigate,
+  onLogout,
 }: {
   businessName: string;
   email: string;
   initial: string;
   subscriptionStatus: SubscriptionStatus;
-  isAdmin?: boolean;
   onNavigate: () => void;
+  onLogout: () => void;
 }) {
   const pro = isPro(subscriptionStatus);
   const t = useTranslations("header");
@@ -226,25 +237,20 @@ function UserMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {isAdmin && (
-          <DropdownMenuItem asChild onClick={onNavigate}>
-            <Link href="/admin" className="flex items-center gap-2">
-              <ShieldCheck className="size-4" /> {t("admin")}
-            </Link>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem asChild onClick={onNavigate}>
           <Link href="/settings/profile" className="flex items-center gap-2">
             <Settings className="size-4" /> {t("settings")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild variant="destructive" onClick={onNavigate}>
-          <form action={logout} className="w-full">
-            <button type="submit" className="flex w-full items-center gap-2">
-              <LogOut className="size-4" /> {t("logOut")}
-            </button>
-          </form>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => {
+            onNavigate();
+            onLogout();
+          }}
+        >
+          <LogOut className="size-4" /> {t("logOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

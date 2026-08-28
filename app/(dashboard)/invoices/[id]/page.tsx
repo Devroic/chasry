@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate, formatMoney, daysUntil } from "@/lib/format";
 import { dueStatusLabel } from "@/lib/reminders";
 
+export const metadata = { title: "Invoice" };
+
 export default async function InvoiceDetailPage({
   params,
 }: {

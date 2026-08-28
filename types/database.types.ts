@@ -24,7 +24,9 @@ export interface Database {
           stripe_subscription_id: string | null;
           subscription_status: SubscriptionStatus;
           current_period_end: string | null;
+          cancel_at_period_end: boolean;
           onboarded_at: string | null;
+          welcome_email_sent_at: string | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & {

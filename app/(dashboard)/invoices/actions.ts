@@ -7,10 +7,9 @@ import { requireUser, getProfile } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { invoiceSchema } from "@/lib/validations/invoice";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
-import { formatDate, formatMoney } from "@/lib/format";
+import { buildReminderEmail } from "@/lib/reminder-email";
 import { decodeReminderOverride } from "@/lib/reminder-override";
 import type { Translator } from "@/lib/validations/shared";
-import ReminderBeforeDueEmail from "@/emails/reminder-before-due";
 
 export type InvoiceFormState = { error?: string } | null;
 
@@ -162,43 +161,71 @@ export async function deleteInvoice(invoiceId: string) {
   redirect("/invoices");
 }
 
+/**
+ * Sends one preview email per offset this invoice actually has scheduled
+ * (invoice override → client override → account default, same cascade the
+ * real cron uses), each built by the exact same buildReminderEmail() the
+ * cron send uses — so what lands in the inbox is a true preview of every
+ * tone (before/overdue/seriously overdue) this invoice will really send,
+ * not always the same generic "7 days before" example. replyTo is set to
+ * the account owner's real email too, same as the real send, so testing
+ * "reply to this email" from a preview actually goes somewhere real.
+ */
 export async function sendPreviewReminder(invoiceId: string) {
   const { supabase, user } = await requireUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("business_name, email, payment_link")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { data: accountSettings }] = await Promise.all([
+    supabase.from("profiles").select("business_name, email, payment_link").eq("id", user.id).single(),
+    supabase.from("reminder_settings").select("offsets").eq("user_id", user.id).single(),
+  ]);
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("invoice_number, amount, currency, due_date, customer_id")
+    .select("invoice_number, amount, currency, due_date, customer_id, reminder_offsets")
     .eq("id", invoiceId)
     .eq("user_id", user.id)
     .single();
-  if (!invoice || !profile) throw new Error("Invoice not found");
 
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("name, payment_link")
-    .eq("id", invoice.customer_id)
-    .single();
+  const { data: customer } = invoice
+    ? await supabase
+        .from("customers")
+        .select("name, payment_link, reminder_offsets")
+        .eq("id", invoice.customer_id)
+        .single()
+    : { data: null };
+
+  const tErrors = await getTranslations("invoices.form.errors");
+  if (!invoice || !profile || !customer) throw new Error(tErrors("notFound"));
+
+  const offsets = invoice.reminder_offsets ?? customer.reminder_offsets ?? accountSettings?.offsets ?? [];
+  if (offsets.length === 0) {
+    throw new Error(tErrors("noRemindersScheduled"));
+  }
 
   const businessName = profile.business_name || profile.email;
+  const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
 
-  await resend.emails.send({
-    from: REMINDERS_FROM_EMAIL,
-    to: profile.email,
-    subject: `[Preview] Reminder: invoice ${invoice.invoice_number ?? ""} due soon from ${businessName}`.trim(),
-    react: ReminderBeforeDueEmail({
+  for (const offsetDays of [...offsets].sort((a, b) => a - b)) {
+    const { element, subject } = buildReminderEmail({
+      offsetDays,
       businessName,
-      clientName: customer?.name ?? "your client",
-      invoiceNumber: invoice.invoice_number ?? undefined,
-      amount: formatMoney(Number(invoice.amount), invoice.currency),
-      dueDateLabel: `Due ${formatDate(invoice.due_date)}`,
-      daysUntilDue: 7,
-      paymentLink: customer?.payment_link ?? profile.payment_link ?? undefined,
-    }),
-  });
+      clientName: customer.name,
+      invoiceNumber: invoice.invoice_number,
+      amount: Number(invoice.amount),
+      currency: invoice.currency,
+      dueDate: invoice.due_date,
+      paymentLink,
+      subjectPrefix: "[Preview] ",
+    });
+
+    await resend.emails.send({
+      from: REMINDERS_FROM_EMAIL,
+      to: profile.email,
+      replyTo: profile.email,
+      subject,
+      react: element,
+    });
+  }
+
+  return { count: offsets.length };
 }

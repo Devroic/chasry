@@ -4,10 +4,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { BackLink } from "@/components/dashboard/back-link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { LinkStripeCustomerForm } from "@/components/admin/link-stripe-customer-form";
 import { formatDate } from "@/lib/format";
 import { getNextRealPaymentDate } from "@/lib/billing";
 import { isPro } from "@/lib/plan";
+
+export const metadata = { title: { absolute: "User · Chasry Admin" } };
 
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -32,7 +33,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     supabase
       .from("profiles")
       .select(
-        "id, business_name, email, subscription_status, stripe_customer_id, stripe_subscription_id, current_period_end, onboarded_at, created_at"
+        "id, business_name, email, subscription_status, stripe_subscription_id, current_period_end, cancel_at_period_end, onboarded_at, created_at"
       )
       .eq("id", id)
       .single(),
@@ -42,8 +43,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   if (!profile) notFound();
 
   const pro = isPro(profile.subscription_status);
+  const canceling = profile.subscription_status === "active" && profile.cancel_at_period_end;
   const nextPaymentDate =
-    profile.subscription_status === "active" && profile.stripe_subscription_id
+    profile.subscription_status === "active" && !canceling && profile.stripe_subscription_id
       ? ((await getNextRealPaymentDate(profile.stripe_subscription_id)) ?? profile.current_period_end)
       : profile.current_period_end;
 
@@ -80,7 +82,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <CardContent className="space-y-3 text-sm">
             <Row label={t("plan")} value={statusLabel[profile.subscription_status] ?? profile.subscription_status} />
             <Row
-              label={t("nextPayment")}
+              label={canceling ? t("cancels") : t("nextPayment")}
               value={nextPaymentDate ? formatDate(nextPaymentDate, locale) : t("noneScheduled")}
             />
             <Row
@@ -88,35 +90,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               value={profile.stripe_subscription_id ?? t("none")}
               mono
             />
-            <Row
-              label={t("stripeCustomer")}
-              value={
-                profile.stripe_customer_id ? (
-                  <a
-                    href={`https://dashboard.stripe.com/customers/${profile.stripe_customer_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-xs text-brand-primary hover:underline"
-                  >
-                    {profile.stripe_customer_id}
-                  </a>
-                ) : (
-                  t("noneLinkedYet")
-                )
-              }
-            />
           </CardContent>
         </Card>
       </div>
-
-      {!profile.stripe_customer_id && (
-        <Card className="mt-4">
-          <CardContent>
-            <p className="mb-3 text-sm font-medium text-foreground">{t("linkTitle")}</p>
-            <LinkStripeCustomerForm userId={profile.id} />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

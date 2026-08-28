@@ -103,42 +103,15 @@ credit (Option A) instead, that's the mechanism that reliably stacks.
 
 ## Gift a subscription (someone who's never paid)
 
-The tricky part isn't Stripe, it's that the app only knows which Chasry account a Stripe customer
-belongs to via `profiles.stripe_customer_id`, and that column is **only ever written by the app's
-own Checkout flow** (`checkout.session.completed`, reading the `client_reference_id` set when they
-click "Upgrade to Pro" in-app). A subscription created straight in the Stripe Dashboard, for a
-Stripe customer that doesn't already have that link, updates Stripe fine but the webhook has
-nothing to match it against, `profiles.subscription_status` silently never changes, and the
-subscriber pays (or gets gifted) nothing as far as the app is concerned.
-
-**Path A, recommended (self-service, no linking risk):**
+**Policy:** always gift via promo code, have them redeem it themselves. Never create a
+subscription for someone directly in Stripe's Dashboard.
 
 1. Create a Coupon as in Option B above (100% off, `forever` duration for a permanent gift, or
    `repeating` for N free months), then a **Promotion Code** from it (Coupons → the coupon →
    **Create promotion code**) so it has a short, shareable code.
 2. Give the subscriber the code and have them click "Upgrade to Pro" in the app themselves and
    enter it at Stripe Checkout (`allow_promotion_codes: true` is already set on the Checkout
-   Session, so the field is there). This goes through the real `checkout.session.completed` flow,
-   `stripe_customer_id` gets linked correctly, and their status flips to `active` automatically.
-   No manual DB work, no risk of a silently orphaned subscription.
-
-**Path B, fully hands-off (you do everything, requires one manual DB step):**
-
-1. In Supabase Table Editor, find the subscriber's `profiles` row and confirm `stripe_customer_id`
-   is empty (i.e. they've never checked out before).
-2. In Stripe, create (or find) the matching Customer record for their email.
-3. **Before creating the subscription**, go back to Supabase and manually set that `profiles` row's
-   `stripe_customer_id` to the Stripe customer's ID (`cus_...`). This step has to happen first, the
-   webhook matches by this column, not by email.
-4. Now in Stripe: Dashboard → that Customer → **Add subscription** → select the Chasry Pro price →
-   attach the coupon from Option B → create.
-5. This fires `customer.subscription.created`, which the webhook now matches successfully (because
-   step 3 already linked the customer), and `subscription_status` flips to `active`.
-6. Verify in Supabase afterward, same as always, don't assume it worked silently.
-
-If you skip step 3, the fix afterward is the same, manually set `stripe_customer_id` in Supabase,
-then make any trivial edit to the Stripe subscription (even just opening and saving it) to force a
-fresh `customer.subscription.updated` event, which will then match and sync correctly.
+   Session, so the field is there).
 
 ## Refunds
 

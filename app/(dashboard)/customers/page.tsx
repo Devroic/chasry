@@ -19,6 +19,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+export const metadata = { title: "Clients" };
+
 const SORT_FIELDS = ["name", "email", "added"] as const;
 type SortField = (typeof SORT_FIELDS)[number];
 

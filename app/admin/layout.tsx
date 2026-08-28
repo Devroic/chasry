@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { requireAdmin, getAdminPlanOverride } from "@/lib/auth";
 import { AdminShell } from "@/components/admin/admin-shell";
 
-export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: { template: "%s · Chasry Admin", default: "Chasry Admin" },
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { sendWelcomeEmail } from "@/app/(auth)/actions";
 
 export default function SignupConfirmedPage() {
   const [status, setStatus] = useState<"checking" | "confirmed" | "invalid">("checking");
@@ -15,6 +16,9 @@ export default function SignupConfirmedPage() {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => {
       setStatus(data.session ? "confirmed" : "invalid");
+      // Fire-and-forget: nothing on this page waits for or reflects the
+      // result, a failed send here shouldn't block anyone from continuing.
+      if (data.session) void sendWelcomeEmail();
     });
   }, []);
 

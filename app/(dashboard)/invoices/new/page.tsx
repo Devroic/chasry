@@ -11,6 +11,8 @@ import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
 import { suggestNextInvoiceNumber } from "@/lib/invoice-number";
 import { createInvoice } from "@/app/(dashboard)/invoices/actions";
 
+export const metadata = { title: "New invoice" };
+
 export default async function NewInvoicePage({
   searchParams,
 }: {
@@ -63,6 +65,8 @@ export default async function NewInvoicePage({
                 customers={customers ?? []}
                 currency={profile.currency}
                 defaultCustomerId={customer_id}
+                lockCustomer={!!customer_id}
+                lockReason="preselected"
                 suggestedInvoiceNumber={suggestNextInvoiceNumber(lastInvoice?.invoice_number)}
                 defaultPaymentLink={profile.payment_link ?? undefined}
                 accountDefaults={{

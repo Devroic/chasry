@@ -3,12 +3,9 @@ import { timingSafeEqual } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
-import { addDaysUtc, toneForOffset } from "@/lib/reminders";
-import { formatDate, formatMoney } from "@/lib/format";
+import { addDaysUtc } from "@/lib/reminders";
+import { buildReminderEmail } from "@/lib/reminder-email";
 import { checkCronRateLimit } from "@/lib/rate-limit";
-import ReminderBeforeDueEmail from "@/emails/reminder-before-due";
-import ReminderOverdueEmail from "@/emails/reminder-overdue";
-import ReminderSeriouslyOverdueEmail from "@/emails/reminder-seriously-overdue";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -189,10 +186,15 @@ async function runReminderSweep() {
   // now; 'failed' is retried on the next run.
   const settled = new Set<string>();
   const failedBefore = new Set<string>();
+  // Any log at all for an invoice, of any status/offset — distinguishes an
+  // invoice's very first reminder check from a later one (see `isFirstCheck`
+  // below).
+  const invoiceHasHistory = new Set<string>();
   for (const log of existingLogs ?? []) {
     const key = `${log.invoice_id}:${log.offset_days}`;
     if (log.status === "failed") failedBefore.add(key);
     else settled.add(key);
+    invoiceHasHistory.add(log.invoice_id);
   }
 
   let sent = 0;
@@ -220,9 +222,7 @@ async function runReminderSweep() {
 
     // Every offset whose target date has arrived (today or earlier — earlier
     // covers an invoice logged already overdue, or a missed cron run) and
-    // hasn't been logged yet. Only the most recent one actually gets sent;
-    // this stops a backdated invoice from firing every past milestone in
-    // one email storm on the first run after it's created.
+    // hasn't been logged yet.
     const due = offsets
       .filter((offsetDays) => !settled.has(`${invoice.id}:${offsetDays}`))
       .map((offsetDays) => ({ offsetDays, targetDate: addDaysUtc(invoice.due_date, offsetDays) }))
@@ -242,13 +242,29 @@ async function runReminderSweep() {
     checked += due.length;
     if (due.length === 0) continue;
 
-    const [{ offsetDays }, ...stale] = due;
+    // Multiple simultaneously-due offsets need different handling depending
+    // on whether this invoice has ever been checked before. On the very
+    // first check, it usually means the invoice was logged already overdue
+    // (backdated, or a bulk import) — sending every past milestone at once
+    // would be an email storm, so only the most current offset goes out and
+    // the rest are marked skipped. Once an invoice already has *some*
+    // history, though, >1 due offset only happens because a run was missed
+    // (e.g. an invoice created after that day's single daily cron already
+    // ran) — every one of those is a reminder the user actually configured,
+    // and none should be silently dropped just because a newer offset also
+    // became due before the gap was caught up. Sent oldest first so a
+    // multi-day catch-up still arrives in the order it was meant to.
+    const isFirstCheck = !invoiceHasHistory.has(invoice.id);
+    const toSend = isFirstCheck
+      ? due.slice(0, 1)
+      : due.slice().sort((a, b) => a.targetDate.getTime() - b.targetDate.getTime());
+    const toSkip = isFirstCheck ? due.slice(1) : [];
 
     // Upsert, not insert: a row may already exist for this offset from an
     // earlier failed attempt, and `unique (invoice_id, offset_days)` would
     // reject a plain insert — which, before failures were retried at all,
     // could never happen. Same reason applies to the sent/failed writes below.
-    for (const { offsetDays: staleOffset } of stale) {
+    for (const { offsetDays: staleOffset } of toSkip) {
       await supabase.from("reminder_logs").upsert(
         {
           invoice_id: invoice.id,
@@ -261,94 +277,66 @@ async function runReminderSweep() {
       skipped++;
     }
 
-    const tone = toneForOffset(offsetDays);
     const businessName = profile.business_name || profile.email;
-    const amountLabel = formatMoney(Number(invoice.amount), invoice.currency);
-    const dueDateFormatted = formatDate(invoice.due_date);
     const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
 
-    const element =
-      tone === "seriously_overdue"
-        ? ReminderSeriouslyOverdueEmail({
-            businessName,
-            clientName: customer.name,
-            invoiceNumber: invoice.invoice_number ?? undefined,
-            amount: amountLabel,
-            dueDateLabel: `Was due ${dueDateFormatted}`,
-            daysOverdue: offsetDays,
-            paymentLink,
-          })
-        : tone === "overdue"
-          ? ReminderOverdueEmail({
-              businessName,
-              clientName: customer.name,
-              invoiceNumber: invoice.invoice_number ?? undefined,
-              amount: amountLabel,
-              dueDateLabel: `Was due ${dueDateFormatted}`,
-              daysOverdue: offsetDays,
-              paymentLink,
-            })
-          : ReminderBeforeDueEmail({
-              businessName,
-              clientName: customer.name,
-              invoiceNumber: invoice.invoice_number ?? undefined,
-              amount: amountLabel,
-              dueDateLabel: `Due ${dueDateFormatted}`,
-              daysUntilDue: -offsetDays,
-              paymentLink,
-            });
-
-    const subject =
-      tone === "seriously_overdue"
-        ? `Please arrange payment: invoice ${invoice.invoice_number ?? ""} from ${businessName}`.trim()
-        : tone === "overdue"
-          ? `Overdue: invoice ${invoice.invoice_number ?? ""} from ${businessName}`.trim()
-          : `Reminder: invoice ${invoice.invoice_number ?? ""} due soon from ${businessName}`.trim();
-
-    try {
-      const { data, error } = await resend.emails.send({
-        from: REMINDERS_FROM_EMAIL,
-        to: customer.email,
-        replyTo: profile.email,
-        subject,
-        react: element,
+    for (const { offsetDays } of toSend) {
+      const { element, subject } = buildReminderEmail({
+        offsetDays,
+        businessName,
+        clientName: customer.name,
+        invoiceNumber: invoice.invoice_number,
+        amount: Number(invoice.amount),
+        currency: invoice.currency,
+        dueDate: invoice.due_date,
+        paymentLink,
       });
 
-      if (error) throw new Error(error.message);
+      try {
+        const { data, error } = await resend.emails.send({
+          from: REMINDERS_FROM_EMAIL,
+          to: customer.email,
+          replyTo: profile.email,
+          subject,
+          react: element,
+        });
 
-      await supabase.from("reminder_logs").upsert(
-        {
-          invoice_id: invoice.id,
-          user_id: invoice.user_id,
-          offset_days: offsetDays,
-          status: "sent",
-          resend_message_id: data?.id ?? null,
-          error: null,
-        },
-        { onConflict: "invoice_id,offset_days" }
-      );
-      sent++;
-    } catch (err) {
-      console.error("cron/send-reminders: send failed", { invoiceId: invoice.id, err });
-      // Per-invoice send failure. Tagged (not just logged) because a burst of
-      // these is the signal that Resend's daily cap was hit — the failure mode
-      // that used to lose reminders permanently. No client email or invoice
-      // amount is attached; the invoice id is enough to investigate.
-      Sentry.captureException(err, {
-        tags: { job: "send-reminders", stage: "send" },
-        extra: { invoiceId: invoice.id, offsetDays },
-      });
-      await supabase.from("reminder_logs").upsert(
-        {
-          invoice_id: invoice.id,
-          user_id: invoice.user_id,
-          offset_days: offsetDays,
-          status: "failed",
-          error: err instanceof Error ? err.message : "Unknown error",
-        },
-        { onConflict: "invoice_id,offset_days" }
-      );
-      failed++;
+        if (error) throw new Error(error.message);
+
+        await supabase.from("reminder_logs").upsert(
+          {
+            invoice_id: invoice.id,
+            user_id: invoice.user_id,
+            offset_days: offsetDays,
+            status: "sent",
+            resend_message_id: data?.id ?? null,
+            error: null,
+          },
+          { onConflict: "invoice_id,offset_days" }
+        );
+        sent++;
+      } catch (err) {
+        console.error("cron/send-reminders: send failed", { invoiceId: invoice.id, err });
+        // Per-invoice send failure. Tagged (not just logged) because a burst of
+        // these is the signal that Resend's daily cap was hit — the failure mode
+        // that used to lose reminders permanently. No client email or invoice
+        // amount is attached; the invoice id is enough to investigate.
+        Sentry.captureException(err, {
+          tags: { job: "send-reminders", stage: "send" },
+          extra: { invoiceId: invoice.id, offsetDays },
+        });
+        await supabase.from("reminder_logs").upsert(
+          {
+            invoice_id: invoice.id,
+            user_id: invoice.user_id,
+            offset_days: offsetDays,
+            status: "failed",
+            error: err instanceof Error ? err.message : "Unknown error",
+          },
+          { onConflict: "invoice_id,offset_days" }
+        );
+        failed++;
+      }
     }
   }
 

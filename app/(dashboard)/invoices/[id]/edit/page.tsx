@@ -8,6 +8,8 @@ import { InvoiceForm } from "@/components/dashboard/invoice-form";
 import { requireOnboardedUser } from "@/lib/auth";
 import { updateInvoice } from "@/app/(dashboard)/invoices/actions";
 
+export const metadata = { title: "Edit invoice" };
+
 export default async function EditInvoicePage({
   params,
 }: {

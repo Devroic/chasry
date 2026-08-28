@@ -25,6 +25,8 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { describeReminderSchedule } from "@/lib/reminders";
 import { deleteCustomer } from "@/app/(dashboard)/customers/actions";
 
+export const metadata = { title: "Client" };
+
 export default async function CustomerDetailPage({
   params,
   searchParams,

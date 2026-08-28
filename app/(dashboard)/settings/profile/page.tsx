@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ProfileForm } from "./profile-form";
 import { DangerZone } from "./danger-zone";
 
+export const metadata = { title: "Profile" };
+
 export default async function ProfileSettingsPage() {
   const { profile } = await requireOnboardedUser();
 

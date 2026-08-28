@@ -106,21 +106,40 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
   }
 }
 
+// Revenue-relevant balance transaction categories: a charge coming in,
+// a refund or dispute taking money back out, and the reversal categories
+// Stripe posts when a refund/dispute itself fails or is won (the money
+// stays with us after all). Everything else (`fee`, `payout`, `transfer`,
+// `adjustment`, ...) doesn't represent revenue changing hands with a
+// customer, and is excluded. `reporting_category` (not the raw `type`) is
+// what Stripe's own docs recommend for this, `type` has ~40 granular
+// values that don't collapse cleanly into "money in vs. money out."
+const REVENUE_REPORTING_CATEGORIES = new Set([
+  "charge",
+  "refund",
+  "refund_failure",
+  "dispute",
+  "dispute_reversal",
+]);
+
 /**
- * Total gross amount ever collected across every subscriber, for the admin
+ * Total net amount ever collected across every subscriber, for the admin
  * Overview page. Nothing in the database tracks historical payment amounts
  * (profiles only stores the current subscription state), so this is summed
  * directly from Stripe's own balance transaction history instead of a
- * running total kept locally. Only successful charges are summed, refunds
- * and disputes are not subtracted back out, this account hasn't had any,
- * and this is meant as a simple lifetime-total figure rather than a
- * reconciled ledger. Returned in cents, matching Stripe's own convention.
+ * running total kept locally. Refunds and disputes are subtracted back out
+ * (Stripe already signs their `amount` negative), so this reflects what was
+ * actually kept, not just gross charges. Still not Stripe's own fee taken
+ * out of it, this is a lifetime-total figure, not a reconciled ledger.
+ * Returned in cents, matching Stripe's own convention.
  */
 export async function getLifetimeRevenueCents(): Promise<number | null> {
   try {
     let totalCents = 0;
-    for await (const txn of stripe.balanceTransactions.list({ type: "charge", limit: 100 })) {
-      totalCents += txn.amount;
+    for await (const txn of stripe.balanceTransactions.list({ limit: 100 })) {
+      if (REVENUE_REPORTING_CATEGORIES.has(txn.reporting_category)) {
+        totalCents += txn.amount;
+      }
     }
     return totalCents;
   } catch {

@@ -119,7 +119,20 @@ export function CustomerForm({
       </FormField>
 
       <FormField label={t("phoneLabel")} htmlFor="phone" error={errors.phone?.message}>
-        <Input id="phone" type="tel" aria-invalid={!!errors.phone} {...register("phone")} />
+        <Input
+          id="phone"
+          type="tel"
+          aria-invalid={!!errors.phone}
+          {...register("phone", {
+            // Strip anything that isn't a digit or standard phone formatting
+            // character as it's typed, rather than only catching letters on
+            // submit — matches the same allowed set customerSchema validates
+            // server-side (lib/validations/customer.ts).
+            onChange: (e) => {
+              e.target.value = e.target.value.replace(/[^0-9+()\s-]/g, "");
+            },
+          })}
+        />
       </FormField>
 
       <FormField
@@ -131,13 +144,18 @@ export function CustomerForm({
         <Input
           id="payment_link"
           type="url"
-          placeholder="https://buy.stripe.com/... or https://paypal.me/you"
+          placeholder={tCommon("paymentLinkPlaceholder")}
           aria-invalid={!!errors.payment_link}
           {...register("payment_link")}
         />
       </FormField>
 
-      <FormField label={t("notesLabel")} htmlFor="notes" error={errors.notes?.message}>
+      <FormField
+        label={t("notesLabel")}
+        htmlFor="notes"
+        error={errors.notes?.message}
+        hint={errors.notes ? undefined : t("notesHint")}
+      >
         <Textarea id="notes" rows={3} aria-invalid={!!errors.notes} {...register("notes")} />
       </FormField>
 

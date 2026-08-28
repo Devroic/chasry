@@ -49,6 +49,7 @@ export function InvoiceForm({
   defaultPaymentLink,
   accountDefaults,
   lockCustomer = false,
+  lockReason = "editing",
   cancelHref,
   submitLabel,
 }: {
@@ -72,12 +73,19 @@ export function InvoiceForm({
   /** The account's reminder default — used to describe/seed the override section. */
   accountDefaults: { offsets: number[]; enabled: boolean };
   /**
-   * Editing an existing invoice: the client is shown read-only. An invoice is
-   * already assigned to someone, reminders may already have gone out to that
-   * address, and the payment link resolves through them, so silently pointing
-   * it at a different client mid-flight would make the reminder history lie.
+   * Client is shown read-only instead of a Select. Two callers use this:
+   * editing an existing invoice (reminders may already have gone out to
+   * that address, and the payment link resolves through them, so silently
+   * pointing it at a different client mid-flight would make the reminder
+   * history lie), and creating a new invoice from a client's own page
+   * (arriving there is already a deliberate "add an invoice for this
+   * client" action, so leaving the dropdown open just invites picking the
+   * wrong one without noticing the payment link/reminder preview below
+   * still describes the client you started from).
    */
   lockCustomer?: boolean;
+  /** Which of lockCustomer's two callers this is — picks the read-only hint's wording. Defaults to "editing" (the original, longer-standing caller). */
+  lockReason?: "editing" | "preselected";
   /** When set, a Cancel button appears next to Save and returns here. */
   cancelHref?: string;
   submitLabel?: string;
@@ -168,7 +176,9 @@ export function InvoiceForm({
           >
             {selectedCustomer?.name ?? ""}
           </div>
-          <p className="text-xs text-muted-foreground">{t("clientLockedHint")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t(lockReason === "preselected" ? "clientLockedHintPreselected" : "clientLockedHint")}
+          </p>
         </FormField>
       ) : (
         <FormField
@@ -266,7 +276,12 @@ export function InvoiceForm({
           : t("paymentLinkNoteNone")}
       </p>
 
-      <FormField label={t("notesLabel")} htmlFor="notes" error={errors.notes?.message}>
+      <FormField
+        label={t("notesLabel")}
+        htmlFor="notes"
+        error={errors.notes?.message}
+        hint={errors.notes ? undefined : t("notesHint")}
+      >
         <Textarea id="notes" rows={3} aria-invalid={!!errors.notes} {...register("notes")} />
       </FormField>
 

@@ -10,7 +10,7 @@ import { buildListHref } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export const metadata = { title: "Users" };
+export const metadata = { title: { absolute: "Users · Chasry Admin" } };
 
 const SORT_FIELDS = ["name", "email", "status", "joined"] as const;
 type SortField = (typeof SORT_FIELDS)[number];

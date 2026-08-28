@@ -7,6 +7,8 @@ import { FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 
 const SUPPORT_EMAIL = "info@chasry.com";
 
+export const metadata = { title: "Help" };
+
 /**
  * Public page, but it renders in *two* chromes: a signed-in visitor gets the
  * full dashboard shell (header + sidebar nav), the same as every other page

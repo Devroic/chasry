@@ -2,11 +2,17 @@ import { z } from "zod";
 import type { Translator } from "./shared";
 
 export function signupSchema(t: Translator) {
-  return z.object({
-    business_name: z.string().trim().min(1, t("businessNameRequired")).max(200),
-    email: z.string().trim().email(t("emailInvalid")).max(320),
-    password: z.string().min(8, t("passwordMinLength")).max(200),
-  });
+  return z
+    .object({
+      business_name: z.string().trim().min(1, t("businessNameRequired")).max(200),
+      email: z.string().trim().email(t("emailInvalid")).max(320),
+      password: z.string().min(8, t("passwordMinLength")).max(200),
+      confirm_password: z.string().min(1, t("passwordRequired")),
+    })
+    .refine((data) => data.password === data.confirm_password, {
+      message: t("passwordsDoNotMatch"),
+      path: ["confirm_password"],
+    });
 }
 
 export function loginSchema(t: Translator) {

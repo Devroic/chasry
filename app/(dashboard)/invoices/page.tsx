@@ -23,6 +23,8 @@ import {
 import { formatDate, formatMoney, daysUntil } from "@/lib/format";
 import { dueStatusLabel } from "@/lib/reminders";
 
+export const metadata = { title: "Invoices" };
+
 const FILTERS = ["all", "unpaid", "overdue", "paid"] as const;
 
 const SORT_FIELDS = ["client", "due", "amount", "status"] as const;

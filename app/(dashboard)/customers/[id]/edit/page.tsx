@@ -7,6 +7,8 @@ import { CustomerForm } from "@/components/dashboard/customer-form";
 import { requireUser } from "@/lib/auth";
 import { updateCustomer } from "@/app/(dashboard)/customers/actions";
 
+export const metadata = { title: "Edit client" };
+
 export default async function EditCustomerPage({
   params,
 }: {

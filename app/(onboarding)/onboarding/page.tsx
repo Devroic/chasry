@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 
+export const metadata = { title: "Set up your account" };
+
 export default async function OnboardingPage() {
   const supabase = await createClient();
   const {

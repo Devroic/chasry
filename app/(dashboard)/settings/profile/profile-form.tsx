@@ -115,7 +115,7 @@ export function ProfileForm({
         <Input
           id="payment_link"
           type="url"
-          placeholder="https://buy.stripe.com/... or https://paypal.me/you"
+          placeholder={tCommon("paymentLinkPlaceholder")}
           aria-invalid={!!errors.payment_link}
           {...register("payment_link")}
         />

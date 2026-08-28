@@ -7,7 +7,7 @@ import { formatMoney } from "@/lib/format";
 import { isAdminEmail } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Overview" };
+export const metadata = { title: { absolute: "Overview · Chasry Admin" } };
 
 /**
  * One bulk fetch, three columns, reduced in JS rather than several separate

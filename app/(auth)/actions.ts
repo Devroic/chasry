@@ -7,6 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { safeNextPath } from "@/lib/supabase/middleware";
 import { loginSchema, signupSchema, requestResetSchema } from "@/lib/validations/auth";
+import { requireUser } from "@/lib/auth";
+import { resend, ACCOUNT_FROM_EMAIL } from "@/lib/resend";
+import WelcomeEmail from "@/emails/welcome";
 
 export type AuthFormState = { error?: string; success?: string } | null;
 
@@ -32,7 +35,10 @@ export async function login(_prev: AuthFormState, formData: FormData): Promise<A
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { error: tLogin("incorrectCredentials") };
+  if (error) {
+    if (error.code === "email_not_confirmed") return { error: tLogin("emailNotConfirmed") };
+    return { error: tLogin("incorrectCredentials") };
+  }
 
   redirect(safeNextPath(formData.get("next")?.toString()));
 }
@@ -51,6 +57,7 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
     business_name: formData.get("business_name"),
     email: formData.get("email"),
     password: formData.get("password"),
+    confirm_password: formData.get("confirm_password"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
 
@@ -124,6 +131,48 @@ export async function requestPasswordReset(
   // Always report success, regardless of whether the email exists — avoids
   // leaking which addresses are registered.
   return { success: tReset("successMessage") };
+}
+
+/**
+ * Fired client-side from signup/confirmed/page.tsx the moment it detects a
+ * real session (i.e. the confirmation link was just consumed), not from
+ * signup() itself, the account isn't really "in" yet at that point, and
+ * confirmation is required by default so signup() rarely has a session to
+ * redirect straight to onboarding with anyway.
+ *
+ * The effect that calls this can fire more than once for the same
+ * confirmation (React Strict Mode double-invokes effects in dev, and
+ * someone can just revisit /signup/confirmed), so this can't assume it's
+ * only ever called once. profiles.welcome_email_sent_at is the claim: the
+ * update only matches while it's still null, so of two near-simultaneous
+ * calls only one can win the row and actually send. Claiming before
+ * sending, not after, on purpose, that's what makes it safe against calls
+ * arriving milliseconds apart. Best-effort otherwise: a failed send
+ * shouldn't block someone from reaching their own account.
+ */
+export async function sendWelcomeEmail() {
+  const { supabase, user } = await requireUser();
+  if (!user.email) return;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ welcome_email_sent_at: new Date().toISOString() })
+    .eq("id", user.id)
+    .is("welcome_email_sent_at", null)
+    .select("id");
+  if (error || !data?.length) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  try {
+    await resend.emails.send({
+      from: ACCOUNT_FROM_EMAIL,
+      to: user.email,
+      subject: "Welcome to Chasry",
+      react: WelcomeEmail({ appUrl }),
+    });
+  } catch (err) {
+    console.error("sendWelcomeEmail: send failed", err);
+  }
 }
 
 export async function logout() {

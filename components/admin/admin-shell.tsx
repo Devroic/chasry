@@ -5,13 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LogOut, ArrowLeft, LayoutDashboard, Users, BookOpen } from "lucide-react";
+import { LogOut, ArrowLeft, LayoutDashboard, Users, BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
 import { setAdminPlanOverride } from "@/app/admin/actions";
+import { LogoutPendingOverlay } from "@/components/logout-pending-overlay";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -39,29 +40,34 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
   const t = useTranslations("admin.shell");
+  const [loggingOut, startLogoutTransition] = useTransition();
+  const handleLogout = () => startLogoutTransition(() => logout());
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      <LogoutPendingOverlay show={loggingOut} />
       <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-sm">
-        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        <div className="flex h-20 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <Image
-              src="/brand/logo-light-bg.png"
-              alt="Chasry"
-              width={140}
-              height={38}
-              className="h-7 w-auto dark:hidden"
-              priority
-            />
-            <Image
-              src="/brand/logo-dark-bg.png"
-              alt="Chasry"
-              width={140}
-              height={38}
-              className="hidden h-7 w-auto dark:block"
-              priority
-            />
-            <Badge variant="outline" className="text-muted-foreground">
+            <Link href="/admin" className="flex items-center">
+              <Image
+                src="/brand/logo-light-bg.png"
+                alt="Chasry"
+                width={220}
+                height={60}
+                className="h-10 w-auto sm:h-14 dark:hidden"
+                priority
+              />
+              <Image
+                src="/brand/logo-dark-bg.png"
+                alt="Chasry"
+                width={220}
+                height={60}
+                className="hidden h-10 w-auto sm:h-14 dark:block"
+                priority
+              />
+            </Link>
+            <Badge variant="outline" className="border-brand-primary/20 bg-brand-primary-tint text-brand-primary">
               {t("badge")}
             </Badge>
           </div>
@@ -75,11 +81,9 @@ export function AdminShell({
                 <ArrowLeft /> {t("backToApp")}
               </Link>
             </Button>
-            <form action={logout}>
-              <Button type="submit" variant="ghost" size="sm">
-                <LogOut /> {t("logOut")}
-              </Button>
-            </form>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut /> {t("logOut")}
+            </Button>
           </div>
         </div>
 
@@ -105,7 +109,7 @@ export function AdminShell({
       </header>
 
       <div className="flex flex-1">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-56 shrink-0 flex-col overflow-y-auto border-r border-border px-4 py-6 lg:flex">
+        <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-56 shrink-0 flex-col overflow-y-auto border-r border-border px-4 py-6 lg:flex">
           <nav className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => {
               const active =
@@ -138,11 +142,15 @@ export function AdminShell({
 
 function PlanViewToggle({ planView }: { planView: "free" | "pro" }) {
   const t = useTranslations("admin.shell");
+  const tCommon = useTranslations("common");
   const [pending, startTransition] = useTransition();
 
   return (
     <div className="hidden items-center gap-1.5 sm:flex">
       <span className="text-xs text-muted-foreground">{t("planViewLabel")}</span>
+      {pending && (
+        <Loader2 className="size-3 animate-spin text-muted-foreground" aria-label={tCommon("loading")} />
+      )}
       <div className="inline-flex items-center rounded-lg border border-border p-0.5">
         <button
           type="button"
@@ -150,7 +158,9 @@ function PlanViewToggle({ planView }: { planView: "free" | "pro" }) {
           onClick={() => startTransition(() => setAdminPlanOverride("free"))}
           className={cn(
             "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-            planView === "free" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+            planView === "free"
+              ? "bg-brand-primary-tint text-brand-primary"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           {t("planViewFree")}
@@ -161,7 +171,9 @@ function PlanViewToggle({ planView }: { planView: "free" | "pro" }) {
           onClick={() => startTransition(() => setAdminPlanOverride("pro"))}
           className={cn(
             "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-            planView === "pro" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+            planView === "pro"
+              ? "bg-brand-primary-tint text-brand-primary"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           {t("planViewPro")}

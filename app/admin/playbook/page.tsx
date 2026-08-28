@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata = { title: "Playbook" };
+export const metadata = { title: { absolute: "Playbook · Chasry Admin" } };
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -73,20 +72,6 @@ export default async function AdminPlaybookPage() {
       <Section title={t("giftTitle")}>
         <p className="font-medium text-foreground">{t("giftBest")}</p>
         <p>{t.rich("giftP1", kbd)}</p>
-        <p className="font-medium text-foreground">{t("giftHandsOff")}</p>
-        <ol className="list-decimal space-y-1 pl-5">
-          <li>
-            {t.rich("giftStep1", {
-              userLink: (chunks) => (
-                <Link href="/admin/users" className="text-brand-primary hover:underline">
-                  {chunks}
-                </Link>
-              ),
-            })}
-          </li>
-          <li>{t("giftStep2")}</li>
-        </ol>
-        <p>{t("giftP2")}</p>
       </Section>
 
       <Section title={t("refundsTitle")}>

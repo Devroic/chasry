@@ -39,7 +39,13 @@ export default function ResetPasswordConfirmPage() {
     const { error } = await supabase.auth.updateUser({ password: data.password });
 
     if (error) {
-      setServerError(t("expiredError"));
+      if (error.code === "same_password") {
+        setServerError(t("samePasswordError"));
+      } else if (error.code === "weak_password") {
+        setServerError(t("weakPasswordError"));
+      } else {
+        setServerError(t("expiredError"));
+      }
       setPending(false);
       return;
     }
