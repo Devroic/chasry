@@ -43,3 +43,7 @@ next-env.d.ts
 
 # claude code local runtime state
 .claude/scheduled_tasks.lock
+
+# markdown docs are local-only working notes, except the repo's own README
+*.md
+!/README.md
