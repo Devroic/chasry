@@ -73,6 +73,8 @@ export default async function NewInvoicePage({
                   offsets: reminderSettings?.offsets ?? [],
                   enabled: reminderSettings?.enabled ?? true,
                 }}
+                isPro={isPro(profile.subscription_status)}
+                cancelHref={customer_id ? `/customers/${customer_id}` : "/invoices"}
               />
             </Suspense>
           </Card>

@@ -7,9 +7,10 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { ClickableTableRow } from "@/components/dashboard/clickable-table-row";
 import { SortableHead } from "@/components/dashboard/sortable-head";
 import { TableSearch } from "@/components/dashboard/table-search";
+import { Pagination } from "@/components/dashboard/pagination";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { buildListHref } from "@/lib/utils";
+import { buildListHref, paginate } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -27,13 +28,14 @@ type SortField = (typeof SORT_FIELDS)[number];
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
-  const { q = "", sort = "added", dir = "desc" } = await searchParams;
+  const { q = "", sort = "added", dir = "desc", page: pageParam } = await searchParams;
   const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "added";
   const sortDir: "asc" | "desc" = dir === "asc" ? "asc" : "desc";
   const { supabase, user } = await requireUser();
   const t = await getTranslations("customers");
+  const tCommon = await getTranslations("common");
 
   const { data: customersRaw } = await supabase
     .from("customers")
@@ -66,6 +68,8 @@ export default async function CustomersPage({
     const nextDir = sortField === field && sortDir === "asc" ? "desc" : "asc";
     return buildListHref("/customers", currentParams, { sort: field, dir: nextDir });
   }
+
+  const { items: paginated, page, totalPages } = paginate(sorted, pageParam);
 
   return (
     <div>
@@ -124,7 +128,7 @@ export default async function CustomersPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((customer) => (
+              {paginated.map((customer) => (
                 <ClickableTableRow key={customer.id} href={`/customers/${customer.id}`}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2.5">
@@ -143,6 +147,17 @@ export default async function CustomersPage({
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {totalPages > 1 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          navLabel={tCommon("pagination")}
+          previousLabel={tCommon("previous")}
+          nextLabel={tCommon("next")}
+          buildHref={(p) => buildListHref("/customers", currentParams, { page: String(p) })}
+        />
       )}
     </div>
   );

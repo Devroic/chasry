@@ -9,7 +9,7 @@ import { InvoiceStatusBadge } from "@/components/dashboard/invoice-status-badge"
 import { InvoiceListItem } from "@/components/dashboard/invoice-list-item";
 import { ClickableTableRow } from "@/components/dashboard/clickable-table-row";
 import { ConfirmDeleteButton } from "@/components/dashboard/confirm-delete-button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -73,8 +73,10 @@ export default async function CustomerDetailPage({
   const tCommon = await getTranslations("common");
   const locale = await getLocale();
 
+  const scheduleSourceIsAccountDefault = customer.reminder_offsets == null;
+
   return (
-    <div>
+    <div className="max-w-2xl">
       <BackLink href="/customers" label={t("detail.backLabel")} />
       <PageHeader
         title={customer.name}
@@ -103,21 +105,21 @@ export default async function CustomerDetailPage({
         </Alert>
       )}
 
-      <Card className="mb-6 p-5">
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Card className="mb-6">
+        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {customer.phone && (
             <div>
-              <dt className="flex items-center gap-1 text-xs text-muted-foreground">
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Phone className="size-3.5" /> {tCommon("phone")}
-              </dt>
-              <dd className="text-sm text-foreground">{customer.phone}</dd>
+              </p>
+              <p className="text-sm text-foreground">{customer.phone}</p>
             </div>
           )}
-          <div>
-            <dt className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Link2 className="size-3.5" /> {t("columnPaymentLink")}
-            </dt>
-            <dd className="flex flex-wrap items-center gap-2">
+          <div className="col-span-2 sm:col-span-3">
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Link2 className="size-3.5" /> {t("detail.paymentLinkInReminders")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
               {paymentLink ? (
                 <a
                   href={paymentLink}
@@ -133,30 +135,51 @@ export default async function CustomerDetailPage({
               <Badge variant="outline" className="text-muted-foreground">
                 {customer.payment_link ? t("detail.customForClient") : t("detail.accountDefault")}
               </Badge>
-            </dd>
-          </div>
-          <div>
-            <dt className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Bell className="size-3.5" /> {t("columnSchedule")}
-            </dt>
-            <dd className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-foreground">
-                {describeReminderSchedule(scheduleOffsets, scheduleEnabled, tReminderOverride)}
-              </span>
-              <Badge variant="outline" className="text-muted-foreground">
-                {customer.reminder_offsets != null ? t("detail.customForClient") : t("detail.accountDefault")}
-              </Badge>
-            </dd>
+            </div>
           </div>
           {customer.notes && (
-            <div className="sm:col-span-2">
-              <dt className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="col-span-2 sm:col-span-3">
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 <StickyNote className="size-3.5" /> {tCommon("notes")}
-              </dt>
-              <dd className="text-sm text-foreground">{customer.notes}</dd>
+              </p>
+              <p className="text-sm text-foreground">{customer.notes}</p>
             </div>
           )}
-        </dl>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">{t("detail.reminderSchedule")}</CardTitle>
+          <Badge variant="outline" className="text-muted-foreground">
+            {customer.reminder_offsets != null ? t("detail.customForClient") : t("detail.accountDefault")}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          {!scheduleEnabled ? (
+            <p className="text-sm text-muted-foreground">
+              {t("detail.remindersOffTitle")}{" "}
+              <Link href={`/customers/${customer.id}/edit`} className="text-brand-primary hover:underline">
+                {t("detail.editClientLink")}
+              </Link>
+              {scheduleSourceIsAccountDefault && (
+                <>
+                  {" "}
+                  {t("detail.orAccountSettings")}{" "}
+                  <Link href="/settings/reminders" className="text-brand-primary hover:underline">
+                    {t("detail.accountSettings")}
+                  </Link>
+                </>
+              )}
+              .
+            </p>
+          ) : (
+            <p className="flex items-center gap-1 text-sm text-foreground">
+              <Bell className="size-3.5 shrink-0 text-muted-foreground" />
+              {describeReminderSchedule(scheduleOffsets, scheduleEnabled, tReminderOverride)}
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       <div className="mb-3 flex items-center justify-between">

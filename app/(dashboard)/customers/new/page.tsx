@@ -41,6 +41,7 @@ export default async function NewCustomerPage({
               offsets: reminderSettings?.offsets ?? [],
               enabled: reminderSettings?.enabled ?? true,
             }}
+            cancelHref={return_to || "/customers"}
           />
         </Card>
         <FormTips

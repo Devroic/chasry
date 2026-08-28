@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
-import { Wallet, CalendarClock, User, Link2, StickyNote } from "lucide-react";
+import { Wallet, CalendarClock, User, Link2, StickyNote, Paperclip } from "lucide-react";
 import { requireOnboardedUser } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { BackLink } from "@/components/dashboard/back-link";
@@ -29,7 +29,7 @@ export default async function InvoiceDetailPage({
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, amount, currency, due_date, status, notes, customer_id, reminder_offsets, reminder_enabled"
+        "id, invoice_number, amount, currency, due_date, status, notes, customer_id, reminder_offsets, reminder_enabled, attachment_filename"
       )
       .eq("id", id)
       .eq("user_id", user.id)
@@ -91,7 +91,7 @@ export default async function InvoiceDetailPage({
       />
 
       <Card className="mb-6">
-        <CardContent className="grid grid-cols-2 gap-4 pt-6 sm:grid-cols-3">
+        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
               <Wallet className="size-3.5" /> {t("detail.amount")}
@@ -172,6 +172,21 @@ export default async function InvoiceDetailPage({
                 <StickyNote className="size-3.5" /> {tCommon("notes")}
               </p>
               <p className="text-sm text-foreground">{invoice.notes}</p>
+            </div>
+          )}
+          {invoice.attachment_filename && (
+            <div className="col-span-2 sm:col-span-3">
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Paperclip className="size-3.5" /> {t("detail.attachment")}
+              </p>
+              <a
+                href={`/invoices/${invoice.id}/attachment`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-brand-primary hover:underline"
+              >
+                {invoice.attachment_filename}
+              </a>
             </div>
           )}
         </CardContent>

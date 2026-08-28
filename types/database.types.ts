@@ -69,6 +69,9 @@ export interface Database {
           notes: string | null;
           reminder_offsets: number[] | null;
           reminder_enabled: boolean | null;
+          attachment_filename: string | null;
+          attachment_content_type: string | null;
+          attachment_data: string | null;
           paid_at: string | null;
           created_at: string;
           updated_at: string;

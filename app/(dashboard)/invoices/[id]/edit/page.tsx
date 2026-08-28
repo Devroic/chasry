@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { BackLink } from "@/components/dashboard/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { InvoiceForm } from "@/components/dashboard/invoice-form";
 import { requireOnboardedUser } from "@/lib/auth";
+import { isPro } from "@/lib/plan";
 import { updateInvoice } from "@/app/(dashboard)/invoices/actions";
 
 export const metadata = { title: "Edit invoice" };
@@ -22,7 +24,7 @@ export default async function EditInvoicePage({
     supabase
       .from("invoices")
       .select(
-        "id, customer_id, invoice_number, amount, currency, due_date, notes, reminder_offsets, reminder_enabled"
+        "id, customer_id, invoice_number, amount, currency, due_date, notes, reminder_offsets, reminder_enabled, attachment_filename"
       )
       .eq("id", id)
       .eq("user_id", user.id)
@@ -42,6 +44,7 @@ export default async function EditInvoicePage({
 
   return (
     <div className="max-w-4xl">
+      <BackLink href={`/invoices/${invoice.id}`} label={invoice.invoice_number || tCommon("back")} />
       <PageHeader title={t("editPage.title")} />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-6 lg:col-span-2">
@@ -59,6 +62,8 @@ export default async function EditInvoicePage({
               lockCustomer
               cancelHref={`/invoices/${invoice.id}`}
               submitLabel={tCommon("saveChanges")}
+              isPro={isPro(profile.subscription_status)}
+              invoiceId={invoice.id}
             />
           </Suspense>
         </Card>

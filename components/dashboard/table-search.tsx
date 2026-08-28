@@ -1,13 +1,21 @@
-import { Search } from "lucide-react";
+"use client";
+
+import Form from "next/form";
+import { useFormStatus } from "react-dom";
+import { Search, Loader2 } from "lucide-react";
 
 /**
- * Plain GET form — no client JS needed, works like the existing filter tabs.
- * The magnifying glass is a real submit button, not just a decorative icon —
- * a mobile keyboard's own "search"/"go" key submits the form too, but not
- * every keyboard shows one (some show "Done" depending on autocomplete/
- * inputmode), so there needs to be a tappable control that doesn't depend
- * on that.
+ * `next/form` instead of a native `<form>` — a plain native GET form does a
+ * full document reload on submit, unlike the sort/pagination links next to
+ * it, which navigate client-side. `next/form` keeps the same GET-to-URL
+ * behavior but navigates client-side too, which is also what lets
+ * `useFormStatus` below report a pending state at all.
  */
+function SearchSubmitIcon() {
+  const { pending } = useFormStatus();
+  return pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Search className="size-4" />;
+}
+
 export function TableSearch({
   action,
   placeholder,
@@ -20,13 +28,13 @@ export function TableSearch({
   hiddenParams?: Record<string, string | undefined>;
 }) {
   return (
-    <form action={action} className="relative">
+    <Form action={action} className="relative">
       <button
         type="submit"
         aria-label={placeholder}
         className="absolute top-1/2 left-0 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
       >
-        <Search className="size-4" />
+        <SearchSubmitIcon />
       </button>
       {hiddenParams &&
         Object.entries(hiddenParams).map(([key, value]) =>
@@ -37,8 +45,15 @@ export function TableSearch({
         name="q"
         defaultValue={defaultValue}
         placeholder={placeholder}
+        // Clicking the browser's native clear ("x") button on a
+        // type="search" input fires this same change event with an empty
+        // value — without this, it only cleared the text, the table stayed
+        // filtered until a separate submit.
+        onChange={(e) => {
+          if (e.target.value === "") e.target.form?.requestSubmit();
+        }}
         className="h-9 w-full rounded-lg border border-input bg-transparent py-1 pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:w-64"
       />
-    </form>
+    </Form>
   );
 }

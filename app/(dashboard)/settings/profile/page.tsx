@@ -11,7 +11,7 @@ export default async function ProfileSettingsPage() {
   return (
     <div className="space-y-8">
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           <ProfileForm
             defaultValues={{
               business_name: profile.business_name ?? "",

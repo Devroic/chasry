@@ -11,9 +11,66 @@ import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
 import { buildReminderEmail } from "@/lib/reminder-email";
 import { addDaysUtc } from "@/lib/reminders";
 import { decodeReminderOverride } from "@/lib/reminder-override";
+import {
+  buildEmailAttachment,
+  encodeBytea,
+  looksLikePdf,
+  MAX_ATTACHMENT_BYTES,
+} from "@/lib/invoice-attachment";
 import type { Translator } from "@/lib/validations/shared";
 
 export type InvoiceFormState = { error?: string } | null;
+
+/**
+ * Validates and encodes an optional attachment from the invoice form, used
+ * by both createInvoice and updateInvoice so the checks (Pro plan, size,
+ * real PDF content) live in exactly one place. Returns `fields: null` when
+ * no new file was submitted — the create form always starts empty, and the
+ * edit form's file input can't be pre-filled with the existing file, so
+ * "nothing submitted" must mean "leave whatever's already there alone",
+ * not "clear it."
+ */
+async function processAttachmentUpload(
+  formData: FormData,
+  userId: string,
+  tErrors: Awaited<ReturnType<typeof getTranslations<"invoices.form.errors">>>
+): Promise<
+  | { error: string }
+  | {
+      fields: {
+        attachment_filename: string;
+        attachment_content_type: string;
+        attachment_data: string;
+      } | null;
+    }
+> {
+  const file = formData.get("attachment");
+  if (!(file instanceof File) || file.size === 0) {
+    return { fields: null };
+  }
+
+  const profile = await getProfile(userId);
+  if (!isPro(profile?.subscription_status ?? "none")) {
+    return { error: tErrors("attachmentRequiresPro") };
+  }
+
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return { error: tErrors("attachmentTooLarge") };
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!looksLikePdf(buffer)) {
+    return { error: tErrors("attachmentMustBePdf") };
+  }
+
+  return {
+    fields: {
+      attachment_filename: file.name,
+      attachment_content_type: "application/pdf",
+      attachment_data: encodeBytea(buffer),
+    },
+  };
+}
 
 function parseInvoiceForm(formData: FormData, t: Translator) {
   return invoiceSchema(t).safeParse({
@@ -63,9 +120,12 @@ export async function createInvoice(
     }
   }
 
+  const attachmentResult = await processAttachmentUpload(formData, user.id, tErrors);
+  if ("error" in attachmentResult) return { error: attachmentResult.error };
+
   const { data, error } = await supabase
     .from("invoices")
-    .insert({ ...parsed.data, user_id: user.id })
+    .insert({ ...parsed.data, user_id: user.id, ...(attachmentResult.fields ?? {}) })
     .select("id")
     .single();
 
@@ -98,9 +158,12 @@ export async function updateInvoice(
     .single();
   if (!customer) return { error: tErrors("invalidClient") };
 
+  const attachmentResult = await processAttachmentUpload(formData, user.id, tErrors);
+  if ("error" in attachmentResult) return { error: attachmentResult.error };
+
   const { error } = await supabase
     .from("invoices")
-    .update(parsed.data)
+    .update({ ...parsed.data, ...(attachmentResult.fields ?? {}) })
     .eq("id", invoiceId)
     .eq("user_id", user.id);
 
@@ -163,6 +226,21 @@ export async function deleteInvoice(invoiceId: string) {
   redirect("/invoices");
 }
 
+/** Clears a previously-attached file. The edit form's "Remove" control —
+ * separate from the main Save action since it needs to work without
+ * touching (or requiring) the rest of the invoice form. */
+export async function removeInvoiceAttachment(invoiceId: string) {
+  const { supabase, user } = await requireUser();
+  await supabase
+    .from("invoices")
+    .update({ attachment_filename: null, attachment_content_type: null, attachment_data: null })
+    .eq("id", invoiceId)
+    .eq("user_id", user.id);
+
+  revalidatePath(`/invoices/${invoiceId}`);
+  revalidatePath(`/invoices/${invoiceId}/edit`);
+}
+
 /**
  * Sends one preview email per offset this invoice actually has scheduled
  * (invoice override → client override → account default, same cascade the
@@ -183,7 +261,9 @@ export async function sendPreviewReminder(invoiceId: string) {
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("invoice_number, amount, currency, due_date, customer_id, reminder_offsets")
+    .select(
+      "invoice_number, amount, currency, due_date, customer_id, reminder_offsets, attachment_filename, attachment_content_type, attachment_data"
+    )
     .eq("id", invoiceId)
     .eq("user_id", user.id)
     .single();
@@ -226,6 +306,7 @@ export async function sendPreviewReminder(invoiceId: string) {
       replyTo: profile.email,
       subject,
       react: element,
+      attachments: buildEmailAttachment(invoice),
     });
   }
 
@@ -254,7 +335,7 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
   const { data: invoice } = await supabase
     .from("invoices")
     .select(
-      "invoice_number, amount, currency, due_date, customer_id, status, reminder_offsets, reminder_enabled"
+      "invoice_number, amount, currency, due_date, customer_id, status, reminder_offsets, reminder_enabled, attachment_filename, attachment_content_type, attachment_data"
     )
     .eq("id", invoiceId)
     .eq("user_id", user.id)
@@ -312,6 +393,7 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
       replyTo: profile.email,
       subject,
       react: element,
+      attachments: buildEmailAttachment(invoice),
     });
     if (error) throw new Error(error.message);
 

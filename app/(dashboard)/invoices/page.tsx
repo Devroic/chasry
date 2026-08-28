@@ -9,9 +9,10 @@ import { SortableHead } from "@/components/dashboard/sortable-head";
 import { TableSearch } from "@/components/dashboard/table-search";
 import { InvoiceStatusBadge, invoiceDisplayStatus } from "@/components/dashboard/invoice-status-badge";
 import { InvoiceListItem } from "@/components/dashboard/invoice-list-item";
+import { Pagination } from "@/components/dashboard/pagination";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { buildListHref, cn } from "@/lib/utils";
+import { buildListHref, cn, paginate } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -33,13 +34,14 @@ type SortField = (typeof SORT_FIELDS)[number];
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; q?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
-  const { filter = "all", q = "", sort = "due", dir = "asc" } = await searchParams;
+  const { filter = "all", q = "", sort = "due", dir = "asc", page: pageParam } = await searchParams;
   const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "due";
   const sortDir: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
   const { supabase, user } = await requireUser();
   const t = await getTranslations("invoices");
+  const tCommon = await getTranslations("common");
   const locale = await getLocale();
   const filterLabels: Record<(typeof FILTERS)[number], string> = {
     all: t("filterAll"),
@@ -101,6 +103,8 @@ export default async function InvoicesPage({
     return buildListHref("/invoices", currentParams, { sort: field, dir: nextDir });
   }
 
+  const { items: paginated, page, totalPages } = paginate(sorted, pageParam);
+
   return (
     <div>
       <PageHeader
@@ -158,7 +162,7 @@ export default async function InvoicesPage({
               stacked cards instead. Desktop keeps the sortable table. */}
           <Card className="p-0 sm:hidden">
             <div className="divide-y divide-border">
-              {sorted.map((invoice) => (
+              {paginated.map((invoice) => (
                 <InvoiceListItem
                   key={invoice.id}
                   id={invoice.id}
@@ -205,7 +209,7 @@ export default async function InvoicesPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sorted.map((invoice) => (
+                {paginated.map((invoice) => (
                   <ClickableTableRow key={invoice.id} href={`/invoices/${invoice.id}`}>
                     <TableCell className="font-medium">
                       {customerName.get(invoice.customer_id) ?? t("clientFallback")}
@@ -231,6 +235,17 @@ export default async function InvoicesPage({
             </Table>
           </Card>
         </>
+      )}
+
+      {totalPages > 1 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          navLabel={tCommon("pagination")}
+          previousLabel={tCommon("previous")}
+          nextLabel={tCommon("next")}
+          buildHref={(p) => buildListHref("/invoices", currentParams, { page: String(p) })}
+        />
       )}
     </div>
   );

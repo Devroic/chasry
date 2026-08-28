@@ -25,7 +25,10 @@
     "loading": "Loading",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "paymentLinkPlaceholder": "https://buy.stripe.com/... or https://paypal.me/you"
+    "paymentLinkPlaceholder": "https://buy.stripe.com/... or https://paypal.me/you",
+    "previous": "Previous",
+    "next": "Next",
+    "pagination": "Pagination"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -298,7 +301,13 @@
       "accountDefault": "Your account default",
       "invoicesTitle": "Invoices",
       "newInvoice": "New invoice",
-      "noInvoices": "No invoices for this client yet."
+      "noInvoices": "No invoices for this client yet.",
+      "paymentLinkInReminders": "Payment link in reminders",
+      "reminderSchedule": "Reminder schedule",
+      "remindersOffTitle": "Reminders are turned off for this client. Change this from",
+      "editClientLink": "Edit client",
+      "orAccountSettings": "or your",
+      "accountSettings": "account settings"
     },
     "form": {
       "nameLabel": "Name",
@@ -377,6 +386,7 @@
       "due": "Due",
       "client": "Client",
       "paymentLinkInReminders": "Payment link in reminders",
+      "attachment": "Attachment",
       "paymentLinkNone": "None set.",
       "addDefault": "Add a default",
       "or": "or",
@@ -409,6 +419,11 @@
       "paymentLinkSourceAccount": "your default payment link",
       "notesLabel": "Notes (optional)",
       "notesHint": "For your own reference. Never included in reminder emails.",
+      "attachmentLabel": "Attachment (optional)",
+      "attachmentProOnly": "Attaching a file is a Pro feature.",
+      "attachmentUpgrade": "Upgrade to Pro",
+      "attachmentRemove": "Remove",
+      "attachmentRemovedToast": "Attachment removed.",
       "submitCreate": "Save invoice",
       "submitEdit": "Save changes",
       "errors": {
@@ -419,14 +434,17 @@
         "notFound": "Couldn't find this invoice.",
         "noRemindersScheduled": "No reminders are scheduled for this invoice yet.",
         "cannotSendNow": "This reminder can't be sent right now.",
-        "sendFailed": "Couldn't send the reminder. Try again."
+        "sendFailed": "Couldn't send the reminder. Try again.",
+        "attachmentRequiresPro": "Attaching a file is a Pro feature. Upgrade to Pro from Settings to attach one.",
+        "attachmentTooLarge": "That file is too large. The limit is 5MB.",
+        "attachmentMustBePdf": "That file doesn't look like a valid PDF."
       }
     },
     "new": {
       "title": "Add an invoice",
       "subtitle": "Thirty seconds of work.",
-      "tipsTitle": "What happens next",
-      "tip1": "Chasry checks daily and sends reminders automatically on your schedule from Settings.",
+      "tipsTitle": "Good to know",
+      "tip1": "Chasry checks daily and sends reminders automatically, based on the schedule in Settings.",
       "tip2": "Mark it paid anytime. Reminders stop the moment you do.",
       "tip3": "Add a payment link so clients can pay straight from the reminder email."
     },

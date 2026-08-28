@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { BackLink } from "@/components/dashboard/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { CustomerForm } from "@/components/dashboard/customer-form";
 import { requireUser } from "@/lib/auth";
@@ -34,6 +35,7 @@ export default async function EditCustomerPage({
 
   return (
     <div className="max-w-4xl">
+      <BackLink href={`/customers/${customer.id}`} label={customer.name} />
       <PageHeader title={t("editPage.title")} />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-6 lg:col-span-2">

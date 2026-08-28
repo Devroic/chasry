@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { TableHead } from "@/components/ui/table";
+import { LinkPendingIcon } from "@/components/dashboard/link-pending-icon";
 import { cn } from "@/lib/utils";
 
 export function SortableHead({
@@ -22,13 +23,16 @@ export function SortableHead({
     <TableHead className={className}>
       <Link
         href={href}
+        prefetch={false}
         className={cn(
           "inline-flex items-center gap-1 hover:text-foreground",
           active ? "text-foreground" : "text-muted-foreground"
         )}
       >
         {label}
-        <Icon className="size-3.5" />
+        <LinkPendingIcon className="size-3.5">
+          <Icon className="size-3.5" />
+        </LinkPendingIcon>
       </Link>
     </TableHead>
   );

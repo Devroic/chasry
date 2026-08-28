@@ -22,6 +22,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  experimental: {
+    serverActions: {
+      // Default is 1MB, well under the invoice attachment's 5MB cap
+      // (lib/invoice-attachment.ts's MAX_ATTACHMENT_BYTES). This limit is
+      // for the whole multipart body, not just the file — measured a
+      // ~1MB+ blowup once the rest of the invoice form's fields and
+      // multipart boundary overhead are added on top of a file near the
+      // cap, so this needs real headroom, not just "5MB plus a little."
+      // Without it, a legitimate upload right at the cap gets rejected by
+      // the framework before createInvoice/updateInvoice's own size check
+      // ever runs — a crash page instead of the "too large" message.
+      bodySizeLimit: "8mb",
+    },
+  },
 };
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");

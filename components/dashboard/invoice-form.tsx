@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ReminderOverrideSection } from "@/components/dashboard/reminder-override-section";
+import { InvoiceAttachmentField } from "@/components/dashboard/invoice-attachment-field";
 import type { InvoiceFormState } from "@/app/(dashboard)/invoices/actions";
 import { invoiceSchema, type InvoiceInput } from "@/lib/validations/invoice";
 import { toFormData } from "@/lib/utils";
@@ -52,6 +53,8 @@ export function InvoiceForm({
   lockReason = "editing",
   cancelHref,
   submitLabel,
+  isPro,
+  invoiceId,
 }: {
   action: (prev: InvoiceFormState, formData: FormData) => Promise<InvoiceFormState>;
   customers: CustomerOption[];
@@ -64,6 +67,7 @@ export function InvoiceForm({
     notes: string | null;
     reminder_offsets: number[] | null;
     reminder_enabled: boolean | null;
+    attachment_filename?: string | null;
   };
   defaultCustomerId?: string;
   /** Prefilled invoice number for a *new* invoice, e.g. "INV-1043" following the last one used. */
@@ -89,6 +93,11 @@ export function InvoiceForm({
   /** When set, a Cancel button appears next to Save and returns here. */
   cancelHref?: string;
   submitLabel?: string;
+  /** Attaching a file is a Pro feature — gates the field itself. */
+  isPro: boolean;
+  /** The invoice's own id, only known once it exists — enables removing an
+   * already-saved attachment. Undefined on the create form. */
+  invoiceId?: string;
 }) {
   const [state, formAction, pending] = useActionState<InvoiceFormState, FormData>(action, null);
   const searchParams = useSearchParams();
@@ -115,7 +124,7 @@ export function InvoiceForm({
       // If we just created a client inline (redirected back from /customers/new),
       // select it automatically instead of leaving the form blank.
       customer_id: initialCustomerId,
-      invoice_number: defaultValues?.invoice_number ?? suggestedInvoiceNumber ?? "",
+      invoice_number: defaultValues?.invoice_number ?? "",
       amount: defaultValues?.amount,
       currency,
       due_date: defaultValues?.due_date ?? todayIso(),
@@ -140,6 +149,8 @@ export function InvoiceForm({
     setReminderOffsets((prev) => (checked ? [...prev, value] : prev.filter((v) => v !== value)));
   }
 
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+
   const onValid = (data: InvoiceInput) => {
     const formData = toFormData({
       customer_id: data.customer_id,
@@ -150,6 +161,7 @@ export function InvoiceForm({
       notes: data.notes,
     });
     encodeReminderOverride(formData, reminderActive, reminderEnabled, reminderOffsets);
+    if (attachmentFile) formData.set("attachment", attachmentFile);
     startTransition(() => formAction(formData));
   };
 
@@ -246,7 +258,7 @@ export function InvoiceForm({
         >
           <Input
             id="invoice_number"
-            placeholder={t("invoiceNumberPlaceholder")}
+            placeholder={suggestedInvoiceNumber || t("invoiceNumberPlaceholder")}
             aria-invalid={!!errors.invoice_number}
             {...register("invoice_number")}
           />
@@ -265,7 +277,7 @@ export function InvoiceForm({
         />
       </FormField>
 
-      <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+      <p className="rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
         {effectivePaymentLink
           ? t("paymentLinkNote", {
               source: selectedCustomer?.payment_link
@@ -283,6 +295,16 @@ export function InvoiceForm({
         hint={errors.notes ? undefined : t("notesHint")}
       >
         <Textarea id="notes" rows={3} aria-invalid={!!errors.notes} {...register("notes")} />
+      </FormField>
+
+      <FormField label={t("attachmentLabel")} htmlFor="attachment">
+        <InvoiceAttachmentField
+          isPro={isPro}
+          invoiceId={invoiceId}
+          currentFilename={defaultValues?.attachment_filename ?? null}
+          selectedFile={attachmentFile}
+          onFileChange={setAttachmentFile}
+        />
       </FormField>
 
       <ReminderOverrideSection

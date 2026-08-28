@@ -4,9 +4,10 @@ import { isAdminEmail } from "@/lib/auth";
 import { ClickableTableRow } from "@/components/dashboard/clickable-table-row";
 import { SortableHead } from "@/components/dashboard/sortable-head";
 import { TableSearch } from "@/components/dashboard/table-search";
+import { Pagination } from "@/components/dashboard/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { buildListHref } from "@/lib/utils";
+import { buildListHref, paginate } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -23,14 +24,15 @@ const STATUS_STYLE: Record<string, string> = {
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
-  const { q = "", sort = "joined", dir = "desc" } = await searchParams;
+  const { q = "", sort = "joined", dir = "desc", page: pageParam } = await searchParams;
   const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "joined";
   const sortDir: "asc" | "desc" = dir === "asc" ? "asc" : "desc";
 
   const t = await getTranslations("admin.users");
   const tStatus = await getTranslations("admin.status");
+  const tCommon = await getTranslations("common");
   const locale = await getLocale();
   const statusLabel: Record<string, string> = {
     active: tStatus("pro"),
@@ -83,6 +85,8 @@ export default async function AdminUsersPage({
     const nextDir = sortField === field && sortDir === "asc" ? "desc" : "asc";
     return buildListHref("/admin/users", currentParams, { sort: field, dir: nextDir });
   }
+
+  const { items: paginated, page, totalPages } = paginate(sorted, pageParam);
 
   return (
     <div>
@@ -138,7 +142,7 @@ export default async function AdminUsersPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((profile) => (
+              {paginated.map((profile) => (
                 <ClickableTableRow key={profile.id} href={`/admin/users/${profile.id}`}>
                   <TableCell className="font-medium">{profile.business_name || "—"}</TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">
@@ -160,6 +164,17 @@ export default async function AdminUsersPage({
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {totalPages > 1 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          navLabel={tCommon("pagination")}
+          previousLabel={tCommon("previous")}
+          nextLabel={tCommon("next")}
+          buildHref={(p) => buildListHref("/admin/users", currentParams, { page: String(p) })}
+        />
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, REMINDERS_FROM_EMAIL } from "@/lib/resend";
 import { addDaysUtc } from "@/lib/reminders";
 import { buildReminderEmail } from "@/lib/reminder-email";
+import { buildEmailAttachment } from "@/lib/invoice-attachment";
 import { checkCronRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -128,7 +129,7 @@ async function runReminderSweep() {
   const { data: invoices, error: invoicesError } = await supabase
     .from("invoices")
     .select(
-      "id, user_id, customer_id, invoice_number, amount, currency, due_date, reminder_offsets, reminder_enabled"
+      "id, user_id, customer_id, invoice_number, amount, currency, due_date, reminder_offsets, reminder_enabled, attachment_filename, attachment_content_type, attachment_data"
     )
     .eq("status", "unpaid")
     .in("user_id", allUserIds);
@@ -269,6 +270,7 @@ async function runReminderSweep() {
           replyTo: profile.email,
           subject,
           react: element,
+          attachments: buildEmailAttachment(invoice),
         });
 
         if (error) throw new Error(error.message);
