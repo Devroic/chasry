@@ -9,13 +9,7 @@ const SUPPORT_EMAIL = "info@chasry.com";
 
 export const metadata = { title: "Help" };
 
-/**
- * Public page, but it renders in *two* chromes: a signed-in visitor gets the
- * full dashboard shell (header + sidebar nav), the same as every other page
- * behind login, so opening Help from the account menu doesn't feel like being
- * ejected from the app. Signed-out visitors still get the slim marketing
- * header, since there's no nav to show them.
- */
+// Public page, but signed-in visitors get the full dashboard shell instead of the marketing header.
 export default async function HelpPage() {
   const t = await getTranslations("help");
   const faqs = (t.raw("faqs") as { question: string; answer: string }[]).map((faq) => ({

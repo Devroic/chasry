@@ -91,13 +91,9 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
     return { error: tSignupErrors("accountExists") };
   }
 
-  // No profile UPDATE here on purpose. `business_name` is carried in the
-  // signUp metadata above and written into public.profiles by the
-  // handle_new_user trigger (see 0006_handle_new_user_business_name.sql).
-  // This used to do a follow-up `.update()`, which quietly did nothing
-  // whenever email confirmation is required: there's no session yet at this
-  // point, so the RLS-scoped client had no permission to write the row — and
-  // onboarding then asked for the business name a second time.
+  // No profile UPDATE here on purpose — business_name is already written by
+  // the handle_new_user trigger; a follow-up update had no session/RLS
+  // permission yet when confirmation is required, and silently no-opped.
 
   // Email confirmation required (Supabase default) → session isn't active yet.
   if (!data.session) {
@@ -134,21 +130,10 @@ export async function requestPasswordReset(
 }
 
 /**
- * Fired client-side from signup/confirmed/page.tsx the moment it detects a
- * real session (i.e. the confirmation link was just consumed), not from
- * signup() itself, the account isn't really "in" yet at that point, and
- * confirmation is required by default so signup() rarely has a session to
- * redirect straight to onboarding with anyway.
- *
- * The effect that calls this can fire more than once for the same
- * confirmation (React Strict Mode double-invokes effects in dev, and
- * someone can just revisit /signup/confirmed), so this can't assume it's
- * only ever called once. profiles.welcome_email_sent_at is the claim: the
- * update only matches while it's still null, so of two near-simultaneous
- * calls only one can win the row and actually send. Claiming before
- * sending, not after, on purpose, that's what makes it safe against calls
- * arriving milliseconds apart. Best-effort otherwise: a failed send
- * shouldn't block someone from reaching their own account.
+ * Fired client-side once a real session is detected (confirmation link just
+ * consumed). Can be called more than once for the same confirmation, so
+ * `welcome_email_sent_at` acts as a claim: the update only matches while
+ * still null, so only one of two near-simultaneous calls wins and sends.
  */
 export async function sendWelcomeEmail() {
   const { supabase, user } = await requireUser();

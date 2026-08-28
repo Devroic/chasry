@@ -20,14 +20,8 @@ const BRAND = {
   border: "#E3E8F2",
 };
 
-// The color-scheme meta tags alone aren't enough, Gmail in particular is
-// well known for ignoring them and inverting colors anyway based on its own
-// luminosity analysis. What actually holds against that is re-asserting the
-// exact same light colors inside a real `prefers-color-scheme: dark` media
-// query with `!important`, since that's the one signal Gmail's dark mode
-// reliably respects, an explicit "I've already accounted for dark mode,
-// here's what I want" rather than a passive opt-out. See AccountLayout for
-// the same fix on the other two Chasry-authored emails.
+// color-scheme meta tags alone don't stop Gmail's dark mode inversion — re-asserting
+// the same light colors inside a real prefers-color-scheme media query with !important does.
 const DARK_MODE_OVERRIDE = `
   @media (prefers-color-scheme: dark) {
     .chasry-body { background-color: #F4F6FB !important; }

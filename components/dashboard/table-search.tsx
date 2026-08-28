@@ -4,13 +4,8 @@ import Form from "next/form";
 import { useFormStatus } from "react-dom";
 import { Search, Loader2 } from "lucide-react";
 
-/**
- * `next/form` instead of a native `<form>` — a plain native GET form does a
- * full document reload on submit, unlike the sort/pagination links next to
- * it, which navigate client-side. `next/form` keeps the same GET-to-URL
- * behavior but navigates client-side too, which is also what lets
- * `useFormStatus` below report a pending state at all.
- */
+// next/form navigates client-side (a native <form> would full-reload), which is
+// also what lets useFormStatus below report a pending state.
 function SearchSubmitIcon() {
   const { pending } = useFormStatus();
   return pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Search className="size-4" />;
@@ -45,10 +40,7 @@ export function TableSearch({
         name="q"
         defaultValue={defaultValue}
         placeholder={placeholder}
-        // Clicking the browser's native clear ("x") button on a
-        // type="search" input fires this same change event with an empty
-        // value — without this, it only cleared the text, the table stayed
-        // filtered until a separate submit.
+        // The native search-input clear ("x") button fires this same event with an empty value.
         onChange={(e) => {
           if (e.target.value === "") e.target.form?.requestSubmit();
         }}

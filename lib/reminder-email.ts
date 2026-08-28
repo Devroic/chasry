@@ -5,12 +5,8 @@ import ReminderBeforeDueEmail from "@/emails/reminder-before-due";
 import ReminderOverdueEmail from "@/emails/reminder-overdue";
 import ReminderSeriouslyOverdueEmail from "@/emails/reminder-seriously-overdue";
 
-/**
- * Picks the right template/subject for a reminder offset and fills it in.
- * Shared by the real cron send (app/api/cron/send-reminders) and the
- * "send me a preview" action, so a preview can never show a different
- * email than what actually goes out for that offset.
- */
+// Picks the right template/subject for a reminder offset. Shared by the real cron
+// send and the preview action, so a preview can never differ from the real email.
 export function buildReminderEmail({
   offsetDays,
   businessName,
@@ -37,15 +33,8 @@ export function buildReminderEmail({
   const dueDateFormatted = formatDate(dueDate);
   const invoiceNum = invoiceNumber ?? undefined;
 
-  // The day-count in the email body reflects how many days it actually is
-  // from today to the due date, not the offset the reminder was configured
-  // for. Those two normally agree, but the cron runs once a day, so an
-  // offset that fires a day (or more) later than its nominal target — a
-  // catch-up after a missed run, or an offset held back by a more-recent
-  // one on an invoice's first check — would otherwise say "due today" or
-  // "1 day overdue" on a day when that's no longer true. `offsetDays` still
-  // picks which template/tone to use (that's "which milestone this is"),
-  // just not the number shown inside it.
+  // The day-count shown reflects today vs. the due date, not the configured
+  // offset — those can drift if the cron sends late. `offsetDays` only picks the tone/template.
   const daysUntilDue = daysUntil(dueDate);
 
   const element =
@@ -79,14 +68,8 @@ export function buildReminderEmail({
             paymentLink,
           });
 
-  // `invoiceNum` is optional (not every invoice has a number set) — build
-  // the reference without it rather than leaving a double space where it
-  // would have gone.
   const invoiceRef = invoiceNum ? `invoice ${invoiceNum}` : "invoice";
-  // Same reasoning as the body text above: "due soon" is only accurate when
-  // there's actually still time left. A same-day or slightly-late "before"
-  // send needs its own subject, not a blanket "due soon" regardless of
-  // daysUntilDue.
+  // "due soon" is only accurate with time left — same-day/late "before" sends need their own subject.
   const beforeDueSubject =
     daysUntilDue > 0
       ? `${subjectPrefix}Reminder: ${invoiceRef} due soon from ${businessName}`

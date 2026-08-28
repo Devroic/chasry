@@ -76,19 +76,10 @@ export function InvoiceForm({
   defaultPaymentLink?: string;
   /** The account's reminder default — used to describe/seed the override section. */
   accountDefaults: { offsets: number[]; enabled: boolean };
-  /**
-   * Client is shown read-only instead of a Select. Two callers use this:
-   * editing an existing invoice (reminders may already have gone out to
-   * that address, and the payment link resolves through them, so silently
-   * pointing it at a different client mid-flight would make the reminder
-   * history lie), and creating a new invoice from a client's own page
-   * (arriving there is already a deliberate "add an invoice for this
-   * client" action, so leaving the dropdown open just invites picking the
-   * wrong one without noticing the payment link/reminder preview below
-   * still describes the client you started from).
-   */
+  /** Shows the client read-only instead of a Select — used when editing (reminder
+   * history already points at this client) and when preselected from a client's page. */
   lockCustomer?: boolean;
-  /** Which of lockCustomer's two callers this is — picks the read-only hint's wording. Defaults to "editing" (the original, longer-standing caller). */
+  /** Which lockCustomer caller this is — picks the read-only hint's wording. */
   lockReason?: "editing" | "preselected";
   /** When set, a Cancel button appears next to Save and returns here. */
   cancelHref?: string;
@@ -165,9 +156,7 @@ export function InvoiceForm({
     startTransition(() => formAction(formData));
   };
 
-  // Payment link is a 2-level cascade (client → account default) with no
-  // invoice-level override — shown as a plain info note below, not an
-  // editable field. Change it from the client page or account settings.
+  // 2-level cascade, no invoice-level override — shown as an info note below, not an editable field.
   const effectivePaymentLink = selectedCustomer?.payment_link || defaultPaymentLink;
   const effectiveOffsets = selectedCustomer?.reminder_offsets ?? accountDefaults.offsets;
   const effectiveEnabled = selectedCustomer?.reminder_enabled ?? accountDefaults.enabled;

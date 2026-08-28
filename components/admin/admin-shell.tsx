@@ -21,16 +21,8 @@ const NAV_ITEMS = [
   { href: "/admin/playbook", labelKey: "tabPlaybook", icon: BookOpen },
 ] as const;
 
-/**
- * A single-operator internal tool, not part of the product a subscriber
- * ever sees, so it's deliberately simpler than DashboardShell (no
- * collapsible sidebar, no mobile Sheet), but shares the same header +
- * left-sidebar shape rather than a top tab bar, per direct feedback that
- * it should feel like the rest of the app. Below `lg` the sidebar gives
- * way to a horizontal nav row under the header instead of a hamburger
- * menu, this section doesn't get enough mobile use to justify a full
- * Sheet component.
- */
+// Simpler than DashboardShell (no collapsible sidebar, no mobile Sheet) — an internal tool, not
+// part of the product a subscriber sees. Below `lg`, the sidebar becomes a horizontal nav row.
 export function AdminShell({
   children,
   planView,

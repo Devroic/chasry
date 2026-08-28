@@ -9,16 +9,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata = { title: { absolute: "Overview · Chasry Admin" } };
 
-/**
- * One bulk fetch, three columns, reduced in JS rather than several separate
- * count() queries. Fine at this app's current scale (see PROJECT.md, this is
- * built for freelancers/small businesses, not assumed scale from day one) —
- * worth revisiting if the user table ever grows large enough for this to
- * matter.
- */
-/** A plain helper, not a component, so React Compiler's purity check (which
- * only applies to component/hook bodies) does not flag this Date.now() call
- * the way it would if it were called directly inside the page component. */
+// Plain helper, not a component, so React Compiler's purity check doesn't flag this Date.now() call.
 function daysAgoTimestamp(days: number) {
   return Date.now() - days * 86_400_000;
 }
@@ -30,9 +21,7 @@ export default async function AdminOverviewPage() {
     supabase.from("profiles").select("email, subscription_status, created_at, onboarded_at"),
     getLifetimeRevenueCents(),
   ]);
-  // Admin accounts aren't real subscribers, counting them would skew every
-  // metric here (and an admin's own subscription_status is a simulated
-  // Free/Pro view anyway, see getAdminPlanOverride in lib/auth.ts).
+  // Admin accounts aren't real subscribers — counting them would skew every metric here.
   const profiles = (data ?? []).filter((p) => !isAdminEmail(p.email));
 
   const total = profiles.length;

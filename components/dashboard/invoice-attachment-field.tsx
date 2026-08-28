@@ -8,14 +8,8 @@ import { Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { removeInvoiceAttachment } from "@/app/(dashboard)/invoices/actions";
 
-/**
- * Pro-gated single-file (PDF) attachment picker for the invoice form.
- * Deliberately not wired into react-hook-form like the rest of the
- * fields — a file input can't be pre-filled with an already-saved file
- * for security reasons, so "already attached" and "newly selected"
- * are two different states this owns directly, same reasoning
- * ReminderOverrideSection already uses for its own non-typed state.
- */
+// Pro-gated PDF attachment picker. Not wired into react-hook-form — a file input
+// can't be pre-filled, so "already attached" vs "newly selected" is owned here directly.
 export function InvoiceAttachmentField({
   isPro,
   invoiceId,
@@ -39,11 +33,7 @@ export function InvoiceAttachmentField({
 
   const hasSavedFile = !!currentFilename && !removed;
 
-  // The Pro gate only blocks *adding* a file — someone who attached one
-  // while on Pro and later dropped to Free can still see and remove it
-  // (removeInvoiceAttachment itself has no plan check), just not add a
-  // replacement. Checked after hasSavedFile/selectedFile on purpose: a
-  // file already in progress always wins over the upsell message.
+  // Pro gate only blocks *adding* a file — a Free user who already has one can still remove it.
   if (!isPro && !hasSavedFile && !selectedFile) {
     return (
       <p className="rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">

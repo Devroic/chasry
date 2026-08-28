@@ -55,9 +55,7 @@ export default async function InvoiceDetailPage({
       .eq("invoice_id", invoice.id),
   ]);
 
-  // Payment link is a 2-level cascade (client → account default) — same
-  // resolution the cron job uses (app/api/cron/send-reminders/route.ts).
-  // Reminder schedule below is still the full 3-level cascade.
+  // Payment link: 2-level cascade (client → account default), same as the cron job.
   const paymentLink = customer?.payment_link ?? profile.payment_link;
   const paymentLinkSource = customer?.payment_link
     ? t("detail.customForClient", { name: customer.name })
@@ -80,9 +78,6 @@ export default async function InvoiceDetailPage({
         title={invoice.invoice_number || t("genericTitle")}
         description={customer ? t("detail.for", { name: customer.name }) : undefined}
         action={
-          // Top right, matching the client detail page. These used to sit in
-          // the middle of the page, so the same actions lived in two different
-          // places depending on which record you were looking at.
           <div className="flex flex-wrap items-center gap-2">
             <InvoiceStatusBadge status={invoice.status} dueDate={invoice.due_date} />
             <InvoiceActions invoiceId={invoice.id} status={invoice.status} />

@@ -12,28 +12,15 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
 
 export const ADMIN_PLAN_OVERRIDE_COOKIE = "chasry_admin_plan_view";
 
-/**
- * An admin's own account always appears as Pro by default, so testing the
- * app doesn't trip the free-plan invoice cap, with a toggle in AdminShell
- * (setAdminPlanOverride in app/admin/actions.ts) to flip to a simulated
- * Free view for testing that experience too. Never written to the
- * database, this only overrides what getProfile() returns for this one
- * request. An admin with a genuine Stripe subscription will not see its
- * real details reflected while the override is active, an accepted
- * trade-off for a testing feature only the admin's own account uses.
- */
+// Admin accounts default to Pro (so the free-plan cap doesn't get in the way of testing),
+// with a toggle to simulate Free. Never written to the database, only overrides getProfile().
 export async function getAdminPlanOverride(): Promise<"free" | "pro"> {
   const cookieStore = await cookies();
   return cookieStore.get(ADMIN_PLAN_OVERRIDE_COOKIE)?.value === "free" ? "free" : "pro";
 }
 
-/**
- * The underlying auth + profile lookups, deduplicated per request with
- * React.cache(). Without this, every page under app/(dashboard) re-running
- * requireUser()/requireOnboardedUser() — on top of the layout doing the same
- * — was issuing a fresh supabase.auth.getUser() and a fresh `profiles`
- * query on every single page load.
- */
+// Deduplicated per request with React.cache() — without it, every page's own
+// requireUser() call issued a fresh supabase.auth.getUser().
 const getAuthedUser = cache(async () => {
   const supabase = await createClient();
   const {
@@ -60,13 +47,8 @@ export const getProfile = cache(async (userId: string) => {
   return data;
 });
 
-/**
- * Auth lookup that returns `null` instead of redirecting — for pages that are
- * reachable both logged in and logged out and need to render differently
- * (currently just `/help`, which shows the full dashboard chrome to a signed-in
- * user and the slim marketing header to everyone else). Shares the same
- * per-request cache as `requireUser()`, so using both costs one auth call.
- */
+// Returns `null` instead of redirecting — for pages reachable both logged in and out
+// (currently just /help). Shares requireUser()'s per-request cache.
 export async function getOptionalUser() {
   const { user } = await getAuthedUser();
   return user;
@@ -79,13 +61,8 @@ export async function requireUser() {
   return { supabase, user };
 }
 
-/**
- * Auth + "finished onboarding" check, for pages that need the business
- * profile to exist (dashboard). There's no subscription gate here — free
- * and Pro accounts both get full access; only the number of active
- * invoices differs (see lib/plan.ts). A subscription lapsing to 'canceled'
- * just drops someone back to free-plan limits, it never locks them out.
- */
+// Auth + "finished onboarding" check. No subscription gate — free and Pro both get
+// full access, only active-invoice count differs (lib/plan.ts).
 export async function requireOnboardedUser() {
   const { supabase, user } = await requireUser();
   const profile = await getProfile(user.id);
@@ -101,14 +78,8 @@ export function isAdminEmail(email: string | null | undefined) {
   return Boolean(email && ADMIN_EMAILS.includes(email.toLowerCase()));
 }
 
-/**
- * Gates the internal /admin section. 404s instead of redirecting for a
- * non-admin, so a logged-in subscriber probing the URL doesn't even learn
- * the section exists. Admin pages still need to reach for the service-role
- * client (lib/supabase/admin.ts) separately for any query that spans other
- * users' data — the RLS-scoped client returned here only ever sees the
- * admin's own row, same as any other user.
- */
+// Gates /admin. 404s (not redirects) for a non-admin, so probing the URL doesn't
+// confirm the section exists. Cross-user queries still need the service-role client separately.
 export async function requireAdmin() {
   const { supabase, user } = await requireUser();
   if (!isAdminEmail(user.email)) notFound();

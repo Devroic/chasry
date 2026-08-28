@@ -22,13 +22,9 @@ import type { Translator } from "@/lib/validations/shared";
 export type InvoiceFormState = { error?: string } | null;
 
 /**
- * Validates and encodes an optional attachment from the invoice form, used
- * by both createInvoice and updateInvoice so the checks (Pro plan, size,
- * real PDF content) live in exactly one place. Returns `fields: null` when
- * no new file was submitted — the create form always starts empty, and the
- * edit form's file input can't be pre-filled with the existing file, so
- * "nothing submitted" must mean "leave whatever's already there alone",
- * not "clear it."
+ * Validates and encodes an optional attachment, shared by create/update.
+ * `fields: null` means no new file was submitted — leave the existing one
+ * alone rather than clearing it (a file input can't be pre-filled).
  */
 async function processAttachmentUpload(
   formData: FormData,
@@ -104,10 +100,8 @@ export async function createInvoice(
     .single();
   if (!customer) return { error: tErrors("invalidClient") };
 
-  // Server-side enforcement of the free-plan invoice limit — the UI already
-  // hides the form at this point, but this is the real gate. Goes through
-  // getProfile() (not an ad hoc query) so an admin's simulated Free/Pro view
-  // (see lib/auth.ts) is honored here too, not just cosmetically in the UI.
+  // Server-side enforcement of the free-plan invoice limit, the real gate,
+  // not just the UI hiding the form.
   const profile = await getProfile(user.id);
   if (!isPro(profile?.subscription_status ?? "none")) {
     const { count } = await supabase
@@ -191,9 +185,7 @@ export async function markInvoicePaid(invoiceId: string) {
 export async function reopenInvoice(invoiceId: string) {
   const { supabase, user } = await requireUser();
 
-  // Reopening a paid invoice adds back an active invoice — subject to the
-  // same free-plan limit as creating a new one. Goes through getProfile()
-  // so an admin's simulated Free/Pro view (see lib/auth.ts) applies here too.
+  // Reopening adds back an active invoice, subject to the same free-plan limit as creating one.
   const profile = await getProfile(user.id);
   if (!isPro(profile?.subscription_status ?? "none")) {
     const { count } = await supabase
@@ -242,14 +234,9 @@ export async function removeInvoiceAttachment(invoiceId: string) {
 }
 
 /**
- * Sends one preview email per offset this invoice actually has scheduled
- * (invoice override → client override → account default, same cascade the
- * real cron uses), each built by the exact same buildReminderEmail() the
- * cron send uses — so what lands in the inbox is a true preview of every
- * tone (before/overdue/seriously overdue) this invoice will really send,
- * not always the same generic "7 days before" example. replyTo is set to
- * the account owner's real email too, same as the real send, so testing
- * "reply to this email" from a preview actually goes somewhere real.
+ * Sends one preview email per scheduled offset, using the same
+ * buildReminderEmail() and cascade the real cron uses, so it's a true
+ * preview of every tone this invoice will actually send.
  */
 export async function sendPreviewReminder(invoiceId: string) {
   const { supabase, user } = await requireUser();
@@ -314,14 +301,9 @@ export async function sendPreviewReminder(invoiceId: string) {
 }
 
 /**
- * Manually fires one reminder whose target date is exactly today and
- * hasn't been attempted yet. The cron (app/api/cron/send-reminders) only
- * gets one chance per offset, its own target day, and won't catch up a
- * day it missed — this is the escape hatch for "I created this invoice
- * after today's daily run already happened." Mirrors the cron's own send
- * path exactly (same buildReminderEmail, same replyTo, same reminder_logs
- * write) so a manually-sent reminder is indistinguishable from one the
- * cron sent itself.
+ * Manually fires one reminder due today that hasn't been attempted yet, the
+ * escape hatch for an invoice created after today's cron run. Mirrors the
+ * cron's own send path exactly (same email builder, same reminder_logs write).
  */
 export async function sendReminderNow(invoiceId: string, offsetDays: number) {
   const { supabase, user } = await requireUser();
@@ -351,9 +333,8 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
 
   if (!invoice || !profile || !customer) throw new Error(tErrors("notFound"));
 
-  // Everything below re-validates what the UI already only shows this
-  // button for — defense against the action being called directly with
-  // stale or fabricated arguments, not expected to trigger in normal use.
+  // Re-validates what the UI already gates, defense against a direct call
+  // with stale/fabricated arguments.
   const enabled = invoice.reminder_enabled ?? customer.reminder_enabled ?? accountSettings?.enabled ?? true;
   const offsets = invoice.reminder_offsets ?? customer.reminder_offsets ?? accountSettings?.offsets ?? [];
   const targetMs = addDaysUtc(invoice.due_date, offsetDays).getTime();
@@ -397,10 +378,7 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
     });
     if (error) throw new Error(error.message);
 
-    // Plain insert, not upsert — we already confirmed above that no row
-    // exists for this offset yet, and RLS only grants this user INSERT on
-    // reminder_logs (see migration 0010), not UPDATE, so an upsert's
-    // ON CONFLICT DO UPDATE branch would be rejected outright.
+    // Plain insert, not upsert — RLS only grants INSERT on reminder_logs, not UPDATE.
     const { error: logError } = await supabase.from("reminder_logs").insert({
       invoice_id: invoiceId,
       user_id: user.id,

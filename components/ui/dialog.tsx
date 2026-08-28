@@ -91,12 +91,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      // pr-10 reserves room for the close button (top-2 right-2, size-7 —
-      // an 8px offset plus a 28px button is ~36px), so a title long enough
-      // to reach the corner wraps under it instead of running into it. Only
-      // shows up with longer text — e.g. Greek titles, which run noticeably
-      // longer than their English source strings — short titles never
-      // reached the corner in the first place.
+      // pr-10 reserves room for the close button so a long title wraps under it.
       className={cn("flex flex-col gap-2 pr-10", className)}
       {...props}
     />

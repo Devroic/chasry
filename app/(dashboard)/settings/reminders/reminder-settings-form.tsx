@@ -32,6 +32,7 @@ export function ReminderSettingsForm({
     defaultValues: { enabled: defaultEnabled, offsets: defaultOffsets },
   });
   const offsets = watch("offsets");
+  const enabled = watch("enabled");
 
   useSuccessToast(state);
 
@@ -79,7 +80,9 @@ export function ReminderSettingsForm({
         />
       </div>
 
-      <ReminderOffsetSwitches idPrefix="offset" offsets={offsets} onToggle={toggleOffset} />
+      {enabled && (
+        <ReminderOffsetSwitches idPrefix="offset" offsets={offsets} onToggle={toggleOffset} />
+      )}
 
       <Button type="submit" loading={pending}>
         {pending ? tCommon("saving") : t("submit")}

@@ -25,17 +25,12 @@ export default async function BillingSettingsPage() {
 
   const status = profile.subscription_status;
   const pro = isPro(status);
-  // Stripe keeps subscription_status "active" all the way until the period
-  // actually ends and it deletes the subscription, cancel_at_period_end is
-  // the only signal that it's set to end rather than renew.
+  // subscription_status stays "active" until the period actually ends;
+  // cancel_at_period_end is the only signal it won't renew.
   const canceling = status === "active" && profile.cancel_at_period_end;
 
-  // Falls back to the stored period-end date on any failure (including a
-  // subscription that genuinely has nothing upcoming to preview) — same
-  // safety net as before, just now correct for a subscription mid-coupon
-  // too, where the next *cycle* boundary and the next *charge* aren't the
-  // same date. Skipped entirely once canceling: there's no next charge to
-  // preview, current_period_end is already the date Pro access ends.
+  // Falls back to the stored period-end date on failure. Skipped once
+  // canceling — current_period_end is already the date Pro access ends.
   const nextPaymentDate =
     status === "active" && !canceling && profile.stripe_subscription_id
       ? ((await getNextRealPaymentDate(profile.stripe_subscription_id)) ?? profile.current_period_end)
@@ -47,10 +42,7 @@ export default async function BillingSettingsPage() {
     canceled: t("statusCanceled"),
   };
 
-  // Same colour vocabulary as InvoiceStatusBadge — emerald reads "healthy",
-  // red "needs attention" — so a status chip means the same thing wherever it
-  // appears. Only the two isPro() statuses can reach this map; every other
-  // status renders the neutral "Free" chip instead.
+  // Same colour vocabulary as InvoiceStatusBadge (emerald = healthy, red = needs attention).
   const proStatusStyles: Record<string, string> = {
     active: canceling
       ? "bg-amber-50 text-amber-700 border-amber-200"

@@ -37,13 +37,8 @@ export async function ReminderTimeline({
     return <p className="text-sm text-muted-foreground">{tTimeline("noneConfigured")}</p>;
   }
 
-  // Compared by calendar day, not exact timestamp — an offset due "today"
-  // stays Scheduled all day, not Skipped the moment any time has passed
-  // since UTC midnight. Matches send-reminders' cron exactly: each offset
-  // gets one chance, its own target day. If that day passes without a log,
-  // the cron will mark it skipped on its next run, no later catch-up, so
-  // that outcome is already certain and shown immediately rather than as a
-  // transient "sending soon" that could go either way.
+  // Compared by calendar day, not exact timestamp — matches send-reminders' cron,
+  // each offset gets one chance, its own target day.
   const nowDate = new Date(now);
   const todayUtcMidnight = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
 
@@ -53,10 +48,7 @@ export async function ReminderTimeline({
         const log = logByOffset.get(offsetDays);
         const targetDate = addDaysUtc(dueDate, offsetDays);
         const isPast = targetDate.getTime() < todayUtcMidnight;
-        // The one gap the "exact day only" cron rule leaves: an invoice
-        // created after today's single daily run already happened. This
-        // is the manual catch-up for exactly that case, so it only shows
-        // for a row that's due today, unpaid, and genuinely never attempted.
+        // Manual catch-up for an invoice created after today's cron run already happened.
         const canSendNow = !log && !invoiceIsPaid && targetDate.getTime() === todayUtcMidnight;
 
         let icon = <Circle className="size-4 text-brand-secondary" />;

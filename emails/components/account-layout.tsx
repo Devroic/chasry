@@ -22,13 +22,8 @@ const BRAND = {
 
 const SUPPORT_EMAIL = "info@chasry.com";
 
-// The color-scheme meta tags alone aren't enough, Gmail in particular is
-// well known for ignoring them and inverting colors anyway based on its own
-// luminosity analysis. What actually holds against that is re-asserting the
-// exact same light colors inside a real `prefers-color-scheme: dark` media
-// query with `!important`, since that's the one signal Gmail's dark mode
-// reliably respects, an explicit "I've already accounted for dark mode,
-// here's what I want" rather than a passive opt-out.
+// color-scheme meta tags alone don't stop Gmail's dark mode inversion — re-asserting
+// the same light colors inside a real prefers-color-scheme media query with !important does.
 const DARK_MODE_OVERRIDE = `
   @media (prefers-color-scheme: dark) {
     .chasry-body { background-color: #F4F6FB !important; }
@@ -39,15 +34,8 @@ const DARK_MODE_OVERRIDE = `
   }
 `;
 
-/**
- * Layout for the two Chasry-to-subscriber lifecycle emails (welcome,
- * upgraded to Pro), mirroring ReminderLayout's card styling but with the
- * mascot logo and "need help" footer used by the Supabase-managed auth
- * emails (confirm signup, reset password), instead of ReminderLayout's
- * per-business eyebrow and "sent on behalf of" footer, which don't apply
- * here since these emails come from Chasry itself, not through a freelancer
- * to their client.
- */
+// Layout for Chasry-to-subscriber lifecycle emails — mirrors ReminderLayout's card
+// styling, but with the mascot logo/footer instead of the per-business eyebrow.
 export function AccountLayout({
   previewText,
   children,

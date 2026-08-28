@@ -26,12 +26,8 @@ export default function ReminderBeforeDueEmail({
   daysUntilDue = 7,
   paymentLink,
 }: Partial<ReminderBeforeDueProps>) {
-  // Usually positive (still ahead) or zero (today), but a reminder can land
-  // a day or more after its own nominal target — a daily-cron catch-up, or
-  // an offset held back by a more-recent one on an invoice's first check —
-  // so this also has to read sensibly once the due date has technically
-  // already passed by send time. The verb changes tense (is due / was due),
-  // not just the trailing phrase, so the sentence stays grammatical.
+  // Can go negative if the due date has technically passed by send time — the verb
+  // changes tense (is due / was due) so the sentence stays grammatical.
   const dueClause =
     daysUntilDue > 0
       ? `is due in ${daysUntilDue} ${daysUntilDue === 1 ? "day" : "days"}`

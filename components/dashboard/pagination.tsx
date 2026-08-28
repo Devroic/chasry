@@ -6,11 +6,7 @@ import { cn } from "@/lib/utils";
 
 type PageItem = number | "ellipsis";
 
-/**
- * First page, last page, current page and its immediate neighbours, with a
- * single "…" filling any gap larger than one — the standard compact
- * numbered-pagination layout (e.g. 1 … 4 5 [6] 7 8 … 12).
- */
+// First page, last page, current page ± 1, "…" filling any gap (e.g. 1 … 4 5 [6] 7 8 … 12).
 function getPageItems(current: number, total: number): PageItem[] {
   const neighbours: number[] = [];
   for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {

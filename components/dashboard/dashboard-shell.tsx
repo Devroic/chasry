@@ -51,11 +51,8 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Desktop-only: manually toggled, defaults open. Resets on a full reload
-  // rather than persisting to disk — the sidebar only has three links, so
-  // that's a fair trade against the hydration-mismatch risk of reading
-  // localStorage before the first client render (see ThemeToggle's history
-  // in ARCHITECTURE.md for why that risk is taken seriously here).
+  // Desktop-only, defaults open, resets on reload rather than persisting to
+  // localStorage (avoids a hydration-mismatch risk for just three links).
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loggingOut, startLogoutTransition] = useTransition();
   const t = useTranslations("header");
@@ -139,15 +136,8 @@ export function DashboardShell({
       <div className="mx-auto flex w-full max-w-7xl flex-1">
         <aside
           className={cn(
-            // Sticky and bounded to the viewport (header is h-20 = 5rem), not
-            // the flex row's natural `align-items: stretch` height, which
-            // matches `main` and is only as tall as the page's content. That
-            // stretched height is what pushed a bottom-pinned button off
-            // screen on a real, content-heavy dashboard: `main` was much
-            // taller than the viewport, so "bottom of aside" was far below
-            // the fold. Bounding `aside` to the viewport means "bottom" is
-            // the bottom of what's actually visible, and `sticky` keeps it
-            // there while the page scrolls, the same way the header does.
+            // Bounded to the viewport height (not the flex row's natural stretch
+            // to `main`'s height), so a bottom-pinned button stays on screen.
             "sticky top-20 hidden h-[calc(100vh-5rem)] shrink-0 flex-col overflow-y-auto border-r border-border py-6 transition-[width] duration-200 lg:flex",
             sidebarCollapsed ? "w-16 px-2" : "w-60 px-4"
           )}

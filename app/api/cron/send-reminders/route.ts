@@ -11,10 +11,7 @@ import { checkCronRateLimit } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** How long after an offset's target date a *failed* send keeps retrying.
- * Long enough to ride out a transient outage or a one-day Resend quota
- * exhaustion, short enough that a permanently-undeliverable address stops
- * being retried instead of bouncing daily forever. */
+/** How long a *failed* send keeps retrying before giving up on a likely-undeliverable address. */
 const FAILED_RETRY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 function isAuthorized(request: Request) {
@@ -45,15 +42,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
 
-  // Check-in starts *after* auth/rate-limit so a rejected probe isn't recorded
-  // as a job run (or a job failure). From here on, this is a genuine execution.
-  //
-  // Why this exists at all: captureException only fires when something
-  // *throws*. If Vercel's scheduler stops firing this route entirely — the
-  // single worst failure mode for the product, since reminders are the whole
-  // point — nothing throws, so nothing is reported and the app looks healthy
-  // while quietly doing nothing. A check-in monitor inverts that: Sentry
-  // alerts on the *absence* of an expected run.
+  // Check-in starts after auth/rate-limit so a rejected probe isn't recorded as a job
+  // run. Monitors for the absence of an expected run (Vercel's scheduler silently
+  // stopping), which captureException alone can't catch since nothing throws.
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: MONITOR_SLUG, status: "in_progress" },
     {
@@ -73,9 +64,7 @@ export async function GET(request: Request) {
     Sentry.captureCheckIn({
       checkInId,
       monitorSlug: MONITOR_SLUG,
-      // The sweep signals failure by returning 500, not by throwing, so the
-      // check-in status has to be derived from the response — otherwise a
-      // failed run would be recorded as a healthy one.
+      // Sweep signals failure via 500, not a throw, so status is derived from the response.
       status: response.ok ? "ok" : "error",
     });
     return response;
@@ -90,17 +79,9 @@ export async function GET(request: Request) {
 async function runReminderSweep() {
   const supabase = createAdminClient();
 
-  // Reminders send for every account regardless of plan — free-plan invoices
-  // get chased too, that's the point of letting people try Chasry for free.
-  // Plan only limits how many active invoices someone can have at once (see
-  // lib/plan.ts), not whether reminders work on the ones they do have.
-  //
-  // `reminder_settings` is fetched for every user, not just ones with
-  // `enabled = true` (unlike before per-client/per-invoice overrides
-  // existed) — a user could have the account-wide default off but a
-  // specific client or invoice overridden back on, so the account-level
-  // row is just one input to the per-invoice resolution below, not a
-  // pre-filter.
+  // Reminders send for every account regardless of plan — plan only limits active
+  // invoice count, not whether reminders work. `reminder_settings` is fetched for
+  // every user since it's just one input to the per-invoice cascade below, not a pre-filter.
   const [{ data: profiles, error: profilesError }, { data: settings, error: settingsError }] =
     await Promise.all([
       supabase.from("profiles").select("id, business_name, email, payment_link"),
@@ -177,14 +158,8 @@ async function runReminderSweep() {
     return NextResponse.json({ error: "Failed to load reminder logs" }, { status: 500 });
   }
 
-  // `status` matters here — this used to key off *every* log row regardless of
-  // status, which meant a reminder that failed to send was recorded as
-  // 'failed' and then skipped forever: it never retried, and the user was
-  // never told. A single transient blip (or hitting Resend's free-tier
-  // 100-emails/day cap, which the whole account shares with Supabase Auth's
-  // signup/reset mail) silently lost that reminder permanently — the exact
-  // opposite of the product's promise. Only 'sent' and 'skipped' are terminal
-  // now; 'failed' is retried on the next run.
+  // Only 'sent' and 'skipped' are terminal — 'failed' retries on the next run
+  // instead of being silently lost forever.
   const settled = new Set<string>();
   const failedBefore = new Set<string>();
   for (const log of existingLogs ?? []) {
@@ -207,11 +182,7 @@ async function runReminderSweep() {
     const customer = customerById.get(invoice.customer_id);
     if (!defaultSettings || !profile || !customer) continue;
 
-    // Cascade: invoice override → client override → account default. Both
-    // `reminder_offsets`/`reminder_enabled` are always written together by
-    // the app (see lib/reminder-override.ts), so checking one for `null`
-    // is enough to tell "no override at this level" from "override, but
-    // it's an empty schedule."
+    // Cascade: invoice override → client override → account default.
     const enabled = invoice.reminder_enabled ?? customer.reminder_enabled ?? defaultSettings.enabled;
     if (!enabled) continue;
     const offsets = invoice.reminder_offsets ?? customer.reminder_offsets ?? defaultSettings.offsets;
@@ -219,13 +190,8 @@ async function runReminderSweep() {
     const businessName = profile.business_name || profile.email;
     const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
 
-    // Each offset gets exactly one chance: its own target day. Never
-    // attempted and that day has already passed (whatever the reason —
-    // a backdated invoice, a missed cron run, an invoice created right
-    // after that day's single daily run) → it's marked skipped, not sent
-    // late. That trades away catching up a reminder that missed its window
-    // for a simple, predictable rule: a reminder either fires on its day or
-    // it doesn't, nothing in between.
+    // Each offset gets exactly one chance, its target day. Missed that day
+    // for any reason → marked skipped, never sent late.
     for (const offsetDays of offsets) {
       const key = `${invoice.id}:${offsetDays}`;
       if (settled.has(key)) continue;
@@ -234,10 +200,8 @@ async function runReminderSweep() {
       const isRetry = failedBefore.has(key);
 
       if (isRetry) {
-        // A previously-failed send retries, but only for a bounded window —
-        // otherwise the last offset in a schedule (nothing ever supersedes
-        // it) would retry forever against an address that may simply be
-        // undeliverable, burning quota and hard-bouncing daily.
+        // Retries, but only within a bounded window — otherwise a permanently
+        // undeliverable address would retry forever.
         if (todayUtcMidnight - targetMs > FAILED_RETRY_WINDOW_MS) continue;
       } else if (targetMs < todayUtcMidnight) {
         await supabase.from("reminder_logs").upsert(
@@ -289,10 +253,7 @@ async function runReminderSweep() {
         sent++;
       } catch (err) {
         console.error("cron/send-reminders: send failed", { invoiceId: invoice.id, err });
-        // Per-invoice send failure. Tagged (not just logged) because a burst of
-        // these is the signal that Resend's daily cap was hit — the failure mode
-        // that used to lose reminders permanently. No client email or invoice
-        // amount is attached; the invoice id is enough to investigate.
+        // Tagged, not just logged — a burst of these signals Resend's daily cap was hit.
         Sentry.captureException(err, {
           tags: { job: "send-reminders", stage: "send" },
           extra: { invoiceId: invoice.id, offsetDays },

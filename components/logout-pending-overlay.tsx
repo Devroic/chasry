@@ -3,14 +3,8 @@
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-/**
- * Driven by an explicit `show` prop rather than useFormStatus, the logout
- * trigger in DashboardShell lives inside a Radix DropdownMenuItem, which
- * unmounts its content when the menu closes on click, before the logout
- * transition finishes. A form-status-based overlay nested in that same
- * form would disappear with it. Lifting pending state to the shell
- * component (via useTransition) keeps this mounted for the whole logout.
- */
+// Explicit `show` prop, not useFormStatus — the trigger lives in a DropdownMenuItem
+// that unmounts on click, before logout finishes.
 export function LogoutPendingOverlay({ show }: { show: boolean }) {
   const t = useTranslations("common");
 

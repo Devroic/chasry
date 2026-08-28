@@ -20,7 +20,7 @@ export default async function ReminderSettingsPage() {
       <CardContent>
         <p className="mb-6 text-sm text-muted-foreground">{t("intro")}</p>
         <ReminderSettingsForm
-          defaultOffsets={settings?.offsets ?? [-7, -3, 1, 14]}
+          defaultOffsets={settings?.offsets ?? [-3, -1, 0, 1, 3]}
           defaultEnabled={settings?.enabled ?? true}
         />
       </CardContent>

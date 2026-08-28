@@ -24,15 +24,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      // Default is 1MB, well under the invoice attachment's 5MB cap
-      // (lib/invoice-attachment.ts's MAX_ATTACHMENT_BYTES). This limit is
-      // for the whole multipart body, not just the file — measured a
-      // ~1MB+ blowup once the rest of the invoice form's fields and
-      // multipart boundary overhead are added on top of a file near the
-      // cap, so this needs real headroom, not just "5MB plus a little."
-      // Without it, a legitimate upload right at the cap gets rejected by
-      // the framework before createInvoice/updateInvoice's own size check
-      // ever runs — a crash page instead of the "too large" message.
+      // Default is 1MB — covers the whole multipart body, not just the file, so
+      // needs real headroom above the 5MB attachment cap (MAX_ATTACHMENT_BYTES).
       bodySizeLimit: "8mb",
     },
   },
@@ -40,12 +33,7 @@ const nextConfig: NextConfig = {
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
-// Order matters: next-intl wraps the config first, then Sentry wraps the
-// result. Sentry's plugin has to be outermost so its webpack/Turbopack hooks
-// see the final config — including next-intl's additions.
-//
-// Written by hand rather than by `@sentry/wizard`, which would have rewritten
-// this file and dropped the security headers and the next-intl wrapper above.
+// Order matters: next-intl wraps first, Sentry wraps outermost so its hooks see the final config.
 export default withSentryConfig(withNextIntl(nextConfig), {
   org: "chasry",
   project: "javascript-nextjs",

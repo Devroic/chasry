@@ -38,9 +38,7 @@ export default async function CustomerDetailPage({
   const { error } = await searchParams;
   const { supabase, user } = await requireUser();
 
-  // Neither query depends on the other's result — both only need `id` and
-  // `user.id`, which are already known — so they run in parallel rather than
-  // waiting on the customer fetch before starting the invoices one.
+  // Independent queries, run in parallel.
   const [{ data: customer }, { data: invoices }, { data: profile }, { data: settings }] =
     await Promise.all([
       supabase

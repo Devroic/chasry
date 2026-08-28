@@ -34,9 +34,16 @@ cp .env.example .env.local
 ## 3. Supabase setup
 
 1. Create a new Supabase project.
-2. Open the **SQL Editor** and run the contents of
-   [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) once. This creates
-   every table, Row Level Security policy, and trigger the app needs.
+2. Link this repo to it and push the schema — never paste SQL into the dashboard's SQL Editor,
+   the migrations in [`supabase/migrations/`](supabase/migrations) are the source of truth and
+   need to stay in sync with what's actually applied:
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <your-project-ref>   # found in the project's dashboard URL
+   npm run db:push
+   ```
+   This creates every table, Row Level Security policy, and trigger the app needs. Run
+   `npm run db:push` again any time a new migration is added later.
 3. In **Project Settings → API**, copy:
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon` `public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -110,7 +117,7 @@ Sign up, complete onboarding (no card needed — you land on the free plan), add
 invoice due today, then manually trigger the reminder cron to see it work end to end:
 
 ```bash
-curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/send-reminders
+npm run cron:reminders
 ```
 
 Or, from any invoice's detail page in the app, use **"Send me a preview"** to email yourself a
@@ -143,13 +150,15 @@ checkout and confirm the webhook flips you to Pro.
 app/(auth)/          login, signup, password reset — unauthenticated
 app/(onboarding)/    business details (no card — lands on the free plan)
 app/(dashboard)/     dashboard, invoices, customers, settings — behind auth
+app/admin/           internal ops tool (user/subscription lookups) — gated by ADMIN_EMAILS
 app/api/stripe/      Stripe webhook
 app/api/cron/        the daily reminder job
 components/ui/       shadcn/ui primitives
 components/dashboard/ app-specific components (nav, tables, forms, empty states)
+components/admin/    internal admin section's own shell/components
 emails/              React Email templates for reminders
 lib/                 Supabase clients, Stripe, Resend, validation, formatting
-supabase/migrations/ database schema (SQL)
+supabase/migrations/ database schema (SQL) — apply with `npm run db:push`
 types/database.types.ts  hand-written Supabase types — regenerate with the Supabase CLI
                          once you have a project: see the comment at the top of the file
 ```

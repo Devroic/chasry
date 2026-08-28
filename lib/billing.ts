@@ -34,26 +34,10 @@ export async function createCheckoutSession({
 }
 
 /**
- * The date real money next changes hands, not just the next billing-cycle
- * boundary. Those are the same date for an undiscounted, uncredited
- * subscription, but two separate mechanisms can push a real charge further
- * out without ever changing the monthly cycle itself: a coupon (a
- * `repeating`-duration discount has a real `end` date, computed by Stripe)
- * and a customer balance credit (a flat amount that gets consumed by
- * whichever invoice comes due next, however far out that is — see
- * `settings/billing`'s admin notes on gifting a subscription). Both were
- * used together on the account this was built against: a 3-month coupon,
- * then a €10 balance credit added afterward to cover one more month on top.
- *
- * Resolution: preview the next invoice. If it's already a real charge,
- * that invoice's date is correct as-is. If it's €0, find how far the
- * coupon pushes things out (its Stripe-computed `end`, or the immediate
- * next invoice's own date if there's no coupon at all — balance alone is
- * covering it), then add however many further consecutive monthly invoices
- * the remaining balance credit is large enough to zero out on top of that.
- * A `forever`-duration coupon with no balance behind it has no computable
- * end at all (by design, nothing is ever going to be charged), so that
- * case returns `null` rather than a fabricated date.
+ * The date real money next changes hands, not just the billing-cycle
+ * boundary — a coupon or balance credit can push it out further. Previews
+ * the next invoice and, if it's €0, walks forward through discount coverage
+ * plus balance-covered months to find the first real charge.
  */
 export async function getNextRealPaymentDate(subscriptionId: string): Promise<string | null> {
   try {
@@ -69,11 +53,8 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
       .map((d) => (typeof d === "string" ? null : d.end))
       .filter((end): end is number => end != null);
 
-    // Discount coverage is exclusive of its end date (the invoice *at* that
-    // timestamp is the first one not covered), so that's a clean base to
-    // layer balance-covered months on top of. With no discount at all, the
-    // immediate upcoming invoice is itself already balance-covered — one
-    // month's worth of credit is already spoken for by it.
+    // Discount coverage excludes its end date; with no discount, the
+    // upcoming invoice is itself already balance-covered.
     const hasDiscount = discountEnds.length > 0;
     const baseSeconds = hasDiscount ? Math.max(...discountEnds) : upcoming.period_end;
 
@@ -90,9 +71,8 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
         return covered.toISOString();
       }
       if (!hasDiscount) {
-        // No discount, and the credit didn't stretch past this one invoice —
-        // it's already covered above by the amount_due === 0 branch, so the
-        // next one after it (one more cycle) is the first real charge.
+        // Credit didn't stretch past this invoice — the next cycle is the
+        // first real charge.
         const nextCycle = new Date(baseSeconds * 1000);
         nextCycle.setUTCMonth(nextCycle.getUTCMonth() + 1);
         return nextCycle.toISOString();
@@ -106,14 +86,8 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
   }
 }
 
-// Revenue-relevant balance transaction categories: a charge coming in,
-// a refund or dispute taking money back out, and the reversal categories
-// Stripe posts when a refund/dispute itself fails or is won (the money
-// stays with us after all). Everything else (`fee`, `payout`, `transfer`,
-// `adjustment`, ...) doesn't represent revenue changing hands with a
-// customer, and is excluded. `reporting_category` (not the raw `type`) is
-// what Stripe's own docs recommend for this, `type` has ~40 granular
-// values that don't collapse cleanly into "money in vs. money out."
+// Categories representing real revenue in/out; excludes fees, payouts,
+// transfers, etc. `reporting_category` collapses these cleanly, `type` doesn't.
 const REVENUE_REPORTING_CATEGORIES = new Set([
   "charge",
   "refund",
@@ -123,15 +97,9 @@ const REVENUE_REPORTING_CATEGORIES = new Set([
 ]);
 
 /**
- * Total net amount ever collected across every subscriber, for the admin
- * Overview page. Nothing in the database tracks historical payment amounts
- * (profiles only stores the current subscription state), so this is summed
- * directly from Stripe's own balance transaction history instead of a
- * running total kept locally. Refunds and disputes are subtracted back out
- * (Stripe already signs their `amount` negative), so this reflects what was
- * actually kept, not just gross charges. Still not Stripe's own fee taken
- * out of it, this is a lifetime-total figure, not a reconciled ledger.
- * Returned in cents, matching Stripe's own convention.
+ * Lifetime net revenue across all subscribers, summed from Stripe's balance
+ * transaction history since nothing local tracks historical payments. Cents,
+ * refunds/disputes already subtracted, not fee-adjusted.
  */
 export async function getLifetimeRevenueCents(): Promise<number | null> {
   try {

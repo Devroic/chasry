@@ -35,11 +35,8 @@ export default function ResetPasswordPage() {
 
   const onValid = (data: ResetInput) => startTransition(() => formAction(toFormData(data)));
 
-  // state.success is only ever used as a "did the request succeed" signal
-  // here, never displayed directly, it's the exact string the server
-  // translated at submit time, so it would stay frozen in whatever language
-  // was active then even after switching languages afterward. Re-deriving
-  // the text from useTranslations() keeps it live, same as title/subtitle.
+  // state.success is just a signal here, not displayed — re-derived via
+  // useTranslations() below so it stays live across language switches.
   if (state?.success) {
     return (
       <div className="text-center">

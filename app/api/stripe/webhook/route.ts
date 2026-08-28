@@ -30,19 +30,13 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
 
   const currentPeriodEnd = subscription.items.data[0]?.current_period_end;
   const status = mapStripeStatus(subscription.status);
-  // The customer portal's "cancel at period end" flow schedules the
-  // cancellation by setting `cancel_at` to a timestamp and leaving
-  // `cancel_at_period_end` false, not by flipping the boolean, at least on
-  // this account's Stripe API version. Both fields mean the same thing here
-  // (subscription set to end rather than renew), so either signals it.
+  // The customer portal schedules cancellation via `cancel_at`, not by flipping
+  // `cancel_at_period_end`, at least on this Stripe API version. Either signals it.
   const cancelAtPeriodEnd = subscription.cancel_at_period_end || subscription.cancel_at != null;
   const scheduledEndSeconds = subscription.cancel_at ?? currentPeriodEnd;
 
-  // Read the prior cancel_at_period_end before overwriting it, that's the
-  // only way to tell "just scheduled a cancellation" (false -> true) apart
-  // from every other reason this event fires (renewal, past_due, someone
-  // resubscribing before their period ends), which would otherwise resend
-  // the cancellation email on every later sync too.
+  // Read the prior value before overwriting — the only way to tell "just scheduled"
+  // (false → true) from every other reason this event fires.
   const { data: existing } = await supabase
     .from("profiles")
     .select("email, cancel_at_period_end")
@@ -86,14 +80,9 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
 }
 
 /**
- * Only called from checkout.session.completed, the one event that
- * represents someone actually just becoming Pro for the first time (the
- * promo-code-at-checkout flow, per STRIPE-PLAYBOOK.md's policy). Not called
- * from the general customer.subscription.updated sync path, that fires for
- * every later renewal, past_due transition, or unrelated change too, and
- * would otherwise re-send this on every one of those. Best-effort: a failed
- * send here shouldn't fail the webhook, Stripe already has the money and
- * the profile already synced by this point.
+ * Only called from checkout.session.completed — someone actually becoming
+ * Pro for the first time, not every later renewal sync. Best-effort: a
+ * failed send here shouldn't fail the webhook.
  */
 async function sendUpgradedToProEmail(email: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -109,12 +98,7 @@ async function sendUpgradedToProEmail(email: string) {
   }
 }
 
-/**
- * Fires the moment cancel_at_period_end flips to true in syncSubscription,
- * not when the subscription is actually deleted at period end, that could be
- * weeks away and the person who just clicked "cancel" wants confirmation now.
- * Best-effort, same as sendUpgradedToProEmail.
- */
+/** Fires when cancel_at_period_end flips true, not when it's actually deleted weeks later. */
 async function sendSubscriptionCanceledEmail(email: string, periodEndIso: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   try {
@@ -133,18 +117,14 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  // These two look alike but mean opposite things, so they're split.
-  //
-  // No `stripe-signature` header = almost always a bot probing the endpoint.
-  // Not reported: it's noise, and Stripe always sends the header.
+  // No signature header = almost always a bot probing the endpoint. Not
+  // reported — Stripe always sends the header.
   if (!signature) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  // A missing secret is *our* misconfiguration, and a total billing outage:
-  // every webhook 400s, so nobody who pays is ever upgraded. This used to
-  // share the branch above and was reported nowhere — the deploy would look
-  // healthy while silently dropping every payment event.
+  // A missing secret is our misconfiguration and a total billing outage —
+  // every webhook 400s, nobody who pays gets upgraded.
   if (!webhookSecret) {
     Sentry.captureException(new Error("STRIPE_WEBHOOK_SECRET is not set, so all Stripe webhooks are being rejected"), {
       level: "fatal",
@@ -160,12 +140,8 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("stripe/webhook: signature verification failed", err);
-    // `error`, not `warning`, so it actually reaches the inbox — the default
-    // Sentry alert only emails on *high priority* issues, and warnings don't
-    // qualify. Reaching here means a `stripe-signature` header was present
-    // (the probe case already returned above), so this is either a stale
-    // STRIPE_WEBHOOK_SECRET — every payment silently failing to upgrade — or
-    // someone forging Stripe signatures. Both are worth being woken up for.
+    // `error` level, not `warning` — Sentry's default alert only emails on high
+    // priority. This means either a stale secret or a forged signature, both worth waking up for.
     Sentry.captureException(err, {
       level: "error",
       tags: { integration: "stripe", stage: "verify-signature" },

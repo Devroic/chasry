@@ -68,10 +68,8 @@ export function CustomerForm({
     },
   });
 
-  // The reminder override isn't a plain text field react-hook-form can
-  // `register()` — it's managed here and stitched into the submitted
-  // FormData in `onValid` via `encodeReminderOverride`, same approach as
-  // the global reminder-settings form.
+  // Not a plain text field react-hook-form can register() — managed here, stitched
+  // into FormData via encodeReminderOverride in onValid.
   const [reminderActive, setReminderActive] = useState(defaultValues?.reminder_offsets != null);
   const [reminderEnabled, setReminderEnabled] = useState(
     defaultValues?.reminder_enabled ?? accountDefaults.enabled
@@ -124,10 +122,7 @@ export function CustomerForm({
           type="tel"
           aria-invalid={!!errors.phone}
           {...register("phone", {
-            // Strip anything that isn't a digit or standard phone formatting
-            // character as it's typed, rather than only catching letters on
-            // submit — matches the same allowed set customerSchema validates
-            // server-side (lib/validations/customer.ts).
+            // Strips as-typed, matching the allowed set validated server-side.
             onChange: (e) => {
               e.target.value = e.target.value.replace(/[^0-9+()\s-]/g, "");
             },
