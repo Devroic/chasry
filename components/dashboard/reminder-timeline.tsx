@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, CircleMinus, XCircle } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { addDaysUtc } from "@/lib/reminders";
 import { formatDate } from "@/lib/format";
@@ -72,9 +72,9 @@ export async function ReminderTimeline({
           status = tTimeline("failed");
           tone = "text-destructive";
         } else if (invoiceIsPaid) {
-          icon = <XCircle className="size-4 text-muted-foreground" />;
+          icon = <CircleMinus className="size-4 text-emerald-600" />;
           status = tTimeline("skippedPaid");
-          tone = "text-muted-foreground";
+          tone = "text-emerald-600";
         } else if (log?.status === "skipped" || isPast) {
           icon = <XCircle className="size-4 text-destructive" />;
           status = tTimeline("skipped");
