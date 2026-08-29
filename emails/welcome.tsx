@@ -3,7 +3,7 @@ import { AccountLayout, AccountHeading, AccountText, AccountButton } from "./com
 
 export default function WelcomeEmail({ appUrl }: { appUrl: string }) {
   return (
-    <AccountLayout previewText="Welcome to Chasry">
+    <AccountLayout previewText="Welcome to Chasry" appUrl={appUrl}>
       <AccountHeading>Welcome to Chasry</AccountHeading>
       <AccountText>
         Your account is ready. Log your first unpaid invoice and Chasry will start chasing

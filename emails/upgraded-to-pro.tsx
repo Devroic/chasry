@@ -4,7 +4,7 @@ import { PRO_PRICE_LABEL } from "@/lib/plan";
 
 export default function UpgradedToProEmail({ appUrl }: { appUrl: string }) {
   return (
-    <AccountLayout previewText="You're on Chasry Pro">
+    <AccountLayout previewText="You're on Chasry Pro" appUrl={appUrl}>
       <AccountHeading>Welcome to Pro</AccountHeading>
       <AccountText>
         Thanks for upgrading, {PRO_PRICE_LABEL}. Unlimited active invoices are unlocked, manage

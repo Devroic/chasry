@@ -84,7 +84,7 @@ async function runReminderSweep() {
   // every user since it's just one input to the per-invoice cascade below, not a pre-filter.
   const [{ data: profiles, error: profilesError }, { data: settings, error: settingsError }] =
     await Promise.all([
-      supabase.from("profiles").select("id, business_name, email, payment_link"),
+      supabase.from("profiles").select("id, business_name, email, payment_link, reminder_locale"),
       supabase.from("reminder_settings").select("user_id, offsets, enabled"),
     ]);
 
@@ -130,7 +130,7 @@ async function runReminderSweep() {
   const customerIds = [...new Set(invoices.map((i) => i.customer_id))];
   const { data: customers, error: customersError } = await supabase
     .from("customers")
-    .select("id, name, email, payment_link, reminder_offsets, reminder_enabled")
+    .select("id, name, email, payment_link, reminder_offsets, reminder_enabled, reminder_locale")
     .in("id", customerIds);
 
   if (customersError) {
@@ -189,6 +189,7 @@ async function runReminderSweep() {
 
     const businessName = profile.business_name || profile.email;
     const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
+    const locale = customer.reminder_locale ?? profile.reminder_locale;
 
     // Each offset gets exactly one chance, its target day. Missed that day
     // for any reason → marked skipped, never sent late.
@@ -225,6 +226,7 @@ async function runReminderSweep() {
         currency: invoice.currency,
         dueDate: invoice.due_date,
         paymentLink,
+        locale,
       });
 
       try {

@@ -17,6 +17,7 @@ function parseCustomerForm(formData: FormData, t: Translator) {
     phone: formData.get("phone"),
     notes: formData.get("notes"),
     payment_link: formData.get("payment_link"),
+    reminder_locale: formData.get("reminder_locale"),
     ...decodeReminderOverride(formData),
   });
 }

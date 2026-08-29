@@ -4,6 +4,8 @@ import { formatDate, formatMoney, daysUntil } from "@/lib/format";
 import ReminderBeforeDueEmail from "@/emails/reminder-before-due";
 import ReminderOverdueEmail from "@/emails/reminder-overdue";
 import ReminderSeriouslyOverdueEmail from "@/emails/reminder-seriously-overdue";
+import { emailCopy } from "@/emails/copy";
+import type { Locale } from "@/lib/locale";
 
 // Picks the right template/subject for a reminder offset. Shared by the real cron
 // send and the preview action, so a preview can never differ from the real email.
@@ -17,6 +19,7 @@ export function buildReminderEmail({
   dueDate,
   paymentLink,
   subjectPrefix = "",
+  locale = "en",
 }: {
   offsetDays: number;
   businessName: string;
@@ -27,10 +30,11 @@ export function buildReminderEmail({
   dueDate: string;
   paymentLink?: string;
   subjectPrefix?: string;
+  locale?: Locale;
 }): { element: React.ReactElement; subject: string } {
   const tone = toneForOffset(offsetDays);
   const amountLabel = formatMoney(amount, currency);
-  const dueDateFormatted = formatDate(dueDate);
+  const dueDateFormatted = formatDate(dueDate, locale);
   const invoiceNum = invoiceNumber ?? undefined;
 
   // The day-count shown reflects today vs. the due date, not the configured
@@ -44,9 +48,10 @@ export function buildReminderEmail({
           clientName,
           invoiceNumber: invoiceNum,
           amount: amountLabel,
-          dueDateLabel: `Was due ${dueDateFormatted}`,
+          dueDateLabel: emailCopy.wasDueLabel(dueDateFormatted, locale),
           daysOverdue: Math.max(1, -daysUntilDue),
           paymentLink,
+          locale,
         })
       : tone === "overdue"
         ? ReminderOverdueEmail({
@@ -54,33 +59,38 @@ export function buildReminderEmail({
             clientName,
             invoiceNumber: invoiceNum,
             amount: amountLabel,
-            dueDateLabel: `Was due ${dueDateFormatted}`,
+            dueDateLabel: emailCopy.wasDueLabel(dueDateFormatted, locale),
             daysOverdue: Math.max(1, -daysUntilDue),
             paymentLink,
+            locale,
           })
         : ReminderBeforeDueEmail({
             businessName,
             clientName,
             invoiceNumber: invoiceNum,
             amount: amountLabel,
-            dueDateLabel: `${daysUntilDue < 0 ? "Was due" : "Due"} ${dueDateFormatted}`,
+            dueDateLabel:
+              daysUntilDue < 0
+                ? emailCopy.wasDueLabel(dueDateFormatted, locale)
+                : emailCopy.dueLabel(dueDateFormatted, locale),
             daysUntilDue,
             paymentLink,
+            locale,
           });
 
-  const invoiceRef = invoiceNum ? `invoice ${invoiceNum}` : "invoice";
+  const invoiceRef = emailCopy.subject.invoiceRef(invoiceNum, locale);
   // "due soon" is only accurate with time left — same-day/late "before" sends need their own subject.
   const beforeDueSubject =
     daysUntilDue > 0
-      ? `${subjectPrefix}Reminder: ${invoiceRef} due soon from ${businessName}`
+      ? emailCopy.subject.dueSoon(subjectPrefix, invoiceRef, businessName, locale)
       : daysUntilDue === 0
-        ? `${subjectPrefix}Reminder: ${invoiceRef} due today from ${businessName}`
-        : `${subjectPrefix}Reminder: ${invoiceRef} was due recently from ${businessName}`;
+        ? emailCopy.subject.dueToday(subjectPrefix, invoiceRef, businessName, locale)
+        : emailCopy.subject.dueRecently(subjectPrefix, invoiceRef, businessName, locale);
   const subject =
     tone === "seriously_overdue"
-      ? `${subjectPrefix}Please arrange payment: ${invoiceRef} from ${businessName}`
+      ? emailCopy.subject.seriouslyOverdue(subjectPrefix, invoiceRef, businessName, locale)
       : tone === "overdue"
-        ? `${subjectPrefix}Overdue: ${invoiceRef} from ${businessName}`
+        ? emailCopy.subject.overdue(subjectPrefix, invoiceRef, businessName, locale)
         : beforeDueSubject;
 
   return { element, subject };

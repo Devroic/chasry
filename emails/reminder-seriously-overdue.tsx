@@ -6,6 +6,8 @@ import {
   ReminderLayout,
   ReminderText,
 } from "@/emails/components/reminder-layout";
+import { emailCopy } from "@/emails/copy";
+import type { Locale } from "@/lib/locale";
 
 export interface ReminderSeriouslyOverdueProps {
   businessName: string;
@@ -15,6 +17,7 @@ export interface ReminderSeriouslyOverdueProps {
   dueDateLabel: string;
   daysOverdue: number;
   paymentLink?: string;
+  locale?: Locale;
 }
 
 export default function ReminderSeriouslyOverdueEmail({
@@ -25,20 +28,24 @@ export default function ReminderSeriouslyOverdueEmail({
   dueDateLabel = "Was due 20 Jul 2026",
   daysOverdue = 30,
   paymentLink,
+  locale = "en",
 }: Partial<ReminderSeriouslyOverdueProps>) {
   return (
     <ReminderLayout
-      previewText={`Invoice is now ${daysOverdue} days overdue, please arrange payment`}
+      previewText={emailCopy.seriouslyOverdue.previewText(daysOverdue, locale)}
       businessName={businessName}
+      locale={locale}
     >
-      <ReminderHeading>Hi {clientName}, this payment is significantly overdue</ReminderHeading>
-      <ReminderText>
-        This invoice from {businessName} was due {daysOverdue} days ago. Please arrange payment as
-        soon as possible, or reply to this email if there&rsquo;s an issue we should know about.
-      </ReminderText>
-      <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />
-      {paymentLink && <PayNowButton href={paymentLink} />}
-      <ReminderText>We&rsquo;d appreciate this being resolved promptly.</ReminderText>
+      <ReminderHeading>{emailCopy.seriouslyOverdue.heading(clientName, locale)}</ReminderHeading>
+      <ReminderText>{emailCopy.seriouslyOverdue.body(businessName, daysOverdue, locale)}</ReminderText>
+      <InvoiceSummary
+        invoiceNumber={invoiceNumber}
+        amount={amount}
+        dueDateLabel={dueDateLabel}
+        locale={locale}
+      />
+      {paymentLink && <PayNowButton href={paymentLink} locale={locale} />}
+      <ReminderText>{emailCopy.seriouslyOverdue.closing(locale)}</ReminderText>
     </ReminderLayout>
   );
 }

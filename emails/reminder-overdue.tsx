@@ -6,6 +6,8 @@ import {
   ReminderLayout,
   ReminderText,
 } from "@/emails/components/reminder-layout";
+import { emailCopy } from "@/emails/copy";
+import type { Locale } from "@/lib/locale";
 
 export interface ReminderOverdueProps {
   businessName: string;
@@ -15,6 +17,7 @@ export interface ReminderOverdueProps {
   dueDateLabel: string;
   daysOverdue: number;
   paymentLink?: string;
+  locale?: Locale;
 }
 
 export default function ReminderOverdueEmail({
@@ -25,23 +28,24 @@ export default function ReminderOverdueEmail({
   dueDateLabel = "Was due 15 Aug 2026",
   daysOverdue = 1,
   paymentLink,
+  locale = "en",
 }: Partial<ReminderOverdueProps>) {
-  const dayWord = daysOverdue === 1 ? "day" : "days";
-
   return (
     <ReminderLayout
-      previewText={`Invoice is now ${daysOverdue} ${dayWord} overdue`}
+      previewText={emailCopy.overdue.previewText(daysOverdue, locale)}
       businessName={businessName}
+      locale={locale}
     >
-      <ReminderHeading>Hi {clientName}, this invoice is now overdue</ReminderHeading>
-      <ReminderText>
-        This invoice from {businessName} was due {daysOverdue} {dayWord} ago and hasn&rsquo;t
-        been marked as paid yet. If you&rsquo;ve already sent payment, thank you, feel free to
-        ignore this. Otherwise, please arrange payment when you get a chance.
-      </ReminderText>
-      <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />
-      {paymentLink && <PayNowButton href={paymentLink} />}
-      <ReminderText>Thanks for your business.</ReminderText>
+      <ReminderHeading>{emailCopy.overdue.heading(clientName, locale)}</ReminderHeading>
+      <ReminderText>{emailCopy.overdue.body(businessName, daysOverdue, locale)}</ReminderText>
+      <InvoiceSummary
+        invoiceNumber={invoiceNumber}
+        amount={amount}
+        dueDateLabel={dueDateLabel}
+        locale={locale}
+      />
+      {paymentLink && <PayNowButton href={paymentLink} locale={locale} />}
+      <ReminderText>{emailCopy.overdue.closing(locale)}</ReminderText>
     </ReminderLayout>
   );
 }

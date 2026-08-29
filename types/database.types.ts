@@ -20,6 +20,7 @@ export interface Database {
           email: string;
           currency: string;
           payment_link: string | null;
+          reminder_locale: "en" | "el";
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           subscription_status: SubscriptionStatus;
@@ -27,6 +28,7 @@ export interface Database {
           cancel_at_period_end: boolean;
           onboarded_at: string | null;
           welcome_email_sent_at: string | null;
+          terms_accepted_at: string | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & {
@@ -46,6 +48,7 @@ export interface Database {
           payment_link: string | null;
           reminder_offsets: number[] | null;
           reminder_enabled: boolean | null;
+          reminder_locale: "en" | "el" | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["customers"]["Row"]> & {

@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { BackLink } from "@/components/dashboard/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { CustomerForm } from "@/components/dashboard/customer-form";
-import { requireUser } from "@/lib/auth";
+import { requireUser, getProfile } from "@/lib/auth";
 import { updateCustomer } from "@/app/(dashboard)/customers/actions";
 
 export const metadata = { title: "Edit client" };
@@ -18,14 +18,17 @@ export default async function EditCustomerPage({
   const { id } = await params;
   const { supabase, user } = await requireUser();
 
-  const [{ data: customer }, { data: reminderSettings }] = await Promise.all([
+  const [{ data: customer }, { data: reminderSettings }, profile] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, name, email, phone, notes, payment_link, reminder_offsets, reminder_enabled")
+      .select(
+        "id, name, email, phone, notes, payment_link, reminder_offsets, reminder_enabled, reminder_locale"
+      )
       .eq("id", id)
       .eq("user_id", user.id)
       .single(),
     supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
+    getProfile(user.id),
   ]);
 
   if (!customer) notFound();
@@ -45,6 +48,7 @@ export default async function EditCustomerPage({
             accountDefaults={{
               offsets: reminderSettings?.offsets ?? [],
               enabled: reminderSettings?.enabled ?? true,
+              locale: profile?.reminder_locale ?? "en",
             }}
             cancelHref={`/customers/${customer.id}`}
             submitLabel={tCommon("saveChanges")}

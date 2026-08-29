@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, Pencil, Phone, Link2, Bell, StickyNote } from "lucide-react";
+import { Plus, Pencil, Phone, Link2, Bell, StickyNote, Languages } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -27,6 +27,12 @@ import { deleteCustomer } from "@/app/(dashboard)/customers/actions";
 
 export const metadata = { title: "Client" };
 
+function overrideBadgeClass(isCustom: boolean) {
+  return isCustom
+    ? "border-brand-primary/20 bg-brand-primary-tint text-brand-primary"
+    : "text-muted-foreground";
+}
+
 export default async function CustomerDetailPage({
   params,
   searchParams,
@@ -44,7 +50,7 @@ export default async function CustomerDetailPage({
       supabase
         .from("customers")
         .select(
-          "id, name, email, phone, notes, payment_link, reminder_offsets, reminder_enabled"
+          "id, name, email, phone, notes, payment_link, reminder_offsets, reminder_enabled, reminder_locale"
         )
         .eq("id", id)
         .eq("user_id", user.id)
@@ -55,7 +61,7 @@ export default async function CustomerDetailPage({
         .eq("customer_id", id)
         .eq("user_id", user.id)
         .order("due_date", { ascending: false }),
-      supabase.from("profiles").select("payment_link").eq("id", user.id).single(),
+      supabase.from("profiles").select("payment_link, reminder_locale").eq("id", user.id).single(),
       supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
     ]);
 
@@ -64,6 +70,7 @@ export default async function CustomerDetailPage({
   const paymentLink = customer.payment_link ?? profile?.payment_link;
   const scheduleOffsets = customer.reminder_offsets ?? settings?.offsets ?? [];
   const scheduleEnabled = customer.reminder_enabled ?? settings?.enabled ?? true;
+  const reminderLocale = customer.reminder_locale ?? profile?.reminder_locale ?? "en";
 
   const t = await getTranslations("customers");
   const tInvoices = await getTranslations("invoices");
@@ -130,8 +137,19 @@ export default async function CustomerDetailPage({
               ) : (
                 <span className="text-sm text-muted-foreground">{t("detail.paymentLinkNone")}</span>
               )}
-              <Badge variant="outline" className="text-muted-foreground">
+              <Badge variant="outline" className={overrideBadgeClass(!!customer.payment_link)}>
                 {customer.payment_link ? t("detail.customForClient") : t("detail.accountDefault")}
+              </Badge>
+            </div>
+          </div>
+          <div className="col-span-2 sm:col-span-3">
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Languages className="size-3.5" /> {t("detail.reminderLocale")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-foreground">{tCommon(`localeNames.${reminderLocale}`)}</span>
+              <Badge variant="outline" className={overrideBadgeClass(!!customer.reminder_locale)}>
+                {customer.reminder_locale ? t("detail.customForClient") : t("detail.accountDefault")}
               </Badge>
             </div>
           </div>
@@ -149,7 +167,7 @@ export default async function CustomerDetailPage({
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">{t("detail.reminderSchedule")}</CardTitle>
-          <Badge variant="outline" className="text-muted-foreground">
+          <Badge variant="outline" className={overrideBadgeClass(customer.reminder_offsets != null)}>
             {customer.reminder_offsets != null ? t("detail.customForClient") : t("detail.accountDefault")}
           </Badge>
         </CardHeader>

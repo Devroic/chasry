@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LOCALES } from "@/lib/locale";
 import { optionalText, optionalUrl, type Translator } from "./shared";
 
 export function customerSchema(t: Translator) {
@@ -17,6 +18,11 @@ export function customerSchema(t: Translator) {
     payment_link: optionalUrl(t),
     reminder_offsets: z.array(z.number().int().min(-60).max(60)).max(10).nullable(),
     reminder_enabled: z.boolean().nullable(),
+    reminder_locale: z
+      .enum(LOCALES)
+      .optional()
+      .or(z.literal(""))
+      .transform((v) => (v ? v : null)),
   });
 }
 

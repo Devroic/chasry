@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useActionState, startTransition } from "react";
 import { useTranslations } from "next-intl";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signup, type AuthFormState } from "@/app/(auth)/actions";
@@ -20,12 +21,14 @@ export default function SignupPage() {
   const tValidation = useTranslations("validation");
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
+    defaultValues: { terms_accepted: false },
   });
 
   const onValid = (data: SignupInput) => startTransition(() => formAction(toFormData(data)));
@@ -107,6 +110,45 @@ export default function SignupPage() {
             {...register("confirm_password")}
           />
         </FormField>
+
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2">
+            <Controller
+              name="terms_accepted"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="terms_accepted"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  aria-invalid={!!errors.terms_accepted}
+                  className="mt-0.5"
+                />
+              )}
+            />
+            <label htmlFor="terms_accepted" className="text-sm text-muted-foreground">
+              {t("termsAgreementPrefix")}{" "}
+              <Link
+                href="/terms?standalone=1"
+                target="_blank"
+                className="font-medium text-brand-primary hover:underline"
+              >
+                {t("termsLink")}
+              </Link>{" "}
+              {t("termsAgreementAnd")}{" "}
+              <Link
+                href="/privacy?standalone=1"
+                target="_blank"
+                className="font-medium text-brand-primary hover:underline"
+              >
+                {t("privacyLink")}
+              </Link>
+            </label>
+          </div>
+          {errors.terms_accepted && (
+            <p className="text-xs text-destructive">{errors.terms_accepted.message}</p>
+          )}
+        </div>
 
         <Button type="submit" className="h-11 w-full text-base font-semibold" loading={pending}>
           {pending ? t("submitting") : t("submit")}

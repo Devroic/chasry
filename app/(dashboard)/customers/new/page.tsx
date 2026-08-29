@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { BackLink } from "@/components/dashboard/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { CustomerForm } from "@/components/dashboard/customer-form";
-import { requireUser } from "@/lib/auth";
+import { requireUser, getProfile } from "@/lib/auth";
 import { createCustomer } from "@/app/(dashboard)/customers/actions";
 
 export const metadata = { title: "New client" };
@@ -19,11 +19,10 @@ export default async function NewCustomerPage({
   const t = await getTranslations("customers");
   const tCommon = await getTranslations("common");
 
-  const { data: reminderSettings } = await supabase
-    .from("reminder_settings")
-    .select("offsets, enabled")
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: reminderSettings }, profile] = await Promise.all([
+    supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
+    getProfile(user.id),
+  ]);
 
   return (
     <div className="max-w-4xl">
@@ -40,6 +39,7 @@ export default async function NewCustomerPage({
             accountDefaults={{
               offsets: reminderSettings?.offsets ?? [],
               enabled: reminderSettings?.enabled ?? true,
+              locale: profile?.reminder_locale ?? "en",
             }}
             cancelHref={return_to || "/customers"}
           />

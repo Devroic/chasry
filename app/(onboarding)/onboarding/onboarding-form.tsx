@@ -17,11 +17,14 @@ import {
 } from "@/components/ui/select";
 import { completeOnboarding, type OnboardingState } from "./actions";
 import { FREE_INVOICE_LIMIT } from "@/lib/plan";
-import { profileSchema, type ProfileInput } from "@/lib/validations/profile";
+import { profileSchema } from "@/lib/validations/profile";
 import { toFormData } from "@/lib/utils";
 import type { z } from "zod";
 
-type ProfileFormValues = z.input<ReturnType<typeof profileSchema>>;
+const onboardingSchema = (t: Parameters<typeof profileSchema>[0]) =>
+  profileSchema(t).pick({ business_name: true, currency: true });
+type OnboardingFormValues = z.input<ReturnType<typeof onboardingSchema>>;
+type OnboardingInput = z.infer<ReturnType<typeof onboardingSchema>>;
 
 const CURRENCIES = ["EUR", "USD", "GBP"];
 
@@ -42,8 +45,8 @@ export function OnboardingForm({
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<ProfileFormValues, unknown, ProfileInput>({
-    resolver: zodResolver(profileSchema(tValidation)),
+  } = useForm<OnboardingFormValues, unknown, OnboardingInput>({
+    resolver: zodResolver(onboardingSchema(tValidation)),
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
@@ -52,7 +55,7 @@ export function OnboardingForm({
     },
   });
 
-  const onValid = (data: ProfileInput) => startTransition(() => formAction(toFormData(data)));
+  const onValid = (data: OnboardingInput) => startTransition(() => formAction(toFormData(data)));
 
   return (
     <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">

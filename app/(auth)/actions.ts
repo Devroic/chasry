@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkAuthRateLimit } from "@/lib/rate-limit";
 import { safeNextPath } from "@/lib/supabase/middleware";
@@ -58,17 +58,28 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
     email: formData.get("email"),
     password: formData.get("password"),
     confirm_password: formData.get("confirm_password"),
+    terms_accepted: formData.get("terms_accepted") === "true",
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const locale = await getLocale();
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { business_name: parsed.data.business_name },
-      emailRedirectTo: `${appUrl}/signup/confirmed`,
+      // Read by handle_new_user (see migration 0016) to stamp terms_accepted_at
+      // and seed reminder_locale atomically — a follow-up UPDATE here would
+      // silently no-op before confirmation, same reasoning as business_name
+      // below. reminder_locale defaults to whatever language they're signing
+      // up in, so reminder emails match without a separate onboarding step.
+      data: {
+        business_name: parsed.data.business_name,
+        terms_accepted: parsed.data.terms_accepted,
+        reminder_locale: locale,
+      },
+      emailRedirectTo: `${appUrl}/auth/confirm?next=/signup/confirmed`,
     },
   });
   if (error) {
@@ -121,7 +132,7 @@ export async function requestPasswordReset(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appUrl}/reset-password/confirm`,
+    redirectTo: `${appUrl}/auth/confirm?next=/reset-password/confirm`,
   });
 
   // Always report success, regardless of whether the email exists — avoids

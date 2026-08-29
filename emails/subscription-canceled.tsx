@@ -9,7 +9,7 @@ export default function SubscriptionCanceledEmail({
   accessUntil: string;
 }) {
   return (
-    <AccountLayout previewText="Your Chasry Pro subscription is canceled">
+    <AccountLayout previewText="Your Chasry Pro subscription is canceled" appUrl={appUrl}>
       <AccountHeading>Sorry to see you go</AccountHeading>
       <AccountText>
         Your Pro subscription is canceled. You will keep unlimited invoices and clients until{" "}

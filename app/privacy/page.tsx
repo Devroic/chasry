@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { BackLink } from "@/components/dashboard/back-link";
 import { getOptionalUser, getProfile } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Privacy Policy" };
 
 const SUPPORT_EMAIL = "info@chasry.com";
-const LAST_UPDATED = "August 24, 2026";
+const LAST_UPDATED = "August 29, 2026";
 
 // Same reasoning as app/terms/page.tsx: deliberately English-only body text.
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -21,12 +23,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default async function PrivacyPage() {
+export default async function PrivacyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ standalone?: string }>;
+}) {
   // Same reasoning as /help and /terms: a signed-in, fully onboarded visitor
   // gets the real dashboard chrome instead of the marketing header.
   const user = await getOptionalUser();
   const profile = user ? await getProfile(user.id) : null;
   const inApp = Boolean(profile?.onboarded_at);
+  const tCommon = await getTranslations("common");
+  // Opened via ?standalone=1 (the "Privacy" link on the signup checkbox,
+  // target="_blank"): a fresh tab with no history of its own, so a Back
+  // link would have nowhere sensible to go.
+  const { standalone } = await searchParams;
 
   const content = (
     <>
@@ -52,6 +63,7 @@ export default async function PrivacyPage() {
                 <li>Your password, stored securely by our authentication provider (we never see it in plain text),</li>
                 <li>Your currency preference, and your language and theme choices,</li>
                 <li>Your subscription status and Stripe customer and subscription identifiers, once you upgrade to Pro,</li>
+                <li>The date and time you accepted these Terms and this Privacy Policy,</li>
                 <li>Basic technical data (like error reports) that helps us keep the service working.</li>
               </ul>
             </Section>
@@ -62,6 +74,12 @@ export default async function PrivacyPage() {
                 address, and optionally their phone number, along with the invoice details you log
                 (amount, due date, invoice number, notes, and a payment link if you set one). We
                 collect this because you enter it, not directly from your clients themselves.
+              </p>
+              <p>
+                If you attach a file to an invoice (for example, a PDF), Pro plan only, we store
+                that file so it can be included with your reminder emails. It may contain your
+                client&apos;s own details if you&apos;ve included them in it, that&apos;s your
+                content, we just store and send it on your behalf.
               </p>
               <p>
                 For this client data, you are responsible for having a lawful reason to contact your
@@ -98,6 +116,12 @@ export default async function PrivacyPage() {
                 <li>Sentry, for error monitoring. We keep what we send it minimal, for example an invoice ID, never your client&apos;s email address or the invoice amount,</li>
                 <li>Vercel, to host the application.</li>
               </ul>
+              <p>
+                Separately, a small number of authorized Chasry staff can access account data,
+                yours and, where necessary to help you, your clients&apos; contact and invoice
+                details you&apos;ve entered, to provide support, investigate abuse, or keep the
+                service running. That access is limited to what&apos;s needed for those purposes.
+              </p>
             </Section>
 
             <Section title="6. Where data is processed">
@@ -180,7 +204,10 @@ export default async function PrivacyPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
       <SiteHeader />
-      <main className="flex-1 px-6 py-16">
+      <main className="flex-1 px-6 py-10">
+        {!standalone && (
+          <BackLink href="/" label={tCommon("back")} className="mb-6" useBrowserBack />
+        )}
         <div className="mx-auto max-w-3xl">{content}</div>
       </main>
       <SiteFooter />

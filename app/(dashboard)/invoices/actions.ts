@@ -242,7 +242,11 @@ export async function sendPreviewReminder(invoiceId: string) {
   const { supabase, user } = await requireUser();
 
   const [{ data: profile }, { data: accountSettings }] = await Promise.all([
-    supabase.from("profiles").select("business_name, email, payment_link").eq("id", user.id).single(),
+    supabase
+      .from("profiles")
+      .select("business_name, email, payment_link, reminder_locale")
+      .eq("id", user.id)
+      .single(),
     supabase.from("reminder_settings").select("offsets").eq("user_id", user.id).single(),
   ]);
 
@@ -258,7 +262,7 @@ export async function sendPreviewReminder(invoiceId: string) {
   const { data: customer } = invoice
     ? await supabase
         .from("customers")
-        .select("name, payment_link, reminder_offsets")
+        .select("name, payment_link, reminder_offsets, reminder_locale")
         .eq("id", invoice.customer_id)
         .single()
     : { data: null };
@@ -273,6 +277,7 @@ export async function sendPreviewReminder(invoiceId: string) {
 
   const businessName = profile.business_name || profile.email;
   const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
+  const locale = customer.reminder_locale ?? profile.reminder_locale;
 
   for (const offsetDays of [...offsets].sort((a, b) => a - b)) {
     const { element, subject } = buildReminderEmail({
@@ -285,6 +290,7 @@ export async function sendPreviewReminder(invoiceId: string) {
       dueDate: invoice.due_date,
       paymentLink,
       subjectPrefix: "[Preview] ",
+      locale,
     });
 
     await resend.emails.send({
@@ -310,7 +316,11 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
   const tErrors = await getTranslations("invoices.form.errors");
 
   const [{ data: profile }, { data: accountSettings }] = await Promise.all([
-    supabase.from("profiles").select("business_name, email, payment_link").eq("id", user.id).single(),
+    supabase
+      .from("profiles")
+      .select("business_name, email, payment_link, reminder_locale")
+      .eq("id", user.id)
+      .single(),
     supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
   ]);
 
@@ -326,7 +336,7 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
   const { data: customer } = invoice
     ? await supabase
         .from("customers")
-        .select("name, email, payment_link, reminder_offsets, reminder_enabled")
+        .select("name, email, payment_link, reminder_offsets, reminder_enabled, reminder_locale")
         .eq("id", invoice.customer_id)
         .single()
     : { data: null };
@@ -355,6 +365,7 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
 
   const businessName = profile.business_name || profile.email;
   const paymentLink = customer.payment_link ?? profile.payment_link ?? undefined;
+  const locale = customer.reminder_locale ?? profile.reminder_locale;
 
   const { element, subject } = buildReminderEmail({
     offsetDays,
@@ -364,6 +375,7 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
     amount: Number(invoice.amount),
     currency: invoice.currency,
     dueDate: invoice.due_date,
+    locale,
     paymentLink,
   });
 

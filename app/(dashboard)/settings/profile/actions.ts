@@ -21,6 +21,7 @@ export async function updateProfile(
     business_name: formData.get("business_name"),
     currency: formData.get("currency"),
     payment_link: formData.get("payment_link"),
+    reminder_locale: formData.get("reminder_locale"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 

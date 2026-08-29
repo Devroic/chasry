@@ -6,6 +6,8 @@ import {
   ReminderLayout,
   ReminderText,
 } from "@/emails/components/reminder-layout";
+import { emailCopy } from "@/emails/copy";
+import type { Locale } from "@/lib/locale";
 
 export interface ReminderBeforeDueProps {
   businessName: string;
@@ -15,6 +17,7 @@ export interface ReminderBeforeDueProps {
   dueDateLabel: string;
   daysUntilDue: number;
   paymentLink?: string;
+  locale?: Locale;
 }
 
 export default function ReminderBeforeDueEmail({
@@ -25,29 +28,26 @@ export default function ReminderBeforeDueEmail({
   dueDateLabel = "Due 29 Aug 2026",
   daysUntilDue = 7,
   paymentLink,
+  locale = "en",
 }: Partial<ReminderBeforeDueProps>) {
-  // Can go negative if the due date has technically passed by send time — the verb
-  // changes tense (is due / was due) so the sentence stays grammatical.
-  const dueClause =
-    daysUntilDue > 0
-      ? `is due in ${daysUntilDue} ${daysUntilDue === 1 ? "day" : "days"}`
-      : daysUntilDue === 0
-        ? "is due today"
-        : `was due ${-daysUntilDue} ${-daysUntilDue === 1 ? "day" : "days"} ago`;
+  const dueClause = emailCopy.beforeDue.dueClause(daysUntilDue, locale);
 
   return (
     <ReminderLayout
-      previewText={`Friendly reminder: invoice ${dueClause}`}
+      previewText={emailCopy.beforeDue.previewText(dueClause, locale)}
       businessName={businessName}
+      locale={locale}
     >
-      <ReminderHeading>Hi {clientName}, just a friendly reminder</ReminderHeading>
-      <ReminderText>
-        This invoice from {businessName} {dueClause}. No action needed if it&rsquo;s already
-        scheduled, this is just a heads-up.
-      </ReminderText>
-      <InvoiceSummary invoiceNumber={invoiceNumber} amount={amount} dueDateLabel={dueDateLabel} />
-      {paymentLink && <PayNowButton href={paymentLink} />}
-      <ReminderText>Thanks for your business.</ReminderText>
+      <ReminderHeading>{emailCopy.beforeDue.heading(clientName, locale)}</ReminderHeading>
+      <ReminderText>{emailCopy.beforeDue.body(businessName, dueClause, locale)}</ReminderText>
+      <InvoiceSummary
+        invoiceNumber={invoiceNumber}
+        amount={amount}
+        dueDateLabel={dueDateLabel}
+        locale={locale}
+      />
+      {paymentLink && <PayNowButton href={paymentLink} locale={locale} />}
+      <ReminderText>{emailCopy.beforeDue.closing(locale)}</ReminderText>
     </ReminderLayout>
   );
 }

@@ -20,6 +20,7 @@ import { updateProfile, type ProfileFormState } from "./actions";
 import { profileSchema, type ProfileInput } from "@/lib/validations/profile";
 import { toFormData } from "@/lib/utils";
 import { useSuccessToast } from "@/lib/use-success-toast";
+import { LOCALES, type Locale } from "@/lib/locale";
 import type { z } from "zod";
 
 type ProfileFormValues = z.input<ReturnType<typeof profileSchema>>;
@@ -34,6 +35,7 @@ export function ProfileForm({
     business_name: string;
     currency: string;
     payment_link: string;
+    reminder_locale: "en" | "el";
   };
   email: string;
 }) {
@@ -44,6 +46,10 @@ export function ProfileForm({
   const t = useTranslations("settings.profile");
   const tCommon = useTranslations("common");
   const tValidation = useTranslations("validation");
+  const localeLabels: Record<Locale, string> = {
+    en: tCommon("localeNames.en"),
+    el: tCommon("localeNames.el"),
+  };
   const {
     register,
     control,
@@ -57,6 +63,7 @@ export function ProfileForm({
       business_name: defaultValues.business_name,
       currency: defaultValues.currency,
       payment_link: defaultValues.payment_link,
+      reminder_locale: defaultValues.reminder_locale,
     },
   });
 
@@ -118,6 +125,32 @@ export function ProfileForm({
           placeholder={tCommon("paymentLinkPlaceholder")}
           aria-invalid={!!errors.payment_link}
           {...register("payment_link")}
+        />
+      </FormField>
+
+      <FormField
+        label={t("reminderLocaleLabel")}
+        htmlFor="reminder_locale"
+        error={errors.reminder_locale?.message}
+        hint={errors.reminder_locale ? undefined : t("reminderLocaleHint")}
+      >
+        <Controller
+          name="reminder_locale"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="reminder_locale" className="w-full sm:w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LOCALES.map((locale) => (
+                  <SelectItem key={locale} value={locale}>
+                    {localeLabels[locale]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
       </FormField>
 

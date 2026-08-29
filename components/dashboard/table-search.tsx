@@ -44,7 +44,7 @@ export function TableSearch({
         onChange={(e) => {
           if (e.target.value === "") e.target.form?.requestSubmit();
         }}
-        className="h-9 w-full rounded-lg border border-input bg-transparent py-1 pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:w-64"
+        className="h-9 w-full rounded-lg border border-input bg-transparent py-1 pr-3 pl-10 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:w-80"
       />
     </Form>
   );

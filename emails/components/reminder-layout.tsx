@@ -11,6 +11,8 @@ import {
   Text,
 } from "@react-email/components";
 import * as React from "react";
+import { emailCopy } from "@/emails/copy";
+import type { Locale } from "@/lib/locale";
 
 const BRAND = {
   primary: "#23458D",
@@ -39,10 +41,12 @@ const DARK_MODE_OVERRIDE = `
 export function ReminderLayout({
   previewText,
   businessName,
+  locale = "en",
   children,
 }: {
   previewText: string;
   businessName: string;
+  locale?: Locale;
   children: React.ReactNode;
 }) {
   return (
@@ -91,11 +95,11 @@ export function ReminderLayout({
 
           <Hr style={{ borderColor: BRAND.border, margin: "28px 0 16px" }} />
           <Text className="chasry-footer" style={{ fontSize: "12px", color: BRAND.neutral, margin: 0 }}>
-            This is an automatic payment reminder sent on behalf of {businessName} via{" "}
+            {emailCopy.footerPrefix(businessName, locale)}
             <span className="chasry-footer-brand" style={{ color: BRAND.primary, fontWeight: 600 }}>
               Chasry
             </span>
-            . Just reply to this email to reach {businessName} directly.
+            {emailCopy.footerSuffix(businessName, locale)}
           </Text>
         </Container>
       </Body>
@@ -126,10 +130,12 @@ export function InvoiceSummary({
   invoiceNumber,
   amount,
   dueDateLabel,
+  locale = "en",
 }: {
   invoiceNumber?: string;
   amount: string;
   dueDateLabel: string;
+  locale?: Locale;
 }) {
   return (
     <Section
@@ -143,7 +149,7 @@ export function InvoiceSummary({
     >
       {invoiceNumber && (
         <Text className="chasry-summary-label" style={{ fontSize: "13px", color: BRAND.neutral, margin: "0 0 4px" }}>
-          Invoice {invoiceNumber}
+          {emailCopy.invoiceLabel(invoiceNumber, locale)}
         </Text>
       )}
       <Text
@@ -159,7 +165,7 @@ export function InvoiceSummary({
   );
 }
 
-export function PayNowButton({ href }: { href: string }) {
+export function PayNowButton({ href, locale = "en" }: { href: string; locale?: Locale }) {
   return (
     <Section style={{ margin: "0 0 20px" }}>
       <Button
@@ -175,7 +181,7 @@ export function PayNowButton({ href }: { href: string }) {
           textDecoration: "none",
         }}
       >
-        Pay now
+        {emailCopy.payNow(locale)}
       </Button>
     </Section>
   );

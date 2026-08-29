@@ -38,9 +38,11 @@ const DARK_MODE_OVERRIDE = `
 // styling, but with the mascot logo/footer instead of the per-business eyebrow.
 export function AccountLayout({
   previewText,
+  appUrl,
   children,
 }: {
   previewText: string;
+  appUrl: string;
   children: React.ReactNode;
 }) {
   return (
@@ -72,7 +74,7 @@ export function AccountLayout({
           }}
         >
           <Img
-            src="https://chasry.com/assets/img/icon.png"
+            src={`${appUrl}/brand/icon-512.png`}
             width="48"
             height="48"
             alt="Chasry"

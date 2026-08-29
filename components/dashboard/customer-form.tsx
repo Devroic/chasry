@@ -3,19 +3,31 @@
 import { useActionState, startTransition, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ReminderOverrideSection } from "@/components/dashboard/reminder-override-section";
 import type { CustomerFormState } from "@/app/(dashboard)/customers/actions";
 import { customerSchema, type CustomerInput } from "@/lib/validations/customer";
 import { toFormData } from "@/lib/utils";
 import { encodeReminderOverride } from "@/lib/reminder-override";
+import { LOCALES, type Locale } from "@/lib/locale";
 import type { z } from "zod";
+
+/** Radix Select can't take an empty-string item value, so this sentinel stands in
+ * for "no override" and is translated back to `null` in onValueChange. */
+const ACCOUNT_DEFAULT_SENTINEL = "account_default";
 
 type CustomerFormValues = z.input<ReturnType<typeof customerSchema>>;
 
@@ -36,9 +48,10 @@ export function CustomerForm({
     payment_link: string | null;
     reminder_offsets: number[] | null;
     reminder_enabled: boolean | null;
+    reminder_locale: "en" | "el" | null;
   };
   /** The account's own reminder default — used to describe and seed the override section. */
-  accountDefaults: { offsets: number[]; enabled: boolean };
+  accountDefaults: { offsets: number[]; enabled: boolean; locale: "en" | "el" };
   submitLabel?: string;
   /** When set, a Cancel button appears next to Save and returns here. */
   cancelHref?: string;
@@ -49,8 +62,13 @@ export function CustomerForm({
   const tCommon = useTranslations("common");
   const tReminderOverride = useTranslations("reminderOverride");
   const tValidation = useTranslations("validation");
+  const localeLabels: Record<Locale, string> = {
+    en: tCommon("localeNames.en"),
+    el: tCommon("localeNames.el"),
+  };
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<CustomerFormValues, unknown, CustomerInput>({
@@ -65,6 +83,7 @@ export function CustomerForm({
       payment_link: defaultValues?.payment_link ?? "",
       reminder_offsets: null,
       reminder_enabled: null,
+      reminder_locale: defaultValues?.reminder_locale ?? "",
     },
   });
 
@@ -89,6 +108,7 @@ export function CustomerForm({
       phone: data.phone,
       notes: data.notes,
       payment_link: data.payment_link,
+      reminder_locale: data.reminder_locale,
       return_to: returnTo,
     });
     encodeReminderOverride(formData, reminderActive, reminderEnabled, reminderOffsets);
@@ -142,6 +162,33 @@ export function CustomerForm({
           placeholder={tCommon("paymentLinkPlaceholder")}
           aria-invalid={!!errors.payment_link}
           {...register("payment_link")}
+        />
+      </FormField>
+
+      <FormField label={t("reminderLocaleLabel")} htmlFor="reminder_locale">
+        <Controller
+          name="reminder_locale"
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={field.value || ACCOUNT_DEFAULT_SENTINEL}
+              onValueChange={(v) => field.onChange(v === ACCOUNT_DEFAULT_SENTINEL ? "" : v)}
+            >
+              <SelectTrigger id="reminder_locale" className="w-full sm:w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ACCOUNT_DEFAULT_SENTINEL}>
+                  {t("reminderLocaleAccountDefault")} ({localeLabels[accountDefaults.locale]})
+                </SelectItem>
+                {LOCALES.map((locale) => (
+                  <SelectItem key={locale} value={locale}>
+                    {localeLabels[locale]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         />
       </FormField>
 

@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { BackLink } from "@/components/dashboard/back-link";
 import { getOptionalUser, getProfile } from "@/lib/auth";
 import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
 
 export const metadata: Metadata = { title: "Terms of Service" };
 
 const SUPPORT_EMAIL = "info@chasry.com";
-const LAST_UPDATED = "August 24, 2026";
+const LAST_UPDATED = "August 28, 2026";
 
 // Deliberately not run through next-intl — see the i18n section of
 // ARCHITECTURE.md: legal text carries real risk if a translation gets a
@@ -26,7 +28,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default async function TermsPage() {
+export default async function TermsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ standalone?: string }>;
+}) {
   // Same reasoning as /help: a signed-in visitor gets the real dashboard
   // chrome instead of the marketing header, so opening this from inside the
   // app doesn't feel like being dropped outside it. Only a *finished*
@@ -35,6 +41,11 @@ export default async function TermsPage() {
   const user = await getOptionalUser();
   const profile = user ? await getProfile(user.id) : null;
   const inApp = Boolean(profile?.onboarded_at);
+  const tCommon = await getTranslations("common");
+  // Opened via ?standalone=1 (the "Terms" link on the signup checkbox,
+  // target="_blank"): a fresh tab with no history of its own, so a Back
+  // link would have nowhere sensible to go.
+  const { standalone } = await searchParams;
 
   const content = (
     <>
@@ -89,6 +100,10 @@ export default async function TermsPage() {
                   jurisdiction). Chasry provides the tool, but you&apos;re responsible for how you
                   use it,
                 </li>
+                <li>
+                  Attach files to your invoices (for example, PDFs) that are unlawful, infringing,
+                  or that you don&apos;t have the right to send to your clients,
+                </li>
                 <li>Attempt to disrupt, reverse-engineer, or gain unauthorized access to Chasry or other users&apos; accounts.</li>
               </ul>
               <p>
@@ -140,9 +155,26 @@ export default async function TermsPage() {
                 any claim relating to Chasry is limited to the amount you paid us in the 12 months
                 before the claim arose.
               </p>
+              <p>
+                You&apos;re solely responsible for the accuracy and content of the invoices,
+                reminders, and any file attachments Chasry sends on your behalf, and for the
+                accuracy of the client contact details you provide. We&apos;re not liable for how a
+                client responds to, or any dispute arising from, a reminder or attachment sent using
+                information or files you supplied.
+              </p>
             </Section>
 
-            <Section title="9. Ending your account">
+            <Section title="9. Indemnification">
+              <p>
+                You agree to defend, indemnify, and hold Chasry harmless from any claim, demand,
+                loss, or expense, including reasonable legal fees, arising from your use of
+                Chasry, the invoices, reminders, or file attachments you send through it, or any
+                dispute between you and your own clients. This includes claims brought against us
+                by your clients or by other third parties as a result of how you used the service.
+              </p>
+            </Section>
+
+            <Section title="10. Ending your account">
               <p>
                 You can delete your account at any time from Settings &rsaquo; Profile. This cancels
                 any active subscription and permanently removes your account, your clients, your
@@ -151,7 +183,7 @@ export default async function TermsPage() {
               </p>
             </Section>
 
-            <Section title="10. Changes to these terms">
+            <Section title="11. Changes to these terms">
               <p>
                 We may update these Terms from time to time. We&apos;ll update the &quot;last
                 updated&quot; date above, and for material changes, we&apos;ll try to notify you by
@@ -159,11 +191,11 @@ export default async function TermsPage() {
               </p>
             </Section>
 
-            <Section title="11. Governing law">
+            <Section title="12. Governing law">
               <p>These Terms are governed by the laws of Cyprus, without regard to conflict-of-law principles.</p>
             </Section>
 
-            <Section title="12. Contact">
+            <Section title="13. Contact">
               <p>
                 Questions about these Terms? Email us at{" "}
                 <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-primary hover:underline">
@@ -192,7 +224,10 @@ export default async function TermsPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
       <SiteHeader />
-      <main className="flex-1 px-6 py-16">
+      <main className="flex-1 px-6 py-10">
+        {!standalone && (
+          <BackLink href="/" label={tCommon("back")} className="mb-6" useBrowserBack />
+        )}
         <div className="mx-auto max-w-3xl">{content}</div>
       </main>
       <SiteFooter />

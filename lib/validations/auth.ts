@@ -8,6 +8,7 @@ export function signupSchema(t: Translator) {
       email: z.string().trim().email(t("emailInvalid")).max(320),
       password: z.string().min(8, t("passwordMinLength")).max(200),
       confirm_password: z.string().min(1, t("passwordRequired")),
+      terms_accepted: z.boolean().refine((v) => v === true, { message: t("termsRequired") }),
     })
     .refine((data) => data.password === data.confirm_password, {
       message: t("passwordsDoNotMatch"),

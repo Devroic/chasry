@@ -17,6 +17,7 @@ export default async function ProfileSettingsPage() {
               business_name: profile.business_name ?? "",
               currency: profile.currency,
               payment_link: profile.payment_link ?? "",
+              reminder_locale: profile.reminder_locale,
             }}
             email={profile.email}
           />

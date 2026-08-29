@@ -14,10 +14,12 @@ export async function completeOnboarding(
   const t = await getTranslations("validation");
   const tErrors = await getTranslations("onboarding.errors");
 
-  const parsed = profileSchema(t).safeParse({
-    business_name: formData.get("business_name"),
-    currency: formData.get("currency"),
-  });
+  const parsed = profileSchema(t)
+    .pick({ business_name: true, currency: true })
+    .safeParse({
+      business_name: formData.get("business_name"),
+      currency: formData.get("currency"),
+    });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
   const supabase = await createClient();
