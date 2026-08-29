@@ -35,7 +35,10 @@ export function BackLink({
         }
       }}
       className={cn(
-        "mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground",
+        // -ml-5 cancels the chevron's own width + gap (size-4 + gap-1 = 20px),
+        // so the icon hangs left of the label text, and the label lines up
+        // with whatever title sits below it instead of trailing 20px right of it.
+        "-ml-5 mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground",
         className
       )}
     >

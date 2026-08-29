@@ -216,7 +216,10 @@ export default async function TermsPage({
         subscriptionStatus={profile.subscription_status}
         footer={<SiteFooter />}
       >
-        <div className="max-w-3xl">{content}</div>
+        <div className="max-w-3xl">
+          <BackLink href="/dashboard" label={tCommon("back")} useBrowserBack />
+          {content}
+        </div>
       </DashboardShell>
     );
   }
@@ -226,7 +229,7 @@ export default async function TermsPage({
       <SiteHeader />
       <main className="flex-1 px-6 py-10">
         {!standalone && (
-          <BackLink href="/" label={tCommon("back")} className="mb-6" useBrowserBack />
+          <BackLink href="/" label={tCommon("back")} className="ml-0 mb-6" useBrowserBack />
         )}
         <div className="mx-auto max-w-3xl">{content}</div>
       </main>

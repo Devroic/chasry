@@ -64,7 +64,10 @@ export default async function HelpPage() {
         subscriptionStatus={profile.subscription_status}
         footer={<SiteFooter />}
       >
-        <div className="max-w-2xl">{content}</div>
+        <div className="max-w-2xl">
+          <BackLink href="/dashboard" label={tCommon("back")} useBrowserBack />
+          {content}
+        </div>
       </DashboardShell>
     );
   }
@@ -73,7 +76,7 @@ export default async function HelpPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
       <SiteHeader />
       <main className="flex-1 px-6 py-10">
-        <BackLink href="/" label={tCommon("back")} className="mb-6" useBrowserBack />
+        <BackLink href="/" label={tCommon("back")} className="ml-0 mb-6" useBrowserBack />
         <div className="mx-auto max-w-2xl">{content}</div>
       </main>
       <SiteFooter />
