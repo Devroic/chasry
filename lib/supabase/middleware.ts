@@ -3,26 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/reset-password"];
 
-// These consume a one-time link from an email (password reset, signup
-// confirmation) and must render regardless of whether the visitor already
-// has an active session elsewhere — excluded from the "bounce logged-in
-// users off auth pages" redirect below so clicking the link never skips
-// straight to /dashboard before the page can show its result.
+// One-time email links (password reset, signup confirm) — excluded from the auth-page bounce below.
 const SESSION_ACTION_PATHS = ["/reset-password/confirm", "/signup/confirmed"];
 
-// Only these need a session — everything else (including a mistyped URL)
-// falls through to Next.js's own routing, so a logged-out visitor hitting a
-// bad link sees the real not-found page instead of always bouncing to
-// /login. Every protected page also checks auth itself server-side
-// (requireUser()/requireOnboardedUser() in lib/auth.ts) — this redirect is
-// a UX convenience (skip the flash of a page that's about to bounce you
-// anyway), not the actual security boundary.
+// UX convenience only — every protected page also checks auth itself server-side.
 const PROTECTED_PREFIXES = ["/dashboard", "/invoices", "/customers", "/settings", "/onboarding"];
 
-// Browsers normalize backslashes to forward slashes when resolving a
-// relative reference against an http(s) base, so "/\evil.com" would
-// otherwise slip past the "//" check and resolve to a protocol-relative
-// off-site redirect ("//evil.com").
+// Rejects backslashes too — browsers normalize "/\evil.com" into an off-site "//evil.com".
 export function isSafeRelativePath(path: string) {
   return path.startsWith("/") && !path.startsWith("//") && !path.includes("\\");
 }

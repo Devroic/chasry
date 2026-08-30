@@ -22,8 +22,7 @@ const BRAND = {
 
 const SUPPORT_EMAIL = "info@chasry.com";
 
-// color-scheme meta tags alone don't stop Gmail's dark mode inversion — re-asserting
-// the same light colors inside a real prefers-color-scheme media query with !important does.
+// Re-asserts light colors under prefers-color-scheme to stop Gmail's dark mode inversion.
 const DARK_MODE_OVERRIDE = `
   @media (prefers-color-scheme: dark) {
     .chasry-body { background-color: #F4F6FB !important; }
@@ -34,8 +33,7 @@ const DARK_MODE_OVERRIDE = `
   }
 `;
 
-// Layout for Chasry-to-subscriber lifecycle emails — mirrors ReminderLayout's card
-// styling, but with the mascot logo/footer instead of the per-business eyebrow.
+// Layout for lifecycle emails — mirrors ReminderLayout's card styling with the mascot logo.
 export function AccountLayout({
   previewText,
   appUrl,

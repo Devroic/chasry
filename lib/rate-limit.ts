@@ -7,9 +7,7 @@ const hasUpstash =
 
 const redis = hasUpstash ? Redis.fromEnv() : null;
 
-// Upstash is optional (free tier, but an extra account to set up). Without it
-// configured, rate limiting is a no-op instead of blocking auth entirely —
-// suitable for local dev, not recommended left off in production.
+// Without Upstash configured, rate limiting is a no-op — fine for local dev, not for production.
 const authLimiter = redis
   ? new Ratelimit({
       redis,

@@ -1,7 +1,4 @@
--- signup() now also passes reminder_locale (the UI language they're signing
--- up in) as auth metadata, so reminder emails default to a sensible language
--- without a separate onboarding step. Falls back to the column default ('en')
--- for anything missing or not a recognized locale.
+-- Seeds reminder_locale from signup metadata, falling back to 'en'.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql

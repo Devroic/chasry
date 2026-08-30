@@ -38,9 +38,7 @@ export function DashboardNav({
           );
         }
 
-        // Collapsed: icon only, with the label as an aria-label for screen
-        // readers and a Tooltip for sighted mouse/keyboard users, instead of
-        // silently dropping the label.
+        // Collapsed: icon only, label moves to aria-label + a Tooltip instead of dropping.
         return (
           <Tooltip key={href}>
             <TooltipTrigger asChild>

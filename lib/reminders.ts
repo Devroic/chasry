@@ -73,11 +73,7 @@ export function describeReminderSchedule(
     .filter((o) => o > 0)
     .sort((a, b) => a - b);
 
-  // The ICU plural category needs a single representative count, not the
-  // list length — "7, 3 days before" is plural even though before.length
-  // is 2 numbers, but "1 day before" must be singular. Only a lone "1"
-  // should read as singular; anything else (a longer list, or a single
-  // number that isn't 1) reads as plural.
+  // ICU plural category needs a representative count, not the list length.
   const pluralCount = (list: number[]) => (list.length === 1 ? list[0] : 2);
 
   const parts: string[] = [];

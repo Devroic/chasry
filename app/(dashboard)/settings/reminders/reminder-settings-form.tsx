@@ -44,9 +44,7 @@ export function ReminderSettingsForm({
     );
   }
 
-  // The server action still reads individual `offset_${n}` keys, so the
-  // validated {enabled, offsets} shape is translated into that FormData
-  // format here rather than changing the action's contract.
+  // Translated to individual offset_${n} keys — the server action's existing FormData shape.
   const onValid = (data: ReminderOffsetsInput) => {
     const formData = new FormData();
     formData.set("enabled", data.enabled ? "on" : "");

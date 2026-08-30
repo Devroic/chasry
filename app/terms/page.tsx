@@ -12,11 +12,7 @@ export const metadata: Metadata = { title: "Terms of Service" };
 const SUPPORT_EMAIL = "info@chasry.com";
 const LAST_UPDATED = "August 29, 2026";
 
-// Deliberately not run through next-intl — see the i18n section of
-// ARCHITECTURE.md: legal text carries real risk if a translation gets a
-// term subtly wrong, and the app already accepts partial i18n coverage
-// elsewhere (Server Action errors) for the same reason. Chrome around this
-// page (header, footer, the Back label) stays translated as normal.
+// Deliberately not run through next-intl — legal text is too risky to mistranslate.
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-8 first:mt-0">
@@ -33,18 +29,12 @@ export default async function TermsPage({
 }: {
   searchParams: Promise<{ standalone?: string }>;
 }) {
-  // Same reasoning as /help: a signed-in visitor gets the real dashboard
-  // chrome instead of the marketing header, so opening this from inside the
-  // app doesn't feel like being dropped outside it. Only a *finished*
-  // account gets the shell — a half-onboarded user would get nav links that
-  // just bounce them back to /onboarding.
+  // Signed-in, fully onboarded visitors get the dashboard shell instead of the marketing header.
   const user = await getOptionalUser();
   const profile = user ? await getProfile(user.id) : null;
   const inApp = Boolean(profile?.onboarded_at);
   const tCommon = await getTranslations("common");
-  // Opened via ?standalone=1 (the "Terms" link on the signup checkbox,
-  // target="_blank"): a fresh tab with no history of its own, so a Back
-  // link would have nowhere sensible to go.
+  // ?standalone=1: opened in a fresh tab (signup checkbox link), so no Back link.
   const { standalone } = await searchParams;
 
   const content = (

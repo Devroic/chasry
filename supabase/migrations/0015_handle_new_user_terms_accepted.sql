@@ -1,8 +1,4 @@
--- signup() now also passes terms_accepted (boolean) as auth metadata, the
--- same mechanism 0006 already uses for business_name -- read here so
--- acceptance is recorded atomically at signup by a security-definer trigger
--- RLS can't block, instead of a follow-up UPDATE that would silently fail
--- whenever email confirmation is required and there's no session yet.
+-- Stamps terms_accepted_at atomically at signup, same mechanism 0006 uses for business_name.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql

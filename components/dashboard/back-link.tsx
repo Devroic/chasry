@@ -13,14 +13,9 @@ export function BackLink({
 }: {
   href: string;
   label: string;
-  /** Extends the default `mb-4` — public pages with a large h1 right below
-   *  need more room than the dashboard's smaller PageHeader titles do. */
+  /** Overrides the default `mb-4`. */
   className?: string;
-  /** For pages reachable from many different contexts (help/terms/privacy,
-   *  linked from login, signup, the homepage, etc.): return to wherever the
-   *  visitor actually came from instead of always going to `href`. `href`
-   *  stays as the fallback when there's no previous page in this tab's
-   *  history (e.g. a direct link). */
+  /** Returns to the previous page instead of always going to `href`. */
   useBrowserBack?: boolean;
 }) {
   const router = useRouter();
@@ -35,9 +30,7 @@ export function BackLink({
         }
       }}
       className={cn(
-        // -ml-5 cancels the chevron's own width + gap (size-4 + gap-1 = 20px),
-        // so the icon hangs left of the label text, and the label lines up
-        // with whatever title sits below it instead of trailing 20px right of it.
+        // -ml-5 hangs the icon left so the label aligns with the title below.
         "-ml-5 mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground",
         className
       )}

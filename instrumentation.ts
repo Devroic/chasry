@@ -1,6 +1,4 @@
-// Next.js entry point for server-side instrumentation. Loads the right Sentry
-// config per runtime — the Node one for Server Actions/Route Handlers/the
-// cron, the Edge one for proxy.ts.
+// Loads the right Sentry config per runtime (Node for Server Actions/cron, Edge for proxy.ts).
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("./sentry.server.config");

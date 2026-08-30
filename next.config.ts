@@ -38,9 +38,7 @@ export default withSentryConfig(withNextIntl(nextConfig), {
   org: "chasry",
   project: "javascript-nextjs",
 
-  // Source map upload needs SENTRY_AUTH_TOKEN (a real secret — never commit
-  // it; set it in .env.local and in Vercel's env vars). Without it the build
-  // still succeeds, you just get minified stack traces in Sentry.
+  // Source map upload needs SENTRY_AUTH_TOKEN; without it, minified traces only.
   silent: !process.env.CI,
 
   // Strips the uploaded source maps from the client bundle so the public

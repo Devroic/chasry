@@ -17,9 +17,7 @@ function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus
   if ((DIRECTLY_MAPPED_STATUSES as string[]).includes(status)) {
     return status as SubscriptionStatus;
   }
-  // incomplete, incomplete_expired, unpaid, paused, trialing (unused — no
-  // Pro trial), or any future status: never grant Pro for a subscription
-  // that hasn't actually gone active. Falls back to the free plan.
+  // Any other status never grants Pro — falls back to the free plan.
   return "none";
 }
 

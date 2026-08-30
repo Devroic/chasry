@@ -42,9 +42,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
 
-  // Check-in starts after auth/rate-limit so a rejected probe isn't recorded as a job
-  // run. Monitors for the absence of an expected run (Vercel's scheduler silently
-  // stopping), which captureException alone can't catch since nothing throws.
+  // Monitors for a missing run (scheduler silently stopping), not just a thrown error.
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: MONITOR_SLUG, status: "in_progress" },
     {
@@ -79,9 +77,7 @@ export async function GET(request: Request) {
 async function runReminderSweep() {
   const supabase = createAdminClient();
 
-  // Reminders send for every account regardless of plan — plan only limits active
-  // invoice count, not whether reminders work. `reminder_settings` is fetched for
-  // every user since it's just one input to the per-invoice cascade below, not a pre-filter.
+  // Reminders send for every account regardless of plan — plan only limits active invoice count.
   const [{ data: profiles, error: profilesError }, { data: settings, error: settingsError }] =
     await Promise.all([
       supabase.from("profiles").select("id, business_name, email, payment_link, reminder_locale"),

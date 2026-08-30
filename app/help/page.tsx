@@ -23,8 +23,6 @@ export default async function HelpPage() {
 
   const user = await getOptionalUser();
   const profile = user ? await getProfile(user.id) : null;
-  // Only show the app chrome to a *finished* account — someone still mid-
-  // onboarding would get nav links that just bounce them back to /onboarding.
   const inApp = Boolean(profile?.onboarded_at);
 
   const content = (

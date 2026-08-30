@@ -7,8 +7,7 @@ import ReminderSeriouslyOverdueEmail from "@/emails/reminder-seriously-overdue";
 import { emailCopy } from "@/emails/copy";
 import type { Locale } from "@/lib/locale";
 
-// Picks the right template/subject for a reminder offset. Shared by the real cron
-// send and the preview action, so a preview can never differ from the real email.
+// Shared by the real cron send and the preview action, so previews can't drift from real emails.
 export function buildReminderEmail({
   offsetDays,
   businessName,
@@ -37,8 +36,7 @@ export function buildReminderEmail({
   const dueDateFormatted = formatDate(dueDate, locale);
   const invoiceNum = invoiceNumber ?? undefined;
 
-  // The day-count shown reflects today vs. the due date, not the configured
-  // offset — those can drift if the cron sends late. `offsetDays` only picks the tone/template.
+  // Day-count reflects today vs. due date; offsetDays only picks the tone/template.
   const daysUntilDue = daysUntil(dueDate);
 
   const element =

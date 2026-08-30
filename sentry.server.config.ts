@@ -1,11 +1,5 @@
-// Sentry init for the Node.js runtime — this is the one that matters most
-// here, because the two paths that fail *silently* both run server-side: the
-// daily reminder cron (nobody is watching at 07:00 UTC) and the Stripe
-// webhook (a failure means someone paid and didn't get Pro).
-//
-// Loaded via instrumentation.ts. Written by hand rather than by
-// `@sentry/wizard` so next.config.ts keeps its security headers and the
-// next-intl plugin wrapper.
+// Sentry init for the Node.js runtime (cron + Stripe webhook). Loaded via
+// instrumentation.ts, written by hand so next.config.ts keeps its own setup.
 import * as Sentry from "@sentry/nextjs";
 import { sentryDsn, sentryEnabled, sentryEnvironment } from "./sentry.shared";
 
@@ -15,9 +9,7 @@ Sentry.init({
   // Off in local dev, and a no-op without a DSN — see sentry.shared.ts.
   enabled: sentryEnabled,
 
-  // Errors only for now. Traces are the expensive part of the 5k/month free
-  // tier and this app has no perf problem worth sampling yet; turn this up
-  // deliberately if you ever need latency data.
+  // Errors only for now — traces are the expensive part of the free tier.
   tracesSampleRate: 0,
 
   // Never let Sentry's own noise reach users or dev logs.

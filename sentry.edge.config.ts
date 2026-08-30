@@ -1,6 +1,4 @@
-// Sentry init for the Edge runtime. `proxy.ts` (the Supabase session refresh
-// + route guard) runs here, so without this a failure in the auth redirect
-// path would go unreported.
+// Sentry init for the Edge runtime — covers proxy.ts (session refresh + route guard).
 import * as Sentry from "@sentry/nextjs";
 import { sentryDsn, sentryEnabled, sentryEnvironment } from "./sentry.shared";
 

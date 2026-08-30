@@ -28,15 +28,12 @@ export default async function PrivacyPage({
 }: {
   searchParams: Promise<{ standalone?: string }>;
 }) {
-  // Same reasoning as /help and /terms: a signed-in, fully onboarded visitor
-  // gets the real dashboard chrome instead of the marketing header.
+  // Signed-in, fully onboarded visitors get the dashboard shell instead of the marketing header.
   const user = await getOptionalUser();
   const profile = user ? await getProfile(user.id) : null;
   const inApp = Boolean(profile?.onboarded_at);
   const tCommon = await getTranslations("common");
-  // Opened via ?standalone=1 (the "Privacy" link on the signup checkbox,
-  // target="_blank"): a fresh tab with no history of its own, so a Back
-  // link would have nowhere sensible to go.
+  // ?standalone=1: opened in a fresh tab (signup checkbox link), so no Back link.
   const { standalone } = await searchParams;
 
   const content = (

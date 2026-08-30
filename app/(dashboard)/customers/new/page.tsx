@@ -16,8 +16,7 @@ export default async function NewCustomerPage({
   searchParams: Promise<{ return_to?: string }>;
 }) {
   const { return_to: rawReturnTo } = await searchParams;
-  // Query-param controlled — only accept it if it's a safe same-origin path,
-  // never pass an attacker-supplied value into a redirect or href.
+  // Query-param controlled — only accept a safe same-origin path.
   const return_to = rawReturnTo && isSafeRelativePath(rawReturnTo) ? rawReturnTo : undefined;
   const { supabase, user } = await requireUser();
   const t = await getTranslations("customers");

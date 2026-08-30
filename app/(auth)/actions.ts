@@ -69,11 +69,7 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      // Read by handle_new_user (see migration 0016) to stamp terms_accepted_at
-      // and seed reminder_locale atomically — a follow-up UPDATE here would
-      // silently no-op before confirmation, same reasoning as business_name
-      // below. reminder_locale defaults to whatever language they're signing
-      // up in, so reminder emails match without a separate onboarding step.
+      // Read by handle_new_user (migration 0016) to stamp these atomically at signup.
       data: {
         business_name: parsed.data.business_name,
         terms_accepted: parsed.data.terms_accepted,
@@ -95,16 +91,10 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
     return { error: tSignupErrors("generic") };
   }
 
-  // Supabase doesn't return an error for a duplicate, already-confirmed email
-  // (anti-enumeration by design) — it signals this instead via an empty
-  // `identities` array on an otherwise normal-looking response.
+  // Duplicate confirmed email signals via an empty identities array, not an error.
   if (data.user && data.user.identities?.length === 0) {
     return { error: tSignupErrors("accountExists") };
   }
-
-  // No profile UPDATE here on purpose — business_name is already written by
-  // the handle_new_user trigger; a follow-up update had no session/RLS
-  // permission yet when confirmation is required, and silently no-opped.
 
   // Email confirmation required (Supabase default) → session isn't active yet.
   if (!data.session) {
@@ -135,17 +125,11 @@ export async function requestPasswordReset(
     redirectTo: `${appUrl}/auth/confirm?next=/reset-password/confirm`,
   });
 
-  // Always report success, regardless of whether the email exists — avoids
-  // leaking which addresses are registered.
+  // Always report success — avoids leaking which emails are registered.
   return { success: tReset("successMessage") };
 }
 
-/**
- * Fired client-side once a real session is detected (confirmation link just
- * consumed). Can be called more than once for the same confirmation, so
- * `welcome_email_sent_at` acts as a claim: the update only matches while
- * still null, so only one of two near-simultaneous calls wins and sends.
- */
+// welcome_email_sent_at acts as a claim so only one concurrent call sends.
 export async function sendWelcomeEmail() {
   const { supabase, user } = await requireUser();
   if (!user.email) return;
