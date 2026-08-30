@@ -86,6 +86,12 @@ export default async function PrivacyPage({
                 own clients about their own invoices. We process it only to provide the reminder
                 service you&apos;ve asked for.
               </p>
+              <p>
+                Under data protection law (including the EU/UK GDPR), you are the data controller
+                for your clients&apos; personal data, you decide what to collect and why. Chasry
+                acts only as a data processor, handling that data solely to provide the service you
+                direct us to.
+              </p>
             </Section>
 
             <Section title="4. How we use this data">
@@ -127,7 +133,9 @@ export default async function PrivacyPage({
             <Section title="6. Where data is processed">
               <p>
                 Our service providers may process and store data in the European Union and/or the
-                United States, each under their own data protection commitments.
+                United States, each under their own data protection commitments. Where data is
+                transferred outside the European Economic Area, we rely on Standard Contractual
+                Clauses or an equivalent safeguard recognized under EU/UK data protection law.
               </p>
             </Section>
 

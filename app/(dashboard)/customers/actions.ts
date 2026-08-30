@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
+import { isSafeRelativePath } from "@/lib/supabase/middleware";
 import { customerSchema } from "@/lib/validations/customer";
 import { decodeReminderOverride } from "@/lib/reminder-override";
 import type { Translator } from "@/lib/validations/shared";
@@ -54,7 +55,7 @@ export async function createCustomer(
   revalidatePath("/customers");
 
   const returnTo = formData.get("return_to");
-  if (typeof returnTo === "string" && returnTo) {
+  if (typeof returnTo === "string" && returnTo && isSafeRelativePath(returnTo)) {
     redirect(`${returnTo}?new_customer_id=${data.id}`);
   }
   redirect(`/customers/${data.id}`);

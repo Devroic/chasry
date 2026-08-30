@@ -10,7 +10,7 @@ import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
 export const metadata: Metadata = { title: "Terms of Service" };
 
 const SUPPORT_EMAIL = "info@chasry.com";
-const LAST_UPDATED = "August 28, 2026";
+const LAST_UPDATED = "August 29, 2026";
 
 // Deliberately not run through next-intl — see the i18n section of
 // ARCHITECTURE.md: legal text carries real risk if a translation gets a
@@ -148,6 +148,12 @@ export default async function TermsPage({
             </Section>
 
             <Section title="8. Limitation of liability">
+              <p>
+                Chasry is provided &quot;as is&quot; and &quot;as available&quot;, without
+                warranties of any kind, express or implied, including any warranty of
+                merchantability, fitness for a particular purpose, or non-infringement, to the
+                extent permitted by law.
+              </p>
               <p>
                 Chasry is a reminder tool, not a debt collection or legal service. We&apos;re not
                 liable for unpaid invoices, disputes between you and your clients, or your inability

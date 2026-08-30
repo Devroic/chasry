@@ -19,8 +19,12 @@ const SESSION_ACTION_PATHS = ["/reset-password/confirm", "/signup/confirmed"];
 // anyway), not the actual security boundary.
 const PROTECTED_PREFIXES = ["/dashboard", "/invoices", "/customers", "/settings", "/onboarding"];
 
-function isSafeRelativePath(path: string) {
-  return path.startsWith("/") && !path.startsWith("//");
+// Browsers normalize backslashes to forward slashes when resolving a
+// relative reference against an http(s) base, so "/\evil.com" would
+// otherwise slip past the "//" check and resolve to a protocol-relative
+// off-site redirect ("//evil.com").
+export function isSafeRelativePath(path: string) {
+  return path.startsWith("/") && !path.startsWith("//") && !path.includes("\\");
 }
 
 export async function updateSession(request: NextRequest) {

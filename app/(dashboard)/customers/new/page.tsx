@@ -5,6 +5,7 @@ import { BackLink } from "@/components/dashboard/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { CustomerForm } from "@/components/dashboard/customer-form";
 import { requireUser, getProfile } from "@/lib/auth";
+import { isSafeRelativePath } from "@/lib/supabase/middleware";
 import { createCustomer } from "@/app/(dashboard)/customers/actions";
 
 export const metadata = { title: "New client" };
@@ -14,7 +15,10 @@ export default async function NewCustomerPage({
 }: {
   searchParams: Promise<{ return_to?: string }>;
 }) {
-  const { return_to } = await searchParams;
+  const { return_to: rawReturnTo } = await searchParams;
+  // Query-param controlled — only accept it if it's a safe same-origin path,
+  // never pass an attacker-supplied value into a redirect or href.
+  const return_to = rawReturnTo && isSafeRelativePath(rawReturnTo) ? rawReturnTo : undefined;
   const { supabase, user } = await requireUser();
   const t = await getTranslations("customers");
   const tCommon = await getTranslations("common");
