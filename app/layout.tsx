@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -31,7 +32,9 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
-  robots: { index: false, follow: false },
+  // Indexable only on the real production deployment; previews and dev stay hidden.
+  robots:
+    process.env.VERCEL_ENV === "production" ? undefined : { index: false, follow: false },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -54,6 +57,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </TooltipProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );

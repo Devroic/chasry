@@ -5,7 +5,7 @@ import { SUPPORT_EMAIL } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Privacy Policy" };
 
-const LAST_UPDATED = "August 31, 2026";
+const LAST_UPDATED = "September 4, 2026";
 
 export default async function PrivacyPage({
   searchParams,
@@ -106,7 +106,7 @@ export default async function PrivacyPage({
                 <li>Stripe, to process your Pro subscription payment (Stripe never receives your clients&apos; invoice or contact details, only your own billing information),</li>
                 <li>Resend, to deliver account emails and the reminder emails we send to your clients on your behalf,</li>
                 <li>Sentry, for error monitoring. We keep what we send it minimal, for example an invoice ID, never your client&apos;s email address or the invoice amount,</li>
-                <li>Vercel, to host the application.</li>
+                <li>Vercel, to host the application and provide cookieless, anonymous visit statistics.</li>
               </ul>
               <p>
                 Separately, a small number of authorized Chasry staff can access account data,
@@ -133,7 +133,11 @@ export default async function PrivacyPage({
                 <li>A cookie that remembers your browser&apos;s timezone, so due dates and reminder days are shown for your own calendar day,</li>
                 <li>Your light/dark theme preference, stored in your browser (not a cookie).</li>
               </ul>
-              <p>We don&apos;t use advertising or analytics tracking cookies.</p>
+              <p>
+                We don&apos;t use advertising or analytics tracking cookies. We do count page
+                visits with Vercel Web Analytics, a cookieless, privacy-friendly service that
+                doesn&apos;t identify or track individual visitors.
+              </p>
             </Section>
 
             <Section title="8. How long we keep data">
