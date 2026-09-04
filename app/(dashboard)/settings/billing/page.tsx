@@ -25,12 +25,10 @@ export default async function BillingSettingsPage() {
 
   const status = profile.subscription_status;
   const pro = isPro(status);
-  // subscription_status stays "active" until the period ends, so cancel_at_period_end is the
-  // only signal it won't renew.
+  // Status stays "active" until period end; cancel_at_period_end is the only won't-renew signal.
   const canceling = status === "active" && profile.cancel_at_period_end;
 
-  // Independent, so they run together. The Stripe lookup falls back to the stored period-end
-  // date, and is skipped once canceling since that date is already the end date.
+  // Stripe lookup falls back to the stored period end; skipped when canceling (that IS the end date).
   const [{ count: activeInvoiceCount }, stripeNextPaymentDate] = await Promise.all([
     // Usage only renders on the free plan's card.
     pro
@@ -45,8 +43,7 @@ export default async function BillingSettingsPage() {
       : Promise.resolve(null),
   ]);
   const nextPaymentDate = stripeNextPaymentDate ?? profile.current_period_end;
-  // When canceling, current_period_end is the day Pro ends; otherwise the next renewal is
-  // the earliest the downgrade could take effect.
+  // When canceling, current_period_end is when Pro ends; else next renewal is earliest downgrade.
   const periodEndLabel = canceling
     ? profile.current_period_end && formatDate(profile.current_period_end, locale)
     : nextPaymentDate && formatDate(nextPaymentDate, locale);
@@ -80,9 +77,7 @@ export default async function BillingSettingsPage() {
         </Alert>
       )}
 
-      {/* No standalone plan card: the comparison carries everything. Problem states
-          (payment failed, canceling) are announced by the alerts above. */}
-      {/* No visible heading: the two cards are self-describing. The label stays for screen readers. */}
+      {/* No visible heading: the cards self-describe; the label stays for screen readers. */}
       <section aria-label={t("compareTitle")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div
@@ -107,8 +102,7 @@ export default async function BillingSettingsPage() {
               </p>
             )}
             <PlanFeatureList className="mt-4 flex-1" features={planFeatures.free} {...srLabels} />
-            {/* Only a healthy subscription can self-cancel; past_due resolves through
-                Manage billing (the action would just fail its status guard). */}
+            {/* Only a healthy subscription can self-cancel; past_due resolves via Manage billing. */}
             {status === "active" &&
               (canceling ? (
                 periodEndLabel && (

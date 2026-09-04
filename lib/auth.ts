@@ -12,15 +12,13 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
 
 export const ADMIN_PLAN_OVERRIDE_COOKIE = "chasry_admin_plan_view";
 
-// Admin accounts default to Pro (so the free-plan cap doesn't get in the way of testing),
-// with a toggle to simulate Free. Never written to the database, only overrides getProfile().
+// Admins default to Pro, with a cookie toggle to simulate Free; never written to the database.
 export async function getAdminPlanOverride(): Promise<"free" | "pro"> {
   const cookieStore = await cookies();
   return cookieStore.get(ADMIN_PLAN_OVERRIDE_COOKIE)?.value === "free" ? "free" : "pro";
 }
 
-// Deduplicated per request with React.cache() — without it, every page's own
-// requireUser() call issued a fresh supabase.auth.getUser().
+// React.cache() dedupes per request, so nested requireUser() calls share one getUser().
 const getAuthedUser = cache(async () => {
   const supabase = await createClient();
   const {
@@ -47,8 +45,7 @@ export const getProfile = cache(async (userId: string) => {
   return data;
 });
 
-// Returns `null` instead of redirecting — for pages reachable both logged in and out
-// (currently just /help). Shares requireUser()'s per-request cache.
+// Returns null instead of redirecting, for pages reachable logged in or out; shares the cache.
 export async function getOptionalUser() {
   const { user } = await getAuthedUser();
   return user;
@@ -58,22 +55,18 @@ export async function getOptionalUser() {
 export async function requireUser() {
   const { supabase, user } = await getAuthedUser();
   if (!user) redirect("/login");
-  // Suspension gates every page AND every server action, since actions are directly
-  // callable. getProfile() is request-cached, so this costs nothing extra on pages
-  // that load the profile anyway.
+  // Suspension gates pages AND actions (directly callable); getProfile() is request-cached.
   const profile = await getProfile(user.id);
   if (profile?.suspended_at) redirect("/suspended");
   return { supabase, user };
 }
 
-// Auth + "finished onboarding" check. No subscription gate — free and Pro both get
-// full access, only active-invoice count differs (lib/plan.ts).
+// Auth + onboarding check. No subscription gate: only active-invoice count differs by plan.
 export async function requireOnboardedUser() {
   const { supabase, user } = await requireUser();
   const profile = await getProfile(user.id);
 
-  // Missing/unreadable profile with a live session: plain /login would loop (the
-  // middleware bounces authenticated users back), so route through a sign-out first.
+  // A live session with no readable profile would loop through /login; sign out first instead.
   if (!profile) redirect("/auth/reset-session");
   if (!profile.onboarded_at) redirect("/onboarding");
 
@@ -85,8 +78,7 @@ export function isAdminEmail(email: string | null | undefined) {
   return Boolean(email && ADMIN_EMAILS.includes(email.toLowerCase()));
 }
 
-// Gates /admin. 404s (not redirects) for a non-admin, so probing the URL doesn't
-// confirm the section exists. Cross-user queries still need the service-role client separately.
+// Gates /admin. 404s (not redirects) for non-admins, so probing doesn't confirm the section exists.
 export async function requireAdmin() {
   const { supabase, user } = await requireUser();
   if (!isAdminEmail(user.email)) notFound();

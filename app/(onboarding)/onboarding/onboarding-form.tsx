@@ -56,7 +56,6 @@ export function OnboardingForm({
     },
   });
 
-  // Short single-card form, so no scroll handling is needed.
   const onValid = (data: OnboardingInput) =>
     startTransition(() => formAction(toFormData(data)));
 

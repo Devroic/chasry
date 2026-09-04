@@ -145,8 +145,7 @@ export function InvoiceForm({
 
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
-  // Server-action redirects keep scroll position: scroll on real page change (unmount after a
-  // successful submit) or when an error appears at the top, never on the click itself.
+  // Action redirects keep scroll: scroll on unmount after success or when an error appears on top.
   const redirectingRef = useRef(false);
   useEffect(() => {
     if (state?.error) {

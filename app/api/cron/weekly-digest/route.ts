@@ -147,8 +147,7 @@ async function runDigestSweep() {
         .from("profiles")
         .update({ digest_sent_at: new Date().toISOString() })
         .eq("id", profile.id);
-      // Every digest counts against the Resend quota, so each one gets a log row
-      // (digest_sent_at alone only remembers the latest per user).
+      // Each digest counts against the Resend quota; digest_sent_at only remembers the latest.
       await logEmailSend(supabase, { userId: profile.id, kind: "digest" });
       sent++;
     } catch (err) {

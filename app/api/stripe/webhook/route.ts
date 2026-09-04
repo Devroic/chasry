@@ -29,21 +29,18 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
 
   const currentPeriodEnd = subscription.items.data[0]?.current_period_end;
   const status = mapStripeStatus(subscription.status);
-  // The customer portal schedules cancellation via `cancel_at`, not by flipping
-  // `cancel_at_period_end`, at least on this Stripe API version. Either signals it.
+  // The portal schedules cancellation via `cancel_at`, not `cancel_at_period_end`; either signals it.
   const cancelAtPeriodEnd = subscription.cancel_at_period_end || subscription.cancel_at != null;
   const scheduledEndSeconds = subscription.cancel_at ?? currentPeriodEnd;
 
-  // Read the prior value before overwriting — the only way to tell "just scheduled"
-  // (false → true) from every other reason this event fires.
+  // Read the prior value before overwriting to tell "just scheduled" from other event fires.
   const { data: existing } = await supabase
     .from("profiles")
     .select("id, email, cancel_at_period_end")
     .eq("stripe_customer_id", customerId)
     .single();
 
-  // While canceling, current_period_end holds the date access actually ends, which a
-  // cancel_at past the billing boundary (kept coupon/credit months) pushes later.
+  // While canceling, current_period_end holds the date access ends (cancel_at can push it later).
   const effectiveEndSeconds = cancelAtPeriodEnd ? scheduledEndSeconds : currentPeriodEnd;
   const { error } = await supabase
     .from("profiles")
@@ -59,8 +56,7 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
 
   if (error) {
     console.error("stripe/webhook: failed to sync subscription", error);
-    // Highest-consequence failure in the app: Stripe took the money but the
-    // profile never flipped to Pro, so the user is charged and still capped.
+    // Highest-consequence failure: Stripe took the money but the profile never flipped to Pro.
     Sentry.captureException(error, {
       level: "fatal",
       tags: { integration: "stripe", stage: "sync-subscription" },
@@ -82,11 +78,7 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
   return status;
 }
 
-/**
- * Only called from checkout.session.completed — someone actually becoming
- * Pro for the first time, not every later renewal sync. Best-effort: a
- * failed send here shouldn't fail the webhook.
- */
+/** First-time Pro only (checkout.session.completed); a failed send must not fail the webhook. */
 async function sendUpgradedToProEmail(email: string, userId: string | null) {
   const appUrl = getAppUrl();
   try {
@@ -96,7 +88,6 @@ async function sendUpgradedToProEmail(email: string, userId: string | null) {
       subject: "You're on Chasry Pro",
       react: UpgradedToProEmail({ appUrl }),
     });
-    // Resend reports failures via the return value, not by throwing.
     if (sendError) throw new Error(sendError.message);
     if (userId) {
       await logEmailSend(createAdminClient(), { userId, kind: "upgraded" });
@@ -110,14 +101,12 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  // No signature header = almost always a bot probing the endpoint. Not
-  // reported — Stripe always sends the header.
+  // No signature header = almost always a bot probing; Stripe always sends it.
   if (!signature) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  // A missing secret is our misconfiguration and a total billing outage —
-  // every webhook 400s, nobody who pays gets upgraded.
+  // A missing secret is our misconfiguration and a total billing outage.
   if (!webhookSecret) {
     Sentry.captureException(new Error("STRIPE_WEBHOOK_SECRET is not set, so all Stripe webhooks are being rejected"), {
       level: "fatal",
@@ -133,8 +122,7 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("stripe/webhook: signature verification failed", err);
-    // `error` level, not `warning` — Sentry's default alert only emails on high
-    // priority. This means either a stale secret or a forged signature, both worth waking up for.
+    // `error` level so Sentry's default alert fires: stale secret or forged signature.
     Sentry.captureException(err, {
       level: "error",
       tags: { integration: "stripe", stage: "verify-signature" },
@@ -179,8 +167,7 @@ export async function POST(request: Request) {
         break;
       }
 
-      // Covers trial start, plan changes, past_due transitions, etc. — the
-      // single source of truth for subscription_status after the initial checkout.
+      // The single source of truth for subscription_status after the initial checkout.
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         await syncSubscription(event.data.object as Stripe.Subscription);
@@ -194,9 +181,7 @@ export async function POST(request: Request) {
             ? subscription.customer
             : subscription.customer.id;
         const supabase = createAdminClient();
-        // Scoped to the deleted subscription's id: Stripe retries events for days and
-        // doesn't order them, so a stale delete must not strip Pro from a customer who
-        // has since re-subscribed (their profile already points at the new sub id).
+        // Scoped to the deleted sub's id: a stale, retried delete must not strip Pro after a re-subscribe.
         const { error } = await supabase
           .from("profiles")
           .update({ subscription_status: "canceled" })

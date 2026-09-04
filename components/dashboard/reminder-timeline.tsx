@@ -40,8 +40,7 @@ export async function ReminderTimeline({
     return <p className="text-sm text-muted-foreground">{tTimeline("noneConfigured")}</p>;
   }
 
-  // Compared by the viewer's calendar day, so a step never reads "Scheduled" past their own
-  // midnight. The cron keeps its UTC boundary; by the time it runs the two agree.
+  // Viewer's calendar day, so a step never reads "Scheduled" past their midnight; the cron keeps UTC.
   const todayUtcMidnight = new Date(`${todayInTimeZone(timeZone)}T00:00:00Z`).getTime();
 
   return (
@@ -71,8 +70,7 @@ export async function ReminderTimeline({
           status = tTimeline("skippedPaid");
           tone = "text-emerald-600";
         } else if (log?.status === "skipped" || isPast) {
-          // Amber: noticeable but routine (invoice logged late, or snoozed
-          // past it). Red stays reserved for real send failures.
+          // Amber: routine (logged late or snoozed past); red stays reserved for real send failures.
           icon = <CircleMinus className="size-4 text-amber-600 dark:text-amber-400" />;
           status = tTimeline("skipped");
           tone = "text-amber-600 dark:text-amber-400";

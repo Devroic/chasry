@@ -18,10 +18,7 @@ import { sendPreviewReminder } from "@/app/(dashboard)/invoices/actions";
 import { cn } from "@/lib/utils";
 import type { ReminderPreview } from "@/lib/reminder-preview";
 
-/**
- * Shows the reminder emails a schedule will send, one tab per tone. The HTML is pre-rendered by
- * buildReminderPreviews() and shown in a sandboxed iframe, so it is pixel-true and scriptless.
- */
+/** Shows the reminders a schedule will send, one tab per tone, in a sandboxed pixel-true iframe. */
 export function ReminderPreviewDialog({
   previews,
   description,

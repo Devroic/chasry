@@ -11,15 +11,12 @@ export async function setUserSuspended(userId: string, suspend: boolean) {
   const t = await getTranslations("admin.suspend");
   const supabase = createAdminClient();
 
-  // The auth email is the trustworthy one — profiles.email is a user-owned row, and
-  // this guard must not be spoofable (see migration 0019 for the DB-side lock too).
-  // Returned (not thrown): production masks thrown Server Action messages.
+  // Trust the auth email; profiles.email is user-owned and spoofable (migration 0019 locks DB-side).
   const { data: target, error: targetError } = await supabase.auth.admin.getUserById(userId);
   if (targetError || !target.user) return { error: t("failed") };
   if (isAdminEmail(target.user.email)) return { error: t("cannotSuspendAdmin") };
 
-  // Ban the auth user too, so their existing session can't keep hitting the
-  // database directly through the REST API once the app locks them out.
+  // Ban the auth user too, so an existing session can't keep hitting the REST API directly.
   const { error: banError } = await supabase.auth.admin.updateUserById(userId, {
     ban_duration: suspend ? "876000h" : "none",
   });

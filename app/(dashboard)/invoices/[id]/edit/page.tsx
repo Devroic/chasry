@@ -52,8 +52,7 @@ export default async function EditInvoicePage({
             <InvoiceForm
               action={updateInvoice.bind(null, invoice.id)}
               customers={customers ?? []}
-              // The invoice's own currency, NOT profile.currency: editing must never
-              // silently re-denominate an invoice after the account default changed.
+              // The invoice's own currency, not profile.currency: edits must never re-denominate.
               currency={invoice.currency}
               defaultValues={invoice}
               defaultPaymentLink={profile.payment_link ?? undefined}

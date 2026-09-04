@@ -26,10 +26,7 @@ import type { Translator } from "@/lib/validations/shared";
 
 export type InvoiceFormState = { error?: string } | null;
 
-/**
- * Validates and encodes an optional attachment. `fields: null` means no new file was submitted,
- * so the existing one must be left alone rather than cleared.
- */
+/** Validates/encodes an optional attachment; `fields: null` = no new file, keep the existing one. */
 async function processAttachmentUpload(
   formData: FormData,
   userId: string,
@@ -107,10 +104,7 @@ async function atFreeInvoiceLimit(supabase: ActionSupabase, userId: string) {
   return (count ?? 0) >= FREE_INVOICE_LIMIT;
 }
 
-/**
- * Everything a user-initiated reminder send needs, with the same cascade the cron resolves.
- * Null when the invoice isn't the user's.
- */
+/** Loads reminder-send context via the cron's cascade; null when the invoice isn't the user's. */
 async function loadReminderSendContext(supabase: ActionSupabase, userId: string, invoiceId: string) {
   // Only the customer fetch depends on the invoice row; the rest batch.
   const [{ data: profile }, { data: accountSettings }, { data: invoice }] = await Promise.all([
@@ -266,8 +260,7 @@ export async function markInvoicePaid(invoiceId: string) {
 export async function reopenInvoice(invoiceId: string) {
   const { supabase, user } = await requireUser();
 
-  // Reopening adds back an active invoice, subject to the same free-plan limit as creating one.
-  // Returned (not thrown): production masks thrown Server Action messages.
+  // Reopening adds back an active invoice, same free-plan gate as create; returned, not thrown.
   if (await atFreeInvoiceLimit(supabase, user.id)) {
     const tErrors = await getTranslations("invoices.form.errors");
     return { error: tErrors("limitReachedReopen", { limit: FREE_INVOICE_LIMIT }) };
@@ -309,17 +302,12 @@ export async function removeInvoiceAttachment(invoiceId: string) {
   revalidatePath(`/invoices/${invoiceId}/edit`);
 }
 
-/**
- * Pauses reminders until `dateIso` (exclusive). Steps whose day passes while paused are skipped,
- * never sent late, same rule as the cron.
- */
+/** Pauses reminders until `dateIso` (exclusive); steps passing while paused are skipped, as in cron. */
 export async function snoozeInvoice(invoiceId: string, dateIso: string) {
   const { supabase, user } = await requireUser();
   const tErrors = await getTranslations("invoices.form.errors");
 
-  // The dialog builds its presets from the user's LOCAL day, which near midnight is a
-  // day off from UTC in either direction — accept "tomorrow" relative to whichever day
-  // is earlier, and bound the max from whichever is later.
+  // Presets use the user's local day; near midnight, bound min/max from whichever UTC/local day fits.
   const parsed = /^\d{4}-\d{2}-\d{2}$/.test(dateIso) ? new Date(`${dateIso}T00:00:00Z`) : null;
   const now = new Date();
   const todayUtcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -392,8 +380,7 @@ export async function sendPreviewReminder(invoiceId: string) {
       subjectPrefix: "[Preview] ",
       locale: context.locale,
       showBranding: context.showBranding,
-      // Inert, like the on-screen preview: a real token here would let the owner
-      // accidentally claim their own invoice while testing.
+      // Inert like the on-screen preview: a real token would let the owner claim their own invoice.
       claimUrl: "#",
     });
 
@@ -421,10 +408,7 @@ export async function sendPreviewReminder(invoiceId: string) {
   return { count: context.offsets.length };
 }
 
-/**
- * Manually fires one not-yet-attempted reminder due today, for invoices created after the cron
- * run. Mirrors the cron's send path exactly.
- */
+/** Manually fires one not-yet-attempted reminder due today, mirroring the cron's send path. */
 export async function sendReminderNow(invoiceId: string, offsetDays: number) {
   const { supabase, user } = await requireUser();
   const tErrors = await getTranslations("invoices.form.errors");
@@ -433,8 +417,7 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
   if (!context) return { error: tErrors("notFound") };
   const { invoice, customer, profile, accountSettings } = context;
 
-  // Re-validates what the UI gates, since the action is directly callable. "Today" accepts the
-  // UTC day or the user's own day, which near midnight legitimately differ by one.
+  // Re-validates UI gates (action is directly callable); "today" accepts the UTC or user's own day.
   const targetMs = addDaysUtc(invoice.due_date, offsetDays).getTime();
   const now = new Date();
   const todayUtcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());

@@ -11,10 +11,7 @@ export type AccountEmailKind =
   | "reminder_preview"
   | "digest";
 
-/**
- * Best-effort quota bookkeeping for sends that reminder_logs doesn't cover.
- * Never throws — losing a tally row must not fail the send it describes.
- */
+/** Best-effort quota bookkeeping for sends reminder_logs doesn't cover; never throws. */
 export async function logEmailSend(
   supabase: SupabaseClient<Database>,
   entry: { userId: string; kind: AccountEmailKind; recipientCount?: number }

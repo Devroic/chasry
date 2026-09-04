@@ -4,12 +4,7 @@ import { useRouter } from "next/navigation";
 import { TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-/**
- * A table row where the entire row (including cell padding, not just its
- * text) navigates on click — a plain per-cell `<Link>` only makes the text
- * itself clickable, leaving the row visually clickable-looking but not
- * actually clickable everywhere.
- */
+/** Row where the whole row (cell padding included) navigates; per-cell <Link> only covers the text. */
 export function ClickableTableRow({
   href,
   label,
@@ -28,8 +23,7 @@ export function ClickableTableRow({
     <TableRow
       onClick={() => router.push(href)}
       onKeyDown={(e) => {
-        // Space too, not just Enter — it's the other activation key users
-        // expect on a focusable row (preventDefault stops the page scroll).
+        // Space too, not just Enter; preventDefault stops the page scroll.
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           router.push(href);

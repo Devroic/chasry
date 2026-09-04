@@ -51,8 +51,7 @@ export default async function AdminUsersPage({
     activeInvoiceCounts.set(invoice.user_id, (activeInvoiceCounts.get(invoice.user_id) ?? 0) + 1);
   }
 
-  // Admin accounts aren't real subscribers, and their subscription_status is
-  // a simulated Free/Pro view anyway (see getAdminPlanOverride in lib/auth.ts).
+  // Admin accounts aren't real subscribers; their status is a simulated view (getAdminPlanOverride).
   const profiles = (profilesRaw ?? []).filter((p) => !isAdminEmail(p.email));
   const query = q.trim().toLowerCase();
   const filtered = query

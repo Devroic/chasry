@@ -20,8 +20,7 @@ export async function startCheckout() {
     .eq("id", user.id)
     .single();
 
-  // Real gate against double-subscribing — reads subscription_status directly,
-  // not via getProfile(), since that applies the admin plan override.
+  // Real gate; reads subscription_status directly, not getProfile(), which applies the admin override.
   if (isPro(profile?.subscription_status ?? "none")) redirect("/settings/billing");
 
   const session = await createCheckoutSession({
@@ -54,24 +53,18 @@ export async function openBillingPortal() {
   redirect(session.url);
 }
 
-/**
- * Schedules the downgrade at the next date real money would change hands. With a coupon
- * or balance credit that's later than the period boundary — canceling there would forfeit
- * the already-covered months, and the downgrade dialog quotes the next-payment date.
- */
+/** Downgrades at the next real-money charge date so coupon/credit-covered months aren't forfeited. */
 export async function cancelSubscription() {
   const { supabase, user } = await requireUser();
   const t = await getTranslations("settings.billing.downgrade");
 
-  // Reads subscription_status directly, not via getProfile(), which applies the
-  // admin plan override — only a real Stripe subscription can be canceled.
   const { data: profile } = await supabase
     .from("profiles")
     .select("email, subscription_status, stripe_subscription_id, cancel_at_period_end")
     .eq("id", user.id)
     .single();
 
-  // Returned (not thrown): production masks thrown Server Action messages.
+  // Returned, not thrown: prod masks thrown action messages.
   if (
     !profile?.stripe_subscription_id ||
     profile.subscription_status !== "active" ||
@@ -101,8 +94,7 @@ export async function cancelSubscription() {
     })
     .eq("id", user.id);
 
-  // The webhook only emails on a false → true flip it observes, which the local
-  // write above already made, so this is the one send.
+  // No double-send: the webhook only emails on a flip it observes, already made by the write above.
   if (profile.email && periodEndIso) {
     await sendSubscriptionCanceledEmail(profile.email, periodEndIso);
     await logEmailSend(supabase, { userId: user.id, kind: "canceled" });
@@ -122,7 +114,6 @@ export async function resumeSubscription() {
     .eq("id", user.id)
     .single();
 
-  // Returned (not thrown): production masks thrown Server Action messages.
   if (
     !profile?.stripe_subscription_id ||
     profile.subscription_status !== "active" ||

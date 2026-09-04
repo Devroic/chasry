@@ -13,10 +13,7 @@ import { logEmailSend } from "@/lib/email-log";
 import { formatMoney } from "@/lib/format";
 import PaidClaimNotificationEmail from "@/emails/paid-claim-notification";
 
-/**
- * Public, unauthenticated action from a reminder email. The signed token is the entire
- * credential, scoping it to one invoice and to setting paid_claimed_at. Idempotent.
- */
+/** Public unauthenticated action; the signed token is the entire credential. Idempotent. */
 export async function claimInvoicePaid(token: string) {
   const invoiceId = verifyInvoiceLink("claim-paid", token);
   if (!invoiceId) return;
@@ -86,7 +83,6 @@ async function notifyOwner(
         invoiceId: invoice.id,
       }),
     });
-    // Resend reports failures via the return value, not by throwing.
     if (sendError) throw new Error(sendError.message);
     await logEmailSend(supabase, { userId: invoice.user_id, kind: "claim_notice" });
   } catch (err) {

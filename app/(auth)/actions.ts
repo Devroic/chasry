@@ -156,7 +156,6 @@ export async function sendWelcomeEmail() {
       subject: "Welcome to Chasry",
       react: WelcomeEmail({ appUrl }),
     });
-    // Resend reports failures via the return value, not by throwing.
     if (sendError) throw new Error(sendError.message);
     await logEmailSend(supabase, { userId: user.id, kind: "welcome" });
   } catch (err) {

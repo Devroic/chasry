@@ -8,8 +8,7 @@ import { Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { removeInvoiceAttachment } from "@/app/(dashboard)/invoices/actions";
 
-// Pro-gated PDF attachment picker. Not wired into react-hook-form — a file input
-// can't be pre-filled, so "already attached" vs "newly selected" is owned here directly.
+// Pro-gated PDF picker; not in react-hook-form since a file input can't be pre-filled.
 export function InvoiceAttachmentField({
   isPro,
   invoiceId,

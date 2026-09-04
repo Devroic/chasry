@@ -7,9 +7,7 @@ import { Send } from "lucide-react";
 import { sendReminderNow } from "@/app/(dashboard)/invoices/actions";
 import { BlockingOverlay } from "@/components/blocking-overlay";
 
-/** Shown only next to a reminder row whose target date is exactly today
- * and hasn't sent yet — see sendReminderNow's own comment for why this
- * exists (the cron only gets one chance at its target day, no catch-up). */
+/** Only for a reminder due today that hasn't sent; the cron gets one chance, no catch-up. */
 export function SendReminderNowButton({
   invoiceId,
   offsetDays,

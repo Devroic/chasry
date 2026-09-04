@@ -87,9 +87,7 @@ export default async function AdminEmailsPage() {
   const copySelf = new Set((settings ?? []).filter((s) => s.copy_self).map((s) => s.user_id));
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
 
-  // Recipient count: each sent reminder is one email, plus a BCC copy when the owner
-  // has "send me a copy" on, plus digests, plus everything in email_log (welcome,
-  // billing, notices, preview batches). Only Supabase's own auth emails are absent.
+  // Each sent reminder counts 1 (+1 with copy_self) plus email_log entries; only auth emails absent.
   const monthStartMs = new Date(monthStartIso).getTime();
   let recipientsToday = 0;
   let recipientsMonth = 0;
@@ -105,8 +103,7 @@ export default async function AdminEmailsPage() {
     if (utcDayOf(entry.sent_at) === todayUtc) recipientsToday += entry.recipient_count;
   }
 
-  // The cron_runs heartbeat distinguishes "ran but nothing was due" from "didn't run";
-  // reminder_logs alone left quiet days looking stale.
+  // The cron_runs heartbeat distinguishes "ran but nothing was due" from "didn't run".
   const lastSweepDay = lastSweepRun ? utcDayOf(lastSweepRun.ran_at) : null;
   const sweepCounts = {
     sent: lastSweepRun?.sent ?? 0,

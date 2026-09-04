@@ -9,10 +9,7 @@ import { Button } from "@/components/ui/button";
 import { BlockingOverlay } from "@/components/blocking-overlay";
 import { markInvoicePaid, dismissPaidClaim } from "@/app/(dashboard)/invoices/actions";
 
-/**
- * Shown when the client clicked "I've paid". Reminders are already paused until the owner marks
- * it paid or dismisses the claim.
- */
+/** Shown when the client clicked "I've paid"; reminders stay paused until confirmed or dismissed. */
 export function PaidClaimBanner({
   invoiceId,
   clientName,

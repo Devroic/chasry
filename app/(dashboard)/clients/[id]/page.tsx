@@ -45,7 +45,6 @@ export default async function CustomerDetailPage({
   const { error } = await searchParams;
   const { supabase, user } = await requireUser();
 
-  // Independent queries, run in parallel.
   const [{ data: customer }, { data: invoices }, { data: profile }, { data: settings }] =
     await Promise.all([
       supabase
@@ -81,9 +80,7 @@ export default async function CustomerDetailPage({
 
   const scheduleSourceIsAccountDefault = customer.reminder_offsets == null;
 
-  // Payment habits: average of (paid_at - due_date) across paid invoices.
-  // Positive = pays late, negative = pays early. Day-level precision is
-  // enough, this is a feel for the client, not an accounting figure.
+  // Payment habits: avg of (paid_at - due_date) days across paid invoices; positive = pays late.
   const paidDeltas = (invoices ?? [])
     .filter((i) => i.status === "paid" && i.paid_at)
     .map((i) => {

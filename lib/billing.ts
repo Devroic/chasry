@@ -4,11 +4,7 @@ import { stripe } from "@/lib/stripe";
 
 const appUrl = getAppUrl();
 
-/**
- * Creates a Stripe Checkout session for the single Chasry Pro plan. No
- * trial here — the free plan already lets people use the product before
- * paying, so Pro just starts billing immediately on upgrade.
- */
+/** Creates the Pro Checkout session. No trial: the free plan is the try-before-paying path. */
 export async function createCheckoutSession({
   userId,
   email,
@@ -34,11 +30,7 @@ export async function createCheckoutSession({
   });
 }
 
-/**
- * Stripe clamps month-end anchors (a Jan 31 subscription bills Feb 28), while bare
- * setUTCMonth overflows into March. Since cancelSubscription schedules cancel_at from
- * this date, overflowing PAST the real renewal would charge the card after a downgrade.
- */
+/** Clamps month-end like Stripe (Jan 31 bills Feb 28); bare setUTCMonth would overflow past renewal. */
 function addMonthsClamped(ms: number, months: number): Date {
   const d = new Date(ms);
   const day = d.getUTCDate();
@@ -49,12 +41,7 @@ function addMonthsClamped(ms: number, months: number): Date {
   return d;
 }
 
-/**
- * The date real money next changes hands, not just the billing-cycle
- * boundary — a coupon or balance credit can push it out further. Previews
- * the next invoice and, if it's €0, walks forward through discount coverage
- * plus balance-covered months to find the first real charge.
- */
+/** Date real money next changes hands; a coupon or balance credit can push past the cycle boundary. */
 export async function getNextRealPaymentDate(subscriptionId: string): Promise<string | null> {
   try {
     const upcoming = await stripe.invoices.createPreview({ subscription: subscriptionId });
@@ -69,8 +56,7 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
       .map((d) => (typeof d === "string" ? null : d.end))
       .filter((end): end is number => end != null);
 
-    // Discount coverage excludes its end date; with no discount, the
-    // upcoming invoice is itself already balance-covered.
+    // Discount coverage excludes its end date; with no discount the upcoming invoice is balance-covered.
     const hasDiscount = discountEnds.length > 0;
     const baseSeconds = hasDiscount ? Math.max(...discountEnds) : upcoming.period_end;
 
@@ -85,8 +71,7 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
         return addMonthsClamped(baseSeconds * 1000, extraMonths + (hasDiscount ? 0 : 1)).toISOString();
       }
       if (!hasDiscount) {
-        // Credit didn't stretch past this invoice — the next cycle is the
-        // first real charge.
+        // Credit didn't stretch past this invoice; the next cycle is the first real charge.
         return addMonthsClamped(baseSeconds * 1000, 1).toISOString();
       }
     }
@@ -98,8 +83,7 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
   }
 }
 
-// Categories representing real revenue in/out; excludes fees, payouts,
-// transfers, etc. `reporting_category` collapses these cleanly, `type` doesn't.
+// Real revenue in/out only (no fees/payouts); `reporting_category` collapses these, `type` doesn't.
 const REVENUE_REPORTING_CATEGORIES = new Set([
   "charge",
   "refund",
@@ -108,11 +92,7 @@ const REVENUE_REPORTING_CATEGORIES = new Set([
   "dispute_reversal",
 ]);
 
-/**
- * Lifetime net revenue across all subscribers, summed from Stripe's balance
- * transaction history since nothing local tracks historical payments. Cents,
- * refunds/disputes already subtracted, not fee-adjusted.
- */
+/** Lifetime net revenue in cents from Stripe balance history; refunds subtracted, not fee-adjusted. */
 export async function getLifetimeRevenueCents(): Promise<number | null> {
   try {
     let totalCents = 0;

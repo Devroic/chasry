@@ -284,10 +284,7 @@ type SweepProfile = {
   subscription_status: "none" | "active" | "past_due" | "canceled";
 };
 
-/**
- * Creates each recurring invoice's next occurrence, RECURRING_LEAD_DAYS before its due date. Only
- * a chain's newest link has recurred_at = null, so a chain rolls at most once per period.
- */
+/** Rolls each recurring chain's next occurrence; only its newest link has recurred_at = null. */
 async function rollRecurringInvoices(
   supabase: ReturnType<typeof createAdminClient>,
   profileById: Map<string, SweepProfile>,
@@ -320,9 +317,7 @@ async function rollRecurringInvoices(
   let rolled = 0;
 
   for (const invoice of candidates) {
-    // Fast-forward far-backdated chains (an imported old invoice): create ONE successor
-    // for the first period whose reminder window is still relevant, instead of walking
-    // forward one phantom invoice per day.
+    // Fast-forward backdated chains: create ONE successor for the first still-relevant period.
     let nextDueDate = addMonthsClampedUtc(invoice.due_date, 1);
     let guard = 0;
     while (
@@ -337,13 +332,10 @@ async function rollRecurringInvoices(
     const profile = profileById.get(invoice.user_id);
     if (!profile) continue;
 
-    // Repeating is Pro-only: after a downgrade the chain pauses (not canceled) and
-    // resumes rolling if the user upgrades again. The billing downgrade dialog
-    // promises exactly this.
+    // Repeating is Pro-only: after a downgrade the chain pauses (not canceled), as the dialog promises.
     if (!isPro(profile.subscription_status)) continue;
 
-    // Claim the source FIRST (only if still unclaimed), so a crash or retried run
-    // between statements can't create duplicate successors.
+    // Claim the source first (only if unclaimed) so a crash/retry can't create duplicate successors.
     const { data: claimedRows, error: claimError } = await supabase
       .from("invoices")
       .update({ recurred_at: new Date().toISOString() })
@@ -384,8 +376,7 @@ async function rollRecurringInvoices(
         tags: { job: "send-reminders", stage: "roll-recurring" },
         extra: { invoiceId: invoice.id },
       });
-      // Release the claim so tomorrow's run retries; if even this fails, Sentry
-      // has both errors and the chain pauses rather than duplicating.
+      // Release the claim so tomorrow retries; if this too fails, the chain pauses, not duplicates.
       const { error: releaseError } = await supabase
         .from("invoices")
         .update({ recurred_at: null })
@@ -415,10 +406,7 @@ async function rollRecurringInvoices(
   return rolled;
 }
 
-/**
- * Tells the owner an invoice was created on their behalf, since recurring billing must never act
- * silently. A failed notification never fails the roll itself.
- */
+/** Notifies the owner an invoice was auto-created; a failed notification never fails the roll. */
 async function notifyRecurringInvoiceCreated({
   supabase,
   profile,
@@ -473,7 +461,6 @@ async function notifyRecurringInvoiceCreated({
         invoiceId: createdInvoiceId,
       }),
     });
-    // Resend reports failures via the return value, not by throwing.
     if (sendError) throw new Error(sendError.message);
     await logEmailSend(supabase, { userId: profile.id, kind: "recurring_notice" });
   } catch (err) {
