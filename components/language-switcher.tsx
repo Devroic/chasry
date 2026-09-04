@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { Languages } from "lucide-react";
+import { Languages, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,7 +27,11 @@ export function LanguageSwitcher() {
           aria-label={t("language")}
           disabled={isPending}
         >
-          <Languages className="size-4" />
+          {isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Languages className="size-4" />
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

@@ -8,6 +8,7 @@ import { resend, ACCOUNT_FROM_EMAIL } from "@/lib/resend";
 import UpgradedToProEmail from "@/emails/upgraded-to-pro";
 import { sendSubscriptionCanceledEmail } from "@/lib/subscription-emails";
 import { logEmailSend } from "@/lib/email-log";
+import { notifyAdmins } from "@/lib/admin-notify";
 import type { SubscriptionStatus } from "@/types/database.types";
 
 export const dynamic = "force-dynamic";
@@ -139,6 +140,7 @@ export async function POST(request: Request) {
           typeof session.customer === "string" ? session.customer : session.customer?.id;
 
         let subscriberEmail: string | null = null;
+        let subscriberBusiness: string | null = null;
 
         if (userId && customerId) {
           const supabase = createAdminClient();
@@ -146,10 +148,11 @@ export async function POST(request: Request) {
             .from("profiles")
             .update({ stripe_customer_id: customerId })
             .eq("id", userId)
-            .select("email")
+            .select("email, business_name")
             .single();
           if (error) throw error;
           subscriberEmail = data?.email ?? null;
+          subscriberBusiness = data?.business_name ?? null;
         }
 
         if (session.subscription) {
@@ -162,6 +165,10 @@ export async function POST(request: Request) {
 
           if (subscriberEmail && status === "active") {
             await sendUpgradedToProEmail(subscriberEmail, userId ?? null);
+            await notifyAdmins("Chasry user upgraded to Pro", [
+              `Business: ${subscriberBusiness ?? "unknown"}`,
+              `Email: ${subscriberEmail}`,
+            ]);
           }
         }
         break;

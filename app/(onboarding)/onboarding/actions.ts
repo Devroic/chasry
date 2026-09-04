@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
+import { notifyAdmins } from "@/lib/admin-notify";
 import { profileSchema } from "@/lib/validations/profile";
 
 export type OnboardingState = { error?: string } | null;
@@ -31,6 +32,12 @@ export async function completeOnboarding(
     .eq("id", user.id);
 
   if (updateError) return { error: tErrors("saveFailed") };
+
+  await notifyAdmins("New Chasry account onboarded", [
+    `Business: ${parsed.data.business_name}`,
+    `Email: ${user.email ?? "unknown"}`,
+    `Currency: ${parsed.data.currency}`,
+  ]);
 
   redirect("/dashboard");
 }
