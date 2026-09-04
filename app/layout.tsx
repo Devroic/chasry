@@ -6,6 +6,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { TimezoneSync } from "@/components/timezone-sync";
 
 // Matches chasry.com's landing page — same typeface, same weight range.
 const inter = Inter({
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             <TooltipProvider>
+              <TimezoneSync />
               {children}
               <Toaster position="top-center" richColors />
             </TooltipProvider>

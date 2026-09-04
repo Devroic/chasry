@@ -1,4 +1,5 @@
 "use client";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 
 import { useActionState, startTransition } from "react";
 import { useTranslations } from "next-intl";
@@ -73,6 +74,7 @@ export function ProfileForm({
 
   return (
     <form onSubmit={handleSubmit(onValid)} noValidate className="space-y-4">
+      <BlockingOverlay show={pending} spinner={false} />
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>

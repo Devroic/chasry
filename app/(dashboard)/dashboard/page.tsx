@@ -3,14 +3,16 @@ import { Sparkles } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { requireOnboardedUser } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT } from "@/lib/plan";
-import { StatCard } from "@/components/dashboard/stat-card";
+import { StatCard } from "@/components/stat-card";
+import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import { InvoiceListItem } from "@/components/dashboard/invoice-list-item";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, todayInTimeZone } from "@/lib/format";
+import { getUserTimeZone } from "@/lib/timezone";
 
 export const metadata = { title: "Dashboard" };
 
@@ -23,7 +25,8 @@ export default async function DashboardPage({
   const { supabase, user, profile } = await requireOnboardedUser();
   const t = await getTranslations("dashboard");
 
-  const [{ data: unpaidInvoices }, { count: customerCount }, { count: invoiceCount }] =
+  // One parallel batch: client lists are small, so names are fetched up front.
+  const [{ data: unpaidInvoices }, { data: customers, count: customerCount }, { count: invoiceCount }] =
     await Promise.all([
       supabase
         .from("invoices")
@@ -33,7 +36,7 @@ export default async function DashboardPage({
         .order("due_date", { ascending: true }),
       supabase
         .from("customers")
-        .select("id", { count: "exact", head: true })
+        .select("id, name", { count: "exact" })
         .eq("user_id", user.id),
       supabase
         .from("invoices")
@@ -41,8 +44,9 @@ export default async function DashboardPage({
         .eq("user_id", user.id),
     ]);
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  // "Overdue" follows the viewer's calendar day (tz cookie), not UTC's.
+  const timeZone = await getUserTimeZone();
+  const today = new Date(`${todayInTimeZone(timeZone)}T00:00:00Z`);
 
   const invoices = unpaidInvoices ?? [];
   const overdue = invoices.filter((i) => new Date(i.due_date) < today);
@@ -50,10 +54,6 @@ export default async function DashboardPage({
   const currency = profile?.currency ?? "EUR";
   const upcoming = invoices.filter((i) => new Date(i.due_date) >= today).slice(0, 5);
 
-  const customerIds = [...new Set(invoices.map((i) => i.customer_id))];
-  const { data: customers } = customerIds.length
-    ? await supabase.from("customers").select("id, name").in("id", customerIds)
-    : { data: [] };
   const customerName = new Map((customers ?? []).map((c) => [c.id, c.name]));
 
   const showChecklist = (customerCount ?? 0) === 0 || (invoiceCount ?? 0) === 0;
@@ -73,10 +73,7 @@ export default async function DashboardPage({
         </Alert>
       )}
 
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} description={t("subtitle")} className="mb-0" />
 
       {showChecklist && (
         <OnboardingChecklist

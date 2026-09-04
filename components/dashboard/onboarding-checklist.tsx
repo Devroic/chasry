@@ -18,7 +18,7 @@ export async function OnboardingChecklist({
       done: hasCustomer,
       title: t("checklist.addClientTitle"),
       description: t("checklist.addClientDescription"),
-      href: "/customers/new",
+      href: "/clients/new",
       cta: t("checklist.addClientCta"),
     },
     {

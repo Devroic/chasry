@@ -1,4 +1,5 @@
 "use client";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 
 import { startTransition, useActionState } from "react";
 import { useTranslations } from "next-intl";
@@ -16,9 +17,11 @@ import { useSuccessToast } from "@/lib/use-success-toast";
 export function ReminderSettingsForm({
   defaultOffsets,
   defaultEnabled,
+  defaultCopySelf,
 }: {
   defaultOffsets: number[];
   defaultEnabled: boolean;
+  defaultCopySelf: boolean;
 }) {
   const [state, formAction, pending] = useActionState<ReminderSettingsState, FormData>(
     updateReminderSettings,
@@ -29,7 +32,7 @@ export function ReminderSettingsForm({
   const tValidation = useTranslations("validation");
   const { control, watch, setValue, handleSubmit } = useForm<ReminderOffsetsInput>({
     resolver: zodResolver(reminderOffsetsSchema(tValidation)),
-    defaultValues: { enabled: defaultEnabled, offsets: defaultOffsets },
+    defaultValues: { enabled: defaultEnabled, offsets: defaultOffsets, copy_self: defaultCopySelf },
   });
   const offsets = watch("offsets");
   const enabled = watch("enabled");
@@ -48,6 +51,7 @@ export function ReminderSettingsForm({
   const onValid = (data: ReminderOffsetsInput) => {
     const formData = new FormData();
     formData.set("enabled", data.enabled ? "on" : "");
+    formData.set("copy_self", data.copy_self ? "on" : "");
     for (const offset of data.offsets) {
       formData.set(`offset_${offset}`, "on");
     }
@@ -56,6 +60,7 @@ export function ReminderSettingsForm({
 
   return (
     <form onSubmit={handleSubmit(onValid)} noValidate className="space-y-6">
+      <BlockingOverlay show={pending} spinner={false} />
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
@@ -80,6 +85,24 @@ export function ReminderSettingsForm({
 
       {enabled && (
         <ReminderOffsetSwitches idPrefix="offset" offsets={offsets} onToggle={toggleOffset} />
+      )}
+
+      {enabled && (
+        <div className="flex items-center justify-between rounded-lg border border-border p-4">
+          <div>
+            <Label htmlFor="copy_self" className="text-sm font-medium">
+              {t("copySelfLabel")}
+            </Label>
+            <p className="text-xs text-muted-foreground">{t("copySelfHint")}</p>
+          </div>
+          <Controller
+            name="copy_self"
+            control={control}
+            render={({ field }) => (
+              <Switch id="copy_self" checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+        </div>
       )}
 
       <Button type="submit" loading={pending}>

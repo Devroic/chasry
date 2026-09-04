@@ -3,14 +3,20 @@ import { notFound } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
 import { Wallet, CalendarClock, User, Link2, StickyNote, Paperclip } from "lucide-react";
 import { requireOnboardedUser } from "@/lib/auth";
-import { PageHeader } from "@/components/dashboard/page-header";
-import { BackLink } from "@/components/dashboard/back-link";
+import { PageHeader } from "@/components/page-header";
+import { BackLink } from "@/components/back-link";
 import { InvoiceStatusBadge } from "@/components/dashboard/invoice-status-badge";
 import { InvoiceActions } from "@/components/dashboard/invoice-actions";
 import { ReminderTimeline } from "@/components/dashboard/reminder-timeline";
+import { ReminderPreviewDialog } from "@/components/dashboard/reminder-preview-dialog";
+import { SnoozeRemindersButton } from "@/components/dashboard/snooze-reminders-button";
+import { PaidClaimBanner } from "@/components/dashboard/paid-claim-banner";
+import { buildReminderPreviews } from "@/lib/reminder-preview";
+import { isPro } from "@/lib/plan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, formatMoney, daysUntil } from "@/lib/format";
+import { formatDate, formatMoney, daysUntil, todayInTimeZone } from "@/lib/format";
+import { getUserTimeZone } from "@/lib/timezone";
 import { dueStatusLabel } from "@/lib/reminders";
 
 export const metadata = { title: "Invoice" };
@@ -23,18 +29,22 @@ export default async function InvoiceDetailPage({
   const { id } = await params;
   const { supabase, user, profile } = await requireOnboardedUser();
 
-  // `settings` only depends on user.id (known up front), not on the invoice
-  // row, so it can run alongside the invoice fetch instead of after it.
-  const [{ data: invoice }, { data: settings }] = await Promise.all([
+  // One batch; only the customer fetch waits, since it needs the invoice's customer_id.
+  const [{ data: invoice }, { data: settings }, { data: logs }] = await Promise.all([
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, amount, currency, due_date, status, notes, customer_id, reminder_offsets, reminder_enabled, attachment_filename"
+        "id, invoice_number, amount, currency, due_date, status, notes, customer_id, reminder_offsets, reminder_enabled, snoozed_until, recurring, paid_claimed_at, attachment_filename"
       )
       .eq("id", id)
       .eq("user_id", user.id)
       .single(),
     supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
+    supabase
+      .from("reminder_logs")
+      .select("offset_days, status, sent_at")
+      .eq("invoice_id", id)
+      .eq("user_id", user.id),
   ]);
 
   if (!invoice) notFound();
@@ -42,18 +52,13 @@ export default async function InvoiceDetailPage({
   const t = await getTranslations("invoices");
   const tCommon = await getTranslations("common");
   const locale = await getLocale();
+  const timeZone = await getUserTimeZone();
 
-  const [{ data: customer }, { data: logs }] = await Promise.all([
-    supabase
-      .from("customers")
-      .select("id, name, email, payment_link, reminder_offsets, reminder_enabled")
-      .eq("id", invoice.customer_id)
-      .single(),
-    supabase
-      .from("reminder_logs")
-      .select("offset_days, status, sent_at")
-      .eq("invoice_id", invoice.id),
-  ]);
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("id, name, email, payment_link, reminder_offsets, reminder_enabled, reminder_locale")
+    .eq("id", invoice.customer_id)
+    .single();
 
   // Payment link: 2-level cascade (client → account default), same as the cron job.
   const paymentLink = customer?.payment_link ?? profile.payment_link;
@@ -71,6 +76,23 @@ export default async function InvoiceDetailPage({
         ? t("detail.customForClient", { name: customer.name })
         : accountDefaultLabel;
 
+  // Pre-rendered so the dialog opens instantly, using the same cascade as the cron.
+  const showPreview = invoice.status === "unpaid" && effectiveEnabled && effectiveOffsets.length > 0 && customer;
+  const previews = showPreview
+    ? await buildReminderPreviews({
+        offsets: effectiveOffsets,
+        businessName: profile.business_name || profile.email,
+        clientName: customer.name,
+        invoiceNumber: invoice.invoice_number,
+        amount: Number(invoice.amount),
+        currency: invoice.currency,
+        dueDate: invoice.due_date,
+        paymentLink: paymentLink ?? undefined,
+        locale: customer.reminder_locale ?? profile.reminder_locale,
+        showBranding: !isPro(profile.subscription_status),
+      })
+    : [];
+
   return (
     <div className="max-w-2xl">
       <BackLink href="/invoices" label={t("detail.backLabel")} />
@@ -79,11 +101,24 @@ export default async function InvoiceDetailPage({
         description={customer ? t("detail.for", { name: customer.name }) : undefined}
         action={
           <div className="flex flex-wrap items-center gap-2">
+            {invoice.recurring === "monthly" && (
+              <Badge variant="outline" className="border-brand-primary/20 bg-brand-primary-tint text-brand-primary">
+                {t("detail.recurringBadge")}
+              </Badge>
+            )}
             <InvoiceStatusBadge status={invoice.status} dueDate={invoice.due_date} />
             <InvoiceActions invoiceId={invoice.id} status={invoice.status} />
           </div>
         }
       />
+
+      {invoice.paid_claimed_at && invoice.status === "unpaid" && customer && (
+        <PaidClaimBanner
+          invoiceId={invoice.id}
+          clientName={customer.name}
+          claimedAtLabel={formatDate(invoice.paid_claimed_at, locale)}
+        />
+      )}
 
       <Card className="mb-6">
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -102,7 +137,7 @@ export default async function InvoiceDetailPage({
             <p className="text-sm text-foreground">{formatDate(invoice.due_date, locale)}</p>
             {invoice.status === "unpaid" && (
               <p className="text-xs text-muted-foreground">
-                {dueStatusLabel(daysUntil(invoice.due_date), t)}
+                {dueStatusLabel(daysUntil(invoice.due_date, timeZone), t)}
               </p>
             )}
           </div>
@@ -112,7 +147,7 @@ export default async function InvoiceDetailPage({
                 <User className="size-3.5" /> {t("detail.client")}
               </p>
               <Link
-                href={`/customers/${customer.id}`}
+                href={`/clients/${customer.id}`}
                 className="text-sm font-medium text-brand-primary hover:underline"
               >
                 {customer.name} · {customer.email}
@@ -150,7 +185,7 @@ export default async function InvoiceDetailPage({
                     {" "}
                     {t("detail.or")}{" "}
                     <Link
-                      href={`/customers/${customer.id}/edit`}
+                      href={`/clients/${customer.id}/edit`}
                       className="text-brand-primary hover:underline"
                     >
                       {t("detail.setForClient")}
@@ -188,11 +223,20 @@ export default async function InvoiceDetailPage({
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">{t("detail.reminderSchedule")}</CardTitle>
-          <Badge variant="outline" className="text-muted-foreground">
-            {scheduleSource}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="text-muted-foreground">
+              {scheduleSource}
+            </Badge>
+            {previews.length > 0 && (
+              <ReminderPreviewDialog
+                previews={previews}
+                description={t("detail.previewDescription", { name: customer?.name ?? "" })}
+                invoiceId={invoice.id}
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {!effectiveEnabled ? (
@@ -213,15 +257,31 @@ export default async function InvoiceDetailPage({
               .
             </p>
           ) : (
-            <ReminderTimeline
-              invoiceId={invoice.id}
-              dueDate={invoice.due_date}
-              offsets={effectiveOffsets}
-              logs={logs ?? []}
-              invoiceIsPaid={invoice.status !== "unpaid"}
-              // eslint-disable-next-line react-hooks/purity -- Server Component: renders once per request, not subject to client re-render instability.
-              now={Date.now()}
-            />
+            <>
+              {invoice.status === "unpaid" && (
+                <div className="mb-4">
+                  <SnoozeRemindersButton
+                    invoiceId={invoice.id}
+                    snoozedUntil={invoice.snoozed_until}
+                    snoozedUntilLabel={
+                      invoice.snoozed_until ? formatDate(invoice.snoozed_until, locale) : undefined
+                    }
+                  />
+                </div>
+              )}
+              <ReminderTimeline
+                invoiceId={invoice.id}
+                dueDate={invoice.due_date}
+                offsets={effectiveOffsets}
+                logs={logs ?? []}
+                invoiceIsPaid={invoice.status !== "unpaid"}
+                sendPaused={
+                  invoice.paid_claimed_at != null ||
+                  (invoice.snoozed_until != null && todayInTimeZone(timeZone) < invoice.snoozed_until)
+                }
+                timeZone={timeZone}
+              />
+            </>
           )}
         </CardContent>
       </Card>

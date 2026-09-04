@@ -34,7 +34,7 @@ export const getProfile = cache(async (userId: string) => {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, business_name, email, currency, payment_link, reminder_locale, subscription_status, current_period_end, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, onboarded_at"
+      "id, business_name, email, currency, payment_link, reminder_locale, subscription_status, current_period_end, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, onboarded_at, digest_enabled, suspended_at"
     )
     .eq("id", userId)
     .single();
@@ -58,6 +58,11 @@ export async function getOptionalUser() {
 export async function requireUser() {
   const { supabase, user } = await getAuthedUser();
   if (!user) redirect("/login");
+  // Suspension gates every page AND every server action, since actions are directly
+  // callable. getProfile() is request-cached, so this costs nothing extra on pages
+  // that load the profile anyway.
+  const profile = await getProfile(user.id);
+  if (profile?.suspended_at) redirect("/suspended");
   return { supabase, user };
 }
 
@@ -67,7 +72,9 @@ export async function requireOnboardedUser() {
   const { supabase, user } = await requireUser();
   const profile = await getProfile(user.id);
 
-  if (!profile) redirect("/login");
+  // Missing/unreadable profile with a live session: plain /login would loop (the
+  // middleware bounces authenticated users back), so route through a sign-out first.
+  if (!profile) redirect("/auth/reset-session");
   if (!profile.onboarded_at) redirect("/onboarding");
 
   return { supabase, user, profile };

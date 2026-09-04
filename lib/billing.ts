@@ -1,7 +1,8 @@
+import { getAppUrl } from "@/lib/constants";
 import "server-only";
 import { stripe } from "@/lib/stripe";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const appUrl = getAppUrl();
 
 /**
  * Creates a Stripe Checkout session for the single Chasry Pro plan. No
@@ -31,6 +32,21 @@ export async function createCheckoutSession({
     success_url: `${appUrl}${successPath}`,
     cancel_url: `${appUrl}${cancelPath}`,
   });
+}
+
+/**
+ * Stripe clamps month-end anchors (a Jan 31 subscription bills Feb 28), while bare
+ * setUTCMonth overflows into March. Since cancelSubscription schedules cancel_at from
+ * this date, overflowing PAST the real renewal would charge the card after a downgrade.
+ */
+function addMonthsClamped(ms: number, months: number): Date {
+  const d = new Date(ms);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const daysInTarget = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, daysInTarget));
+  return d;
 }
 
 /**
@@ -66,16 +82,12 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
       const consumedByThisInvoice = hasDiscount ? 0 : priceCents;
       const extraMonths = Math.floor((creditCents - consumedByThisInvoice) / priceCents);
       if (extraMonths > 0) {
-        const covered = new Date(baseSeconds * 1000);
-        covered.setUTCMonth(covered.getUTCMonth() + extraMonths + (hasDiscount ? 0 : 1));
-        return covered.toISOString();
+        return addMonthsClamped(baseSeconds * 1000, extraMonths + (hasDiscount ? 0 : 1)).toISOString();
       }
       if (!hasDiscount) {
         // Credit didn't stretch past this invoice — the next cycle is the
         // first real charge.
-        const nextCycle = new Date(baseSeconds * 1000);
-        nextCycle.setUTCMonth(nextCycle.getUTCMonth() + 1);
-        return nextCycle.toISOString();
+        return addMonthsClamped(baseSeconds * 1000, 1).toISOString();
       }
     }
 

@@ -2,17 +2,19 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { PageHeader } from "@/components/dashboard/page-header";
+import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { ClickableTableRow } from "@/components/dashboard/clickable-table-row";
-import { SortableHead } from "@/components/dashboard/sortable-head";
-import { TableSearch } from "@/components/dashboard/table-search";
+import { EmptyMessage } from "@/components/empty-message";
+import { TabLink } from "@/components/tab-link";
+import { ClickableTableRow } from "@/components/clickable-table-row";
+import { SortableHead } from "@/components/sortable-head";
+import { TableSearch } from "@/components/table-search";
 import { InvoiceStatusBadge, invoiceDisplayStatus } from "@/components/dashboard/invoice-status-badge";
 import { InvoiceListItem } from "@/components/dashboard/invoice-list-item";
-import { Pagination } from "@/components/dashboard/pagination";
+import { Pagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { buildListHref, cn, paginate } from "@/lib/utils";
+import { buildListHref, paginate } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -22,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate, formatMoney, daysUntil } from "@/lib/format";
+import { getUserTimeZone } from "@/lib/timezone";
 import { dueStatusLabel } from "@/lib/reminders";
 
 export const metadata = { title: "Invoices" };
@@ -43,6 +46,7 @@ export default async function InvoicesPage({
   const t = await getTranslations("invoices");
   const tCommon = await getTranslations("common");
   const locale = await getLocale();
+  const timeZone = await getUserTimeZone();
   const filterLabels: Record<(typeof FILTERS)[number], string> = {
     all: t("filterAll"),
     unpaid: t("filterUnpaid"),
@@ -50,21 +54,21 @@ export default async function InvoicesPage({
     paid: t("filterPaid"),
   };
 
-  const { data: invoicesRaw } = await supabase
-    .from("invoices")
-    .select("id, invoice_number, amount, currency, due_date, status, customer_id")
-    .eq("user_id", user.id);
+  // One parallel batch: the name lookup only needs user.id, not the invoice list.
+  const [{ data: invoicesRaw }, { data: customers }] = await Promise.all([
+    supabase
+      .from("invoices")
+      .select("id, invoice_number, amount, currency, due_date, status, customer_id")
+      .eq("user_id", user.id),
+    supabase.from("customers").select("id, name").eq("user_id", user.id),
+  ]);
 
   const invoices = invoicesRaw ?? [];
-  const customerIds = [...new Set(invoices.map((i) => i.customer_id))];
-  const { data: customers } = customerIds.length
-    ? await supabase.from("customers").select("id, name").in("id", customerIds)
-    : { data: [] };
   const customerName = new Map((customers ?? []).map((c) => [c.id, c.name]));
 
   const query = q.trim().toLowerCase();
   const filtered = invoices.filter((invoice) => {
-    const display = invoiceDisplayStatus(invoice.status, invoice.due_date);
+    const display = invoiceDisplayStatus(invoice.status, invoice.due_date, timeZone);
     if (filter !== "all") {
       const matchesFilter = filter === "unpaid" ? invoice.status === "unpaid" : display === filter;
       if (!matchesFilter) return false;
@@ -87,8 +91,8 @@ export default async function InvoicesPage({
       case "status":
         return (
           sortMultiplier *
-          invoiceDisplayStatus(a.status, a.due_date).localeCompare(
-            invoiceDisplayStatus(b.status, b.due_date)
+          invoiceDisplayStatus(a.status, a.due_date, timeZone).localeCompare(
+            invoiceDisplayStatus(b.status, b.due_date, timeZone)
           )
         );
       case "due":
@@ -120,22 +124,19 @@ export default async function InvoicesPage({
       />
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 border-b border-border sm:border-b-0">
+        {/* overflow-x-auto: the four Greek labels exceed a 375px viewport. */}
+        <nav className="flex gap-1 overflow-x-auto border-b border-border sm:border-b-0">
           {FILTERS.map((f) => (
-            <Link
+            <TabLink
               key={f}
               href={buildListHref("/invoices", currentParams, { filter: f === "all" ? undefined : f })}
-              className={cn(
-                "border-b-2 px-3 py-2 text-sm font-medium",
-                filter === f
-                  ? "border-brand-primary text-brand-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
+              active={filter === f}
+              className="whitespace-nowrap"
             >
               {filterLabels[f]}
-            </Link>
+            </TabLink>
           ))}
-        </div>
+        </nav>
         <TableSearch
           action="/invoices"
           placeholder={t("searchPlaceholder")}
@@ -152,14 +153,10 @@ export default async function InvoicesPage({
           actionHref="/invoices/new"
         />
       ) : sorted.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          {t("noResults")}
-        </p>
+        <EmptyMessage>{t("noResults")}</EmptyMessage>
       ) : (
         <>
-          {/* Mobile: card list — a 5-column table would force horizontal
-              scrolling on narrow screens, so this shows the same rows as
-              stacked cards instead. Desktop keeps the sortable table. */}
+          {/* Mobile shows stacked cards; the 5-column table would scroll horizontally. */}
           <Card className="p-0 sm:hidden">
             <div className="divide-y divide-border">
               {paginated.map((invoice) => (
@@ -210,7 +207,11 @@ export default async function InvoicesPage({
               </TableHeader>
               <TableBody>
                 {paginated.map((invoice) => (
-                  <ClickableTableRow key={invoice.id} href={`/invoices/${invoice.id}`}>
+                  <ClickableTableRow
+                    key={invoice.id}
+                    href={`/invoices/${invoice.id}`}
+                    label={[customerName.get(invoice.customer_id) ?? t("clientFallback"), invoice.invoice_number].filter(Boolean).join(" ")}
+                  >
                     <TableCell className="font-medium">
                       {customerName.get(invoice.customer_id) ?? t("clientFallback")}
                     </TableCell>
@@ -221,7 +222,7 @@ export default async function InvoicesPage({
                       <div>{formatDate(invoice.due_date, locale)}</div>
                       {invoice.status === "unpaid" && (
                         <div className="text-xs">
-                          {dueStatusLabel(daysUntil(invoice.due_date), t)}
+                          {dueStatusLabel(daysUntil(invoice.due_date, timeZone), t)}
                         </div>
                       )}
                     </TableCell>

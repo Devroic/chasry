@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, startTransition, useState } from "react";
+import { useActionState, startTransition, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Controller, useForm } from "react-hook-form";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 import {
   Select,
   SelectContent,
@@ -18,15 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ReminderOverrideSection } from "@/components/dashboard/reminder-override-section";
-import type { CustomerFormState } from "@/app/(dashboard)/customers/actions";
+import type { CustomerFormState } from "@/app/(dashboard)/clients/actions";
 import { customerSchema, type CustomerInput } from "@/lib/validations/customer";
 import { toFormData } from "@/lib/utils";
 import { encodeReminderOverride } from "@/lib/reminder-override";
 import { LOCALES, type Locale } from "@/lib/locale";
 import type { z } from "zod";
 
-/** Radix Select can't take an empty-string item value, so this sentinel stands in
- * for "no override" and is translated back to `null` in onValueChange. */
+/** Radix Select rejects empty-string item values, so this stands in for "no override". */
 const ACCOUNT_DEFAULT_SENTINEL = "account_default";
 
 type CustomerFormValues = z.input<ReturnType<typeof customerSchema>>;
@@ -87,8 +87,7 @@ export function CustomerForm({
     },
   });
 
-  // Not a plain text field react-hook-form can register() — managed here, stitched
-  // into FormData via encodeReminderOverride in onValid.
+  // Not register()-able, so held in state and stitched into FormData by encodeReminderOverride.
   const [reminderActive, setReminderActive] = useState(defaultValues?.reminder_offsets != null);
   const [reminderEnabled, setReminderEnabled] = useState(
     defaultValues?.reminder_enabled ?? accountDefaults.enabled
@@ -101,7 +100,24 @@ export function CustomerForm({
     setReminderOffsets((prev) => (checked ? [...prev, value] : prev.filter((v) => v !== value)));
   }
 
+  // Scroll on real page change (unmount after a successful submit) or when an error appears at
+  // the top, never on the click itself.
+  const redirectingRef = useRef(false);
+  useEffect(() => {
+    if (state?.error) {
+      redirectingRef.current = false;
+      window.scrollTo({ top: 0 });
+    }
+  }, [state]);
+  useEffect(
+    () => () => {
+      if (redirectingRef.current) window.scrollTo(0, 0);
+    },
+    []
+  );
+
   const onValid = (data: CustomerInput) => {
+    redirectingRef.current = true;
     const formData = toFormData({
       name: data.name,
       email: data.email,
@@ -116,7 +132,10 @@ export function CustomerForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onValid)} noValidate className="space-y-4">
+    // handleSubmit runs inside the event, so the React Compiler allows onValid's ref write.
+    <form onSubmit={(e) => handleSubmit(onValid)(e)} noValidate className="space-y-4">
+      {/* Page locks while saving; the submit button's spinner is the indicator. */}
+      <BlockingOverlay show={pending} spinner={false} />
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>

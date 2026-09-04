@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 import {
   Select,
   SelectContent,
@@ -37,7 +38,9 @@ type CustomerOption = {
 };
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  // Local calendar date, not UTC: toISOString() shows yesterday east of UTC before the rollover.
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function InvoiceForm({
@@ -65,6 +68,7 @@ export function InvoiceForm({
     amount: number;
     due_date: string;
     notes: string | null;
+    recurring?: "none" | "monthly";
     reminder_offsets: number[] | null;
     reminder_enabled: boolean | null;
     attachment_filename?: string | null;
@@ -76,8 +80,7 @@ export function InvoiceForm({
   defaultPaymentLink?: string;
   /** The account's reminder default — used to describe/seed the override section. */
   accountDefaults: { offsets: number[]; enabled: boolean };
-  /** Shows the client read-only instead of a Select — used when editing (reminder
-   * history already points at this client) and when preselected from a client's page. */
+  /** Shows the client read-only instead of a Select (editing, or preselected from a client's page). */
   lockCustomer?: boolean;
   /** Which lockCustomer caller this is — picks the read-only hint's wording. */
   lockReason?: "editing" | "preselected";
@@ -86,8 +89,7 @@ export function InvoiceForm({
   submitLabel?: string;
   /** Attaching a file is a Pro feature — gates the field itself. */
   isPro: boolean;
-  /** The invoice's own id, only known once it exists — enables removing an
-   * already-saved attachment. Undefined on the create form. */
+  /** Enables removing an already-saved attachment. Undefined on the create form. */
   invoiceId?: string;
 }) {
   const [state, formAction, pending] = useActionState<InvoiceFormState, FormData>(action, null);
@@ -112,14 +114,15 @@ export function InvoiceForm({
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
-      // If we just created a client inline (redirected back from /customers/new),
-      // select it automatically instead of leaving the form blank.
+      // Auto-selects a client just created inline via /clients/new.
       customer_id: initialCustomerId,
       invoice_number: defaultValues?.invoice_number ?? "",
       amount: defaultValues?.amount,
       currency,
-      due_date: defaultValues?.due_date ?? todayIso(),
+      // `||` not `??`: a duplicate passes "" so the date defaults to today.
+      due_date: defaultValues?.due_date || todayIso(),
       notes: defaultValues?.notes ?? "",
+      recurring: defaultValues?.recurring ?? "none",
       reminder_offsets: null,
       reminder_enabled: null,
     },
@@ -142,7 +145,24 @@ export function InvoiceForm({
 
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
+  // Server-action redirects keep scroll position: scroll on real page change (unmount after a
+  // successful submit) or when an error appears at the top, never on the click itself.
+  const redirectingRef = useRef(false);
+  useEffect(() => {
+    if (state?.error) {
+      redirectingRef.current = false;
+      window.scrollTo({ top: 0 });
+    }
+  }, [state]);
+  useEffect(
+    () => () => {
+      if (redirectingRef.current) window.scrollTo(0, 0);
+    },
+    []
+  );
+
   const onValid = (data: InvoiceInput) => {
+    redirectingRef.current = true;
     const formData = toFormData({
       customer_id: data.customer_id,
       invoice_number: data.invoice_number,
@@ -150,6 +170,7 @@ export function InvoiceForm({
       currency: data.currency,
       due_date: data.due_date,
       notes: data.notes,
+      recurring: data.recurring,
     });
     encodeReminderOverride(formData, reminderActive, reminderEnabled, reminderOffsets);
     if (attachmentFile) formData.set("attachment", attachmentFile);
@@ -163,6 +184,8 @@ export function InvoiceForm({
 
   return (
     <form onSubmit={handleSubmit(onValid)} noValidate className="space-y-4">
+      {/* Page locks while saving; the submit button's spinner is the indicator. */}
+      <BlockingOverlay show={pending} spinner={false} />
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
@@ -173,7 +196,7 @@ export function InvoiceForm({
         <FormField label={t("clientLabel")} htmlFor="customer_id_display">
           <div
             id="customer_id_display"
-            className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground"
+            className="flex h-8 w-full items-center rounded-lg border border-input bg-muted/40 px-2.5 text-sm text-foreground"
           >
             {selectedCustomer?.name ?? ""}
           </div>
@@ -188,7 +211,7 @@ export function InvoiceForm({
           error={errors.customer_id?.message}
           labelAction={
             <Link
-              href={`/customers/new?return_to=${pathname}`}
+              href={`/clients/new?return_to=${pathname}`}
               className="text-xs font-medium text-brand-primary hover:underline"
             >
               {t("addNewClient")}
@@ -220,7 +243,7 @@ export function InvoiceForm({
           {customers.length === 0 && (
             <p className="text-xs text-muted-foreground">
               {t("needClientFirst")}{" "}
-              <Link href="/customers/new" className="text-brand-primary hover:underline">
+              <Link href="/clients/new" className="text-brand-primary hover:underline">
                 {t("addOne")}
               </Link>
               .
@@ -256,15 +279,47 @@ export function InvoiceForm({
 
       <input type="hidden" {...register("currency")} />
 
-      <FormField label={t("dueDateLabel")} htmlFor="due_date" error={errors.due_date?.message}>
-        <Input
-          id="due_date"
-          type="date"
-          className="sm:w-56"
-          aria-invalid={!!errors.due_date}
-          {...register("due_date")}
-        />
-      </FormField>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField label={t("dueDateLabel")} htmlFor="due_date" error={errors.due_date?.message}>
+          <Input
+            id="due_date"
+            type="date"
+            className="sm:w-56"
+            aria-invalid={!!errors.due_date}
+            {...register("due_date")}
+          />
+        </FormField>
+        <FormField
+          label={t("recurringLabel")}
+          htmlFor="recurring"
+          hint={isPro ? t("recurringHint") : undefined}
+        >
+          <Controller
+            name="recurring"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange} disabled={!isPro}>
+                <SelectTrigger id="recurring" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("recurringNone")}</SelectItem>
+                  <SelectItem value="monthly">{t("recurringMonthly")}</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {/* Same Pro-upsell treatment as the attachment field below. */}
+          {!isPro && (
+            <p className="rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
+              {t("recurringProOnly")}{" "}
+              <Link href="/settings/billing" className="text-brand-primary hover:underline">
+                {t("attachmentUpgrade")}
+              </Link>
+            </p>
+          )}
+        </FormField>
+      </div>
 
       <p className="rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
         {effectivePaymentLink

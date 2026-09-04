@@ -21,6 +21,9 @@
     "pro": "Pro",
     "free": "Free",
     "saveFailed": "Couldn't save changes. Try again.",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "An unexpected error occurred. Your data is safe, try again in a moment.",
+    "tryAgain": "Try again",
     "close": "Close",
     "loading": "Loading",
     "showPassword": "Show password",
@@ -126,7 +129,8 @@
       "signUpNow": "Sign up now",
       "errors": {
         "incorrectCredentials": "Incorrect email or password.",
-        "emailNotConfirmed": "Confirm your email first, check your inbox for the link we sent."
+        "emailNotConfirmed": "Confirm your email first, check your inbox for the link we sent.",
+        "accountSuspended": "Your account has been suspended. Contact us at {email} to resolve it."
       }
     },
     "signup": {
@@ -174,7 +178,11 @@
       "submitting": "Saving…",
       "expiredError": "That reset link has expired. Request a new one.",
       "samePasswordError": "Your new password must be different from your current one.",
-      "weakPasswordError": "Choose a stronger password and try again."
+      "weakPasswordError": "Choose a stronger password and try again.",
+      "checking": "Checking your link…",
+      "expiredTitle": "This link has expired",
+      "expiredSubtitle": "Reset links only work for a short time, and each one can be used once.",
+      "requestNewLink": "Request a new link"
     },
     "signupConfirmed": {
       "confirming": "Confirming",
@@ -227,19 +235,43 @@
       },
       {
         "question": "What happens when I hit the free limit?",
-        "answer": "Mark an existing invoice as paid to free up a slot, or upgrade to Pro ({price}/month) for unlimited invoices and clients. There's no trial, because the free plan already lets you try everything before you'd need to."
+        "answer": "Mark an existing invoice as paid to free up a slot, or upgrade to Pro ({price}/month) for unlimited invoices, plus repeating monthly invoices, PDF attachments on reminders, and reminder emails without Chasry branding. There's no trial, because the free plan already lets you try everything before you'd need to."
       },
       {
         "question": "When exactly do reminders get sent?",
         "answer": "Once a day, Chasry checks every unpaid invoice against your reminder schedule (e.g. 7 and 3 days before the due date, 1 day after). You can turn individual reminders on or off, or pause reminders entirely, from Settings → Reminders."
       },
       {
+        "question": "Can I pause reminders for one invoice?",
+        "answer": "Yes. Open the invoice and use Snooze to pause every reminder until a date you pick, for example when a client has promised to pay by Friday. Reminder steps whose day passes while paused are skipped, never sent late, and you can resume anytime."
+      },
+      {
         "question": "Does Chasry collect the payment itself?",
         "answer": "No. Chasry never touches your money. If you add a payment link (a Stripe Payment Link, PayPal.me, or similar) in Settings, reminder emails include a \"Pay now\" button pointing to it, but the client pays you directly."
       },
       {
+        "question": "What is the \"already paid\" link my client sees?",
+        "answer": "Every reminder ends with a link your client can use to tell you they've already paid. When they click it, reminders for that invoice pause and you get an email. You then either mark the invoice as paid or, if the money never arrived, resume reminders with one click. Chasry never marks anything as paid on its own."
+      },
+      {
         "question": "Can I preview what a reminder email looks like?",
-        "answer": "Yes. Open any invoice and use \"Send me a preview\" to get a sample reminder emailed to your own inbox. It's never sent to your client."
+        "answer": "Yes. Open any invoice and click \"Preview emails\" to see every reminder exactly as your client will receive it. From the preview you can also email the samples to your own inbox. Nothing is ever sent to your client."
+      },
+      {
+        "question": "Can I get a copy of every reminder that goes out?",
+        "answer": "Yes. Turn on \"Send me a copy of every reminder\" in Settings → Reminders and each reminder also lands in your own inbox. Your client can't see this."
+      },
+      {
+        "question": "What is the weekly summary email?",
+        "answer": "Every Monday, Chasry emails you what you're owed, what it did in the last week, and your most overdue invoices, with one-click mark-as-paid links. It only sends when there's something to report, and you can turn it off in Settings → Reminders."
+      },
+      {
+        "question": "How do repeating invoices work?",
+        "answer": "On Pro, set an invoice to \"Repeats monthly\" and Chasry creates next month's invoice automatically, two weeks before it's due, copying the client, amount, notes, and payment link, and emails you when it does. Attachments are not carried over, so add each period's PDF yourself. Stop the series anytime by setting the newest invoice back to \"Does not repeat\"."
+      },
+      {
+        "question": "Can I attach my invoice PDF to the reminders?",
+        "answer": "On Pro, yes. Attach a PDF to an invoice and every reminder for it includes the file. Repeating invoices don't inherit attachments, each new invoice needs its own."
       },
       {
         "question": "What currencies are supported?",
@@ -304,7 +336,7 @@
       "deleteClient": "Delete",
       "deleteTitle": "Delete {name}?",
       "deleteDescription": "This can't be undone. You can only delete a client once they have no invoices.",
-      "hasInvoicesError": "{name} still has invoices on file. Delete or reassign those first.",
+      "hasInvoicesError": "{name} still has invoices on file. Delete those invoices first.",
       "paymentLinkNone": "None set",
       "customForClient": "Custom for this client",
       "accountDefault": "Your account default",
@@ -313,6 +345,11 @@
       "noInvoices": "No invoices for this client yet.",
       "paymentLinkInReminders": "Payment link in reminders",
       "reminderLocale": "Reminder email language",
+      "paymentHabits": "Payment habits",
+      "paysLate": "{days, plural, one {Usually pays # day late} other {Usually pays # days late}}",
+      "paysEarly": "{days, plural, one {Usually pays # day early} other {Usually pays # days early}}",
+      "paysOnTime": "Usually pays on time",
+      "paymentHabitsBasis": "{count, plural, one {Based on # paid invoice.} other {Based on # paid invoices.}}",
       "reminderSchedule": "Reminder schedule",
       "remindersOffTitle": "Reminders are turned off for this client. Change this from",
       "editClientLink": "Edit client",
@@ -384,12 +421,35 @@
       "markPaidToast": "Marked as paid. Reminders stopped.",
       "reopen": "Reopen",
       "reopenToast": "Reopened. Reminders will resume.",
-      "sendPreview": "Send me a preview",
       "sending": "Sending…",
       "sendPreviewToast": "{count, plural, one {Preview sent to your email.} other {# previews sent to your email, one per scheduled reminder.}}",
+      "duplicate": "Duplicate",
       "edit": "Edit",
       "deleteTitle": "Delete this invoice?",
       "deleteDescription": "This can't be undone. Reminder history for this invoice will also be removed."
+    },
+    "snooze": {
+      "button": "Snooze",
+      "title": "Snooze reminders",
+      "description": "Pause every reminder for this invoice until a date you pick, for example when the client promised a payment date.",
+      "dateLabel": "Pause until",
+      "skippedNote": "Reminder steps whose day passes while paused are skipped, never sent late.",
+      "cancel": "Cancel",
+      "confirm": "Pause reminders",
+      "snoozedToast": "Reminders paused.",
+      "resumedToast": "Reminders resumed.",
+      "pausedUntil": "Reminders are paused until {date}.",
+      "resume": "Resume",
+      "failed": "Couldn't pause reminders. Try again.",
+      "presetTomorrow": "Tomorrow",
+      "presetDays3": "In 3 days",
+      "presetWeek": "In 1 week"
+    },
+    "paidClaim": {
+      "title": "{name} says they've paid ({date})",
+      "description": "Reminders are paused until you decide. If the money arrived, mark the invoice as paid. If not, resume reminders.",
+      "dismiss": "Not received, resume reminders",
+      "dismissedToast": "Claim dismissed. Reminders will resume."
     },
     "detail": {
       "backLabel": "Invoices",
@@ -409,6 +469,8 @@
       "customForClient": "Custom for {name}",
       "accountDefault": "Your account default",
       "remindersOffTitle": "Reminders are turned off for this invoice. Change this from",
+      "previewDescription": "Exactly what {name} will receive, using this invoice's schedule and details.",
+      "recurringBadge": "Repeats monthly",
       "editInvoice": "Edit invoice",
       "orAccountSettings": "or your",
       "accountSettings": "account settings"
@@ -425,6 +487,11 @@
       "invoiceNumberLabel": "Invoice number (optional)",
       "invoiceNumberPlaceholder": "INV-1001",
       "dueDateLabel": "Due date",
+      "recurringLabel": "Repeats",
+      "recurringNone": "Does not repeat",
+      "recurringMonthly": "Every month",
+      "recurringHint": "Chasry creates next month's invoice automatically, two weeks before it's due, and emails you when it does. Attachments don't carry over.",
+      "recurringProOnly": "Repeating invoices are a Pro feature.",
       "paymentLinkNote": "Reminders for this invoice will include {source}: {link}",
       "paymentLinkNoteNone": "No payment link set yet. Add one on this client or in Settings → Profile to include a \"Pay now\" button in reminders.",
       "paymentLinkSourceClient": "this client's payment link",
@@ -448,6 +515,8 @@
         "cannotSendNow": "This reminder can't be sent right now.",
         "sendFailed": "Couldn't send the reminder. Try again.",
         "attachmentRequiresPro": "Attaching a file is a Pro feature. Upgrade to Pro from Settings to attach one.",
+        "recurringRequiresPro": "Repeating invoices are a Pro feature. Upgrade to Pro from Settings to turn this on.",
+        "invalidSnoozeDate": "Pick a date between tomorrow and 90 days from now.",
         "attachmentTooLarge": "That file is too large. The limit is 5MB.",
         "attachmentMustBePdf": "That file doesn't look like a valid PDF."
       }
@@ -455,6 +524,8 @@
     "new": {
       "title": "Add an invoice",
       "subtitle": "Thirty seconds of work.",
+      "duplicatedFrom": "Prefilled from {number}. Set the new due date and save.",
+      "duplicatedFromGeneric": "Prefilled from an existing invoice. Set the new due date and save.",
       "tipsTitle": "Good to know",
       "tip1": "Chasry checks daily and sends reminders automatically, based on the schedule in Settings.",
       "tip2": "Mark it paid anytime. Reminders stop the moment you do.",
@@ -471,6 +542,30 @@
     "daysBeforeDue": "{days, plural, one {# day before due} other {# days before due}}",
     "onDueDateOption": "On the due date",
     "daysAfterDue": "{days, plural, one {# day after due} other {# days after due}}"
+  },
+  "emailLinks": {
+    "markPaid": {
+      "title": "Mark this invoice as paid?",
+      "subtitle": "You opened a link from your weekly summary email.",
+      "confirm": "Yes, mark as paid",
+      "doneTitle": "Marked as paid",
+      "doneBody": "Reminders for this invoice have stopped. You can reopen it anytime from the app.",
+      "invalidTitle": "This link is no longer valid",
+      "invalidBody": "The link may have expired. You can mark invoices as paid anytime from the app."
+    }
+  },
+  "reminderPreview": {
+    "button": "Preview emails",
+    "title": "Reminder emails",
+    "sampleDescription": "A sample of what your clients receive, using your saved schedule and details.",
+    "toneBefore": "Before due",
+    "toneOverdue": "Overdue",
+    "toneFirm": "Firm (14+ days late)",
+    "sentLabel": "Sent: {schedule}",
+    "subjectLabel": "Subject",
+    "sampleClientName": "Sample Client",
+    "emailMe": "Email all reminders to me",
+    "emailMeHint": "Sends one email per scheduled reminder to your own inbox."
   },
   "reminderTimeline": {
     "noneConfigured": "No reminders configured.",
@@ -525,28 +620,52 @@
       "intro": "Chasry checks every unpaid invoice once a day and sends a reminder on any of the days you turn on below, relative to the invoice's due date.",
       "enabledLabel": "Reminders enabled",
       "enabledHint": "Turn off to pause all reminder emails.",
+      "copySelfLabel": "Send me a copy of every reminder",
+      "copySelfHint": "Each reminder also lands in your own inbox. Your client can't see this.",
       "firmNotice": "After {days}+ days, reminders read more direct automatically",
       "submit": "Save schedule",
       "saved": "Saved.",
       "savedTitle": "Reminder schedule saved",
       "savedDescription": "Chasry will use this from the next daily run."
     },
+    "digest": {
+      "title": "Weekly summary email",
+      "label": "Send me a Monday summary",
+      "hint": "What you're owed and what Chasry did last week. Only sends when there's something to report.",
+      "enabledToast": "Weekly summary turned on.",
+      "disabledToast": "Weekly summary turned off.",
+      "failed": "Couldn't save this. Try again."
+    },
     "billing": {
       "pastDueWarning": "Your last payment failed. Update your card from Manage billing below to keep Pro active. You'll drop back to the free plan's {limit}-invoice limit if it isn't resolved.",
       "cancelingTitle": "Subscription canceled",
       "cancelingWarning": "Your subscription won't renew. You'll keep Pro access until {date}, then your account moves to the free plan.",
-      "planTitle": "Chasry plan",
-      "proLabel": "Pro ({price}/month)",
-      "freeLabel": "Free",
-      "proDescription": "Unlimited clients and invoices.",
-      "freeDescription": "Up to {limit} active invoices at a time ({used} used). Unlimited clients.",
       "nextPayment": "Next payment: {date}.",
       "manageBilling": "Manage billing",
-      "upgradeToPro": "Upgrade to Pro",
-      "statusActive": "Active",
-      "statusCanceling": "Canceling",
-      "statusPastDue": "Payment failed, updating",
-      "statusCanceled": "Canceled"
+      "compareTitle": "Compare plans",
+      "switchesOn": "Your plan switches to Free on {date}.",
+      "downgrade": {
+        "button": "Downgrade to Free",
+        "title": "Downgrade to Free?",
+        "descriptionDated": "You keep everything in Pro until {date}. From that day:",
+        "descriptionUndated": "You keep everything in Pro until the end of your current billing period. From that day:",
+        "lossLimit": "New invoices are limited to {limit} active at a time",
+        "lossRecurring": "Repeating invoices pause and stop creating new monthly invoices",
+        "lossAttachments": "PDF attachments are no longer included in reminder emails",
+        "lossBranding": "Reminder emails carry the Sent via Chasry footer again",
+        "reassurance": "Your invoices, clients, and reminder history stay exactly as they are, and reminders keep sending for invoices you've already logged. You can resume Pro anytime before the switch.",
+        "keepPro": "Keep Pro",
+        "confirm": "Downgrade to Free",
+        "confirming": "Downgrading",
+        "toastDated": "Done. Your plan switches to Free on {date}.",
+        "toastUndated": "Done. Your plan switches to Free at the end of the billing period.",
+        "failed": "We couldn't update your subscription. Please try again."
+      },
+      "resume": {
+        "button": "Resume Pro",
+        "toast": "Welcome back. Your Pro plan will keep renewing.",
+        "failed": "We couldn't update your subscription. Please try again."
+      }
     },
     "dangerZone": {
       "title": "Danger zone",
@@ -561,7 +680,37 @@
   "upgradePrompt": {
     "title": "You're using all {count} of your {limit} free invoices",
     "description": "Mark one as paid, or upgrade to Pro for unlimited invoices and clients: {price}/month, cancel anytime.",
-    "cta": "Upgrade to Pro"
+    "cta": "Upgrade to Pro",
+    "compareLink": "See everything Pro includes"
+  },
+  "plans": {
+    "included": "Included",
+    "notIncluded": "Not included",
+    "rowActiveInvoices": "Active invoices",
+    "rowActiveInvoicesFree": "3 at a time",
+    "rowActiveInvoicesPro": "Unlimited",
+    "rowClients": "Unlimited clients",
+    "rowReminders": "Automatic reminders that get firmer over time",
+    "rowSchedules": "Custom schedules per client or invoice",
+    "rowClaims": "One-click payment confirmation for clients",
+    "rowDigest": "Weekly summary email",
+    "rowRecurring": "Repeating monthly invoices",
+    "rowAttachments": "PDF invoice attached to reminders",
+    "rowBranding": "Reminder emails without Chasry branding"
+  },
+  "upgrade": {
+    "currentPlan": "Your current plan",
+    "forever": "forever",
+    "perMonth": "per month",
+    "freeUsage": "You're using {used} of your {limit} active invoices.",
+    "cta": "Upgrade to Pro",
+    "note": "Billed monthly through Stripe. Cancel anytime."
+  },
+  "suspended": {
+    "title": "Account suspended",
+    "body": "Your Chasry account has been suspended and payment reminders for your invoices are paused. Your data is safe and nothing has been deleted.",
+    "contact": "If you believe this is a mistake, or want to resolve it, email us at",
+    "logOut": "Log out"
   },
   "admin": {
     "shell": {
@@ -570,6 +719,7 @@
       "logOut": "Log out",
       "tabOverview": "Overview",
       "tabUsers": "Users",
+      "tabEmails": "Email health",
       "tabPlaybook": "Playbook",
       "planViewLabel": "Your view",
       "planViewFree": "Free",
@@ -590,8 +740,22 @@
       "free": "Free",
       "canceled": "Canceled",
       "stuckOnboarding": "Stuck mid-onboarding",
+      "canceling": "Canceling",
+      "suspended": "Suspended",
       "newThisWeek": "New this week",
       "newThisMonth": "New this month",
+      "conversion": "Conversion",
+      "conversionHint": "Paying share of onboarded accounts.",
+      "signupsTitle": "Signups per week",
+      "signupsHint": "Registrations bucketed by week (Mondays, UTC), last 8 weeks.",
+      "usageTitle": "Feature usage",
+      "usageRecurring": "Repeating invoice series (active)",
+      "usageSnoozed": "Invoices snoozed right now",
+      "usageAttachments": "Invoices with a PDF attached",
+      "usageClaims": "Client payment confirmations (all time)",
+      "usageDigest": "Weekly summary turned on",
+      "usageCopySelf": "Reminder copies to self turned on",
+      "usageHint": "Counts exclude admin accounts.",
       "estimatedMrr": "Estimated MRR",
       "mrrDescription": "{count, plural, one {# paying account} other {# paying accounts}} × {price}/month. Past-due accounts are counted, they are still billed until Stripe finishes retrying the payment.",
       "lifetimeRevenue": "Lifetime revenue",
@@ -603,6 +767,7 @@
       "registeredCount": "{count, plural, one {# registered} other {# registered}}",
       "searchPlaceholder": "Search by name or email",
       "noResults": "No matching users.",
+      "noUsers": "No registered users yet.",
       "columnName": "Name",
       "columnEmail": "Email",
       "columnPlan": "Plan",
@@ -622,6 +787,44 @@
       "noneScheduled": "None scheduled",
       "stripeSubscription": "Stripe subscription",
       "none": "None"
+    },
+    "suspend": {
+      "badge": "Suspended",
+      "sinceLabel": "Suspended since",
+      "button": "Suspend account",
+      "title": "Suspend this account?",
+      "description": "{name} will be locked out until you reinstate them:",
+      "effectAccess": "They can't sign in to the app; they see a suspension notice with the support address.",
+      "effectEmails": "All their outgoing email stops: reminders, repeating invoices, and weekly summaries.",
+      "effectData": "Their data is untouched, and reinstating restores everything instantly.",
+      "cancel": "Cancel",
+      "confirm": "Suspend account",
+      "confirming": "Suspending",
+      "suspendedToast": "Account suspended.",
+      "reinstate": "Lift suspension",
+      "reinstatedToast": "Account reinstated.",
+      "cannotSuspendAdmin": "Admin accounts can't be suspended.",
+      "failed": "Could not update the account. Please try again."
+    },
+    "emails": {
+      "title": "Email health",
+      "subtitle": "Delivery volume against the Resend quota, cron runs, and failed sends.",
+      "quotaToday": "Emails today",
+      "quotaMonth": "Emails this month",
+      "quotaHint": "All recipients: reminders, self-copies, digests, and account emails (welcome, billing, notices). Sign-up and password emails go through Supabase, not Resend.",
+      "lastSweep": "Last reminder sweep",
+      "sweepStale": "Overdue",
+      "sweepCounts": "{sent} sent, {failed} failed, {skipped} skipped that day.",
+      "noSweepYet": "No reminder sweep recorded yet.",
+      "lastDigest": "Last weekly digest",
+      "digestCount": "{count, plural, one {# digest sent} other {# digests sent}} that day.",
+      "noDigestYet": "No digest sent yet.",
+      "failedTitle": "Failed sends, last 7 days",
+      "noFailures": "No failed sends in the last 7 days.",
+      "columnWhen": "When",
+      "columnUser": "User",
+      "columnInvoice": "Invoice",
+      "columnStep": "Reminder step"
     },
     "playbook": {
       "title": "Stripe Playbook",

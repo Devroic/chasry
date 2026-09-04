@@ -20,6 +20,22 @@ export function addDaysUtc(isoDate: string, offsetDays: number): Date {
   return d;
 }
 
+/**
+ * Adds calendar months to an ISO date, clamping the day to the target
+ * month's length (Jan 31 + 1 month → Feb 28/29), in UTC. Used by the
+ * recurring-invoice roller so month-end retainers don't drift into the
+ * next month.
+ */
+export function addMonthsClampedUtc(isoDate: string, months: number): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const daysInTarget = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, daysInTarget));
+  return d.toISOString().slice(0, 10);
+}
+
 /** Whether `date` (UTC) falls on today's UTC calendar day. */
 export function isTodayUtc(date: Date): boolean {
   const now = new Date();

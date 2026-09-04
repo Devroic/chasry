@@ -1,5 +1,6 @@
 "use server";
 
+import { getAppUrl, SUPPORT_EMAIL } from "@/lib/constants";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
@@ -9,6 +10,7 @@ import { safeNextPath } from "@/lib/supabase/middleware";
 import { loginSchema, signupSchema, requestResetSchema } from "@/lib/validations/auth";
 import { requireUser } from "@/lib/auth";
 import { resend, ACCOUNT_FROM_EMAIL } from "@/lib/resend";
+import { logEmailSend } from "@/lib/email-log";
 import WelcomeEmail from "@/emails/welcome";
 
 export type AuthFormState = { error?: string; success?: string } | null;
@@ -37,6 +39,10 @@ export async function login(_prev: AuthFormState, formData: FormData): Promise<A
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
     if (error.code === "email_not_confirmed") return { error: tLogin("emailNotConfirmed") };
+    // Suspension bans the auth user (see setUserSuspended), which surfaces here.
+    if (error.code === "user_banned") {
+      return { error: tLogin("accountSuspended", { email: SUPPORT_EMAIL }) };
+    }
     return { error: tLogin("incorrectCredentials") };
   }
 
@@ -62,7 +68,7 @@ export async function signup(_prev: AuthFormState, formData: FormData): Promise<
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const locale = await getLocale();
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -119,7 +125,7 @@ export async function requestPasswordReset(
   const parsed = requestResetSchema(t).safeParse({ email: formData.get("email") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? tErrors("invalidInput") };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${appUrl}/auth/confirm?next=/reset-password/confirm`,
@@ -142,14 +148,17 @@ export async function sendWelcomeEmail() {
     .select("id");
   if (error || !data?.length) return;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: ACCOUNT_FROM_EMAIL,
       to: user.email,
       subject: "Welcome to Chasry",
       react: WelcomeEmail({ appUrl }),
     });
+    // Resend reports failures via the return value, not by throwing.
+    if (sendError) throw new Error(sendError.message);
+    await logEmailSend(supabase, { userId: user.id, kind: "welcome" });
   } catch (err) {
     console.error("sendWelcomeEmail: send failed", err);
   }

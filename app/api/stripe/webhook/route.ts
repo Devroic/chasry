@@ -1,3 +1,4 @@
+import { getAppUrl } from "@/lib/constants";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import * as Sentry from "@sentry/nextjs";
@@ -5,8 +6,8 @@ import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resend, ACCOUNT_FROM_EMAIL } from "@/lib/resend";
 import UpgradedToProEmail from "@/emails/upgraded-to-pro";
-import SubscriptionCanceledEmail from "@/emails/subscription-canceled";
-import { formatDate } from "@/lib/format";
+import { sendSubscriptionCanceledEmail } from "@/lib/subscription-emails";
+import { logEmailSend } from "@/lib/email-log";
 import type { SubscriptionStatus } from "@/types/database.types";
 
 export const dynamic = "force-dynamic";
@@ -37,17 +38,20 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
   // (false → true) from every other reason this event fires.
   const { data: existing } = await supabase
     .from("profiles")
-    .select("email, cancel_at_period_end")
+    .select("id, email, cancel_at_period_end")
     .eq("stripe_customer_id", customerId)
     .single();
 
+  // While canceling, current_period_end holds the date access actually ends, which a
+  // cancel_at past the billing boundary (kept coupon/credit months) pushes later.
+  const effectiveEndSeconds = cancelAtPeriodEnd ? scheduledEndSeconds : currentPeriodEnd;
   const { error } = await supabase
     .from("profiles")
     .update({
       stripe_subscription_id: subscription.id,
       subscription_status: status,
-      current_period_end: currentPeriodEnd
-        ? new Date(currentPeriodEnd * 1000).toISOString()
+      current_period_end: effectiveEndSeconds
+        ? new Date(effectiveEndSeconds * 1000).toISOString()
         : null,
       cancel_at_period_end: cancelAtPeriodEnd,
     })
@@ -72,6 +76,7 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
       existing.email,
       new Date(scheduledEndSeconds * 1000).toISOString()
     );
+    await logEmailSend(supabase, { userId: existing.id, kind: "canceled" });
   }
 
   return status;
@@ -82,32 +87,22 @@ async function syncSubscription(subscription: Stripe.Subscription): Promise<Subs
  * Pro for the first time, not every later renewal sync. Best-effort: a
  * failed send here shouldn't fail the webhook.
  */
-async function sendUpgradedToProEmail(email: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+async function sendUpgradedToProEmail(email: string, userId: string | null) {
+  const appUrl = getAppUrl();
   try {
-    await resend.emails.send({
+    const { error: sendError } = await resend.emails.send({
       from: ACCOUNT_FROM_EMAIL,
       to: email,
       subject: "You're on Chasry Pro",
       react: UpgradedToProEmail({ appUrl }),
     });
+    // Resend reports failures via the return value, not by throwing.
+    if (sendError) throw new Error(sendError.message);
+    if (userId) {
+      await logEmailSend(createAdminClient(), { userId, kind: "upgraded" });
+    }
   } catch (err) {
     console.error("stripe/webhook: upgraded-to-pro email failed", err);
-  }
-}
-
-/** Fires when cancel_at_period_end flips true, not when it's actually deleted weeks later. */
-async function sendSubscriptionCanceledEmail(email: string, periodEndIso: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  try {
-    await resend.emails.send({
-      from: ACCOUNT_FROM_EMAIL,
-      to: email,
-      subject: "Your Chasry Pro subscription is canceled",
-      react: SubscriptionCanceledEmail({ appUrl, accessUntil: formatDate(periodEndIso) }),
-    });
-  } catch (err) {
-    console.error("stripe/webhook: subscription-canceled email failed", err);
   }
 }
 
@@ -178,7 +173,7 @@ export async function POST(request: Request) {
           const status = await syncSubscription(subscription);
 
           if (subscriberEmail && status === "active") {
-            await sendUpgradedToProEmail(subscriberEmail);
+            await sendUpgradedToProEmail(subscriberEmail, userId ?? null);
           }
         }
         break;
@@ -199,10 +194,14 @@ export async function POST(request: Request) {
             ? subscription.customer
             : subscription.customer.id;
         const supabase = createAdminClient();
+        // Scoped to the deleted subscription's id: Stripe retries events for days and
+        // doesn't order them, so a stale delete must not strip Pro from a customer who
+        // has since re-subscribed (their profile already points at the new sub id).
         const { error } = await supabase
           .from("profiles")
           .update({ subscription_status: "canceled" })
-          .eq("stripe_customer_id", customerId);
+          .eq("stripe_customer_id", customerId)
+          .eq("stripe_subscription_id", subscription.id);
         if (error) throw error;
         break;
       }

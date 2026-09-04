@@ -1,11 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/components/status-tones";
 import { daysUntil } from "@/lib/format";
+import { getUserTimeZone } from "@/lib/timezone";
 import type { InvoiceStatus } from "@/types/database.types";
 
-export function invoiceDisplayStatus(status: InvoiceStatus, dueDate: string) {
+export function invoiceDisplayStatus(status: InvoiceStatus, dueDate: string, timeZone = "UTC") {
   if (status !== "unpaid") return status;
-  return daysUntil(dueDate) < 0 ? "overdue" : "unpaid";
+  return daysUntil(dueDate, timeZone) < 0 ? "overdue" : "unpaid";
 }
 
 export async function InvoiceStatusBadge({
@@ -15,14 +17,16 @@ export async function InvoiceStatusBadge({
   status: InvoiceStatus;
   dueDate: string;
 }) {
-  const display = invoiceDisplayStatus(status, dueDate);
+  // "Overdue" follows the viewer's own calendar day, not UTC's.
+  const timeZone = await getUserTimeZone();
+  const display = invoiceDisplayStatus(status, dueDate, timeZone);
   const t = await getTranslations("invoices");
 
   const styles: Record<string, string> = {
-    paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    overdue: "bg-red-50 text-red-700 border-red-200",
-    unpaid: "bg-brand-primary-tint text-brand-primary border-transparent",
-    canceled: "bg-muted text-muted-foreground border-transparent",
+    paid: STATUS_TONES.positive,
+    overdue: STATUS_TONES.negative,
+    unpaid: STATUS_TONES.brand,
+    canceled: STATUS_TONES.neutral,
   };
 
   const labels: Record<string, string> = {

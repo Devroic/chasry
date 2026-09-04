@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 import {
   Select,
   SelectContent,
@@ -55,10 +56,13 @@ export function OnboardingForm({
     },
   });
 
-  const onValid = (data: OnboardingInput) => startTransition(() => formAction(toFormData(data)));
+  // Short single-card form, so no scroll handling is needed.
+  const onValid = (data: OnboardingInput) =>
+    startTransition(() => formAction(toFormData(data)));
 
   return (
     <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
+      <BlockingOverlay show={pending} spinner={false} />
       {state?.error && (
         <Alert variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>

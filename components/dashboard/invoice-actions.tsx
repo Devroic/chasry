@@ -4,15 +4,11 @@ import { useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Check, Pencil, RotateCcw, Send } from "lucide-react";
+import { Check, Copy, Pencil, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 import { ConfirmDeleteButton } from "@/components/dashboard/confirm-delete-button";
-import {
-  markInvoicePaid,
-  reopenInvoice,
-  deleteInvoice,
-  sendPreviewReminder,
-} from "@/app/(dashboard)/invoices/actions";
+import { markInvoicePaid, reopenInvoice, deleteInvoice } from "@/app/(dashboard)/invoices/actions";
 import type { InvoiceStatus } from "@/types/database.types";
 
 export function InvoiceActions({
@@ -23,21 +19,22 @@ export function InvoiceActions({
   status: InvoiceStatus;
 }) {
   const [markPending, startMark] = useTransition();
-  const [previewPending, startPreview] = useTransition();
   const t = useTranslations("invoices.actions");
   const tErrors = useTranslations("invoiceActionErrors");
   const tCommon = useTranslations("common");
 
   return (
     <div className="flex flex-wrap gap-2">
+      <BlockingOverlay show={markPending} spinner={false} />
       {status === "unpaid" ? (
         <Button
           size="sm"
-          disabled={markPending}
+          loading={markPending}
           onClick={() =>
             startMark(async () => {
-              await markInvoicePaid(invoiceId);
-              toast.success(t("markPaidToast"));
+              const result = await markInvoicePaid(invoiceId);
+              if (result?.error) toast.error(result.error);
+              else toast.success(t("markPaidToast"));
             })
           }
         >
@@ -47,15 +44,12 @@ export function InvoiceActions({
         <Button
           size="sm"
           variant="outline"
-          disabled={markPending}
+          loading={markPending}
           onClick={() =>
             startMark(async () => {
-              try {
-                await reopenInvoice(invoiceId);
-                toast.info(t("reopenToast"));
-              } catch (err) {
-                toast.error(err instanceof Error ? err.message : tErrors("reopenFailed"));
-              }
+              const result = await reopenInvoice(invoiceId).catch(() => ({ error: tErrors("reopenFailed") }));
+              if (result?.error) toast.error(result.error);
+              else toast.info(t("reopenToast"));
             })
           }
         >
@@ -63,27 +57,15 @@ export function InvoiceActions({
         </Button>
       ) : null}
 
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={previewPending}
-        onClick={() =>
-          startPreview(async () => {
-            try {
-              const { count } = await sendPreviewReminder(invoiceId);
-              toast.success(t("sendPreviewToast", { count }));
-            } catch (err) {
-              toast.error(err instanceof Error ? err.message : tErrors("previewFailed"));
-            }
-          })
-        }
-      >
-        <Send /> {previewPending ? t("sending") : t("sendPreview")}
-      </Button>
-
       <Button variant="outline" size="sm" asChild>
         <Link href={`/invoices/${invoiceId}/edit`}>
           <Pencil /> {tCommon("edit")}
+        </Link>
+      </Button>
+
+      <Button variant="outline" size="sm" asChild>
+        <Link href={`/invoices/new?from=${invoiceId}`}>
+          <Copy /> {t("duplicate")}
         </Link>
       </Button>
 

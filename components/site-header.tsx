@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
@@ -16,22 +16,7 @@ export function SiteHeader({ actions }: { actions?: React.ReactNode }) {
     <header className="sticky top-0 z-10 border-b border-border/70 bg-background/85 backdrop-blur-sm">
       <div className="flex h-20 items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center">
-          <Image
-            src="/brand/logo-light-bg.png"
-            alt="Chasry"
-            width={220}
-            height={60}
-            className="h-10 w-auto sm:h-14 dark:hidden"
-            priority
-          />
-          <Image
-            src="/brand/logo-dark-bg.png"
-            alt="Chasry"
-            width={220}
-            height={60}
-            className="hidden h-10 w-auto sm:h-14 dark:block"
-            priority
-          />
+          <BrandLogo />
         </Link>
         <div className="flex items-center gap-1">
           <LanguageSwitcher />

@@ -2,15 +2,11 @@ import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 import { InvoiceStatusBadge } from "@/components/dashboard/invoice-status-badge";
 import { formatDate, formatMoney, daysUntil } from "@/lib/format";
+import { getUserTimeZone } from "@/lib/timezone";
 import { dueStatusLabel } from "@/lib/reminders";
 import type { InvoiceStatus } from "@/types/database.types";
 
-/**
- * A single invoice as a clickable row/card — shared by the dashboard's "Due
- * soon" list and the invoices list page's mobile card view, so both places
- * show due-date urgency ("3 days left" / "2 days overdue") identically
- * instead of a raw date the reader has to do the math on themselves.
- */
+/** One invoice as a clickable row/card, showing due-date urgency rather than a raw date. */
 export async function InvoiceListItem({
   id,
   customerName,
@@ -30,6 +26,7 @@ export async function InvoiceListItem({
 }) {
   const t = await getTranslations("invoices");
   const locale = await getLocale();
+  const timeZone = await getUserTimeZone();
 
   return (
     <Link
@@ -43,7 +40,7 @@ export async function InvoiceListItem({
         </p>
         <p className="text-xs text-muted-foreground">
           {formatDate(dueDate, locale)}
-          {status === "unpaid" ? ` · ${dueStatusLabel(daysUntil(dueDate), t)}` : ""}
+          {status === "unpaid" ? ` · ${dueStatusLabel(daysUntil(dueDate, timeZone), t)}` : ""}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-3">

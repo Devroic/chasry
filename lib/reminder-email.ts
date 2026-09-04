@@ -19,6 +19,9 @@ export function buildReminderEmail({
   paymentLink,
   subjectPrefix = "",
   locale = "en",
+  daysUntilDueOverride,
+  showBranding = true,
+  claimUrl,
 }: {
   offsetDays: number;
   businessName: string;
@@ -30,6 +33,17 @@ export function buildReminderEmail({
   paymentLink?: string;
   subjectPrefix?: string;
   locale?: Locale;
+  /**
+   * Day-count to render instead of today's. The in-app preview passes
+   * `-offsetDays` so a future reminder shows the count it will have on its
+   * actual send day (on that day, days-until-due equals minus the offset).
+   * The cron never sets this, so real sends are unchanged.
+   */
+  daysUntilDueOverride?: number;
+  /** Free plan: linked "via Chasry" footer. Pro: brand-free footer. */
+  showBranding?: boolean;
+  /** Signed "I've paid" link shown to the client; omit to hide the line. */
+  claimUrl?: string;
 }): { element: React.ReactElement; subject: string } {
   const tone = toneForOffset(offsetDays);
   const amountLabel = formatMoney(amount, currency);
@@ -37,7 +51,7 @@ export function buildReminderEmail({
   const invoiceNum = invoiceNumber ?? undefined;
 
   // Day-count reflects today vs. due date; offsetDays only picks the tone/template.
-  const daysUntilDue = daysUntil(dueDate);
+  const daysUntilDue = daysUntilDueOverride ?? daysUntil(dueDate);
 
   const element =
     tone === "seriously_overdue"
@@ -50,6 +64,8 @@ export function buildReminderEmail({
           daysOverdue: Math.max(1, -daysUntilDue),
           paymentLink,
           locale,
+          showBranding,
+          claimUrl,
         })
       : tone === "overdue"
         ? ReminderOverdueEmail({
@@ -61,6 +77,8 @@ export function buildReminderEmail({
             daysOverdue: Math.max(1, -daysUntilDue),
             paymentLink,
             locale,
+            showBranding,
+            claimUrl,
           })
         : ReminderBeforeDueEmail({
             businessName,
@@ -74,6 +92,8 @@ export function buildReminderEmail({
             daysUntilDue,
             paymentLink,
             locale,
+            showBranding,
+            claimUrl,
           });
 
   const invoiceRef = emailCopy.subject.invoiceRef(invoiceNum, locale);

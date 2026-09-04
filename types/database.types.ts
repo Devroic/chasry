@@ -6,6 +6,7 @@
 export type SubscriptionStatus = "none" | "active" | "past_due" | "canceled";
 
 export type InvoiceStatus = "unpaid" | "paid" | "canceled";
+export type InvoiceRecurring = "none" | "monthly";
 export type ReminderLogStatus = "sent" | "failed" | "skipped";
 
 type NoRelationships = { Relationships: [] };
@@ -29,6 +30,9 @@ export interface Database {
           onboarded_at: string | null;
           welcome_email_sent_at: string | null;
           terms_accepted_at: string | null;
+          digest_enabled: boolean;
+          digest_sent_at: string | null;
+          suspended_at: string | null;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & {
@@ -76,6 +80,10 @@ export interface Database {
           attachment_content_type: string | null;
           attachment_data: string | null;
           paid_at: string | null;
+          snoozed_until: string | null;
+          recurring: InvoiceRecurring;
+          recurred_at: string | null;
+          paid_claimed_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -92,6 +100,7 @@ export interface Database {
           user_id: string;
           offsets: number[];
           enabled: boolean;
+          copy_self: boolean;
         };
         Insert: Partial<Database["public"]["Tables"]["reminder_settings"]["Row"]> & {
           user_id: string;
@@ -116,6 +125,33 @@ export interface Database {
           status: ReminderLogStatus;
         };
         Update: Partial<Database["public"]["Tables"]["reminder_logs"]["Row"]>;
+      } & NoRelationships;
+      cron_runs: {
+        Row: {
+          id: string;
+          job: string;
+          ran_at: string;
+          sent: number;
+          failed: number;
+          skipped: number;
+        };
+        Insert: Partial<Database["public"]["Tables"]["cron_runs"]["Row"]> & {
+          job: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["cron_runs"]["Row"]>;
+      } & NoRelationships;
+      email_log: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          kind: string;
+          recipient_count: number;
+          sent_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["email_log"]["Row"]> & {
+          kind: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["email_log"]["Row"]>;
       } & NoRelationships;
     };
     Views: Record<string, never>;

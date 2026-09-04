@@ -34,6 +34,18 @@ export const emailCopy = {
     }
     return `. Just reply to this email to reach ${businessName} directly.`;
   },
+  // Pro accounts get the brand-free footer — same explanation, no "via Chasry".
+  footerNoBrand: (businessName: string, locale: Locale) => {
+    if (locale === "el") {
+      const period = businessName.trim().endsWith(".") ? "" : ".";
+      return `Αυτή είναι μια αυτόματη υπενθύμιση πληρωμής από ${businessName}. Απαντήστε απευθείας σε αυτό το email για να επικοινωνήσετε με ${businessName}${period}`;
+    }
+    return `This is an automatic payment reminder from ${businessName}. Just reply to this email to reach ${businessName} directly.`;
+  },
+  claimPaidQuestion: (locale: Locale) =>
+    locale === "el" ? "Έχετε ήδη πληρώσει αυτό το τιμολόγιο;" : "Already paid this invoice?",
+  claimPaidLink: (businessName: string, locale: Locale) =>
+    locale === "el" ? `Ενημερώστε ${businessName}` : `Let ${businessName} know`,
 
   beforeDue: {
     dueClause: beforeDueClause,

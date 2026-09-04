@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin, getAdminPlanOverride } from "@/lib/auth";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: { template: "%s · Chasry Admin", default: "Chasry Admin" },
@@ -11,5 +12,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await requireAdmin();
   const planView = await getAdminPlanOverride();
 
-  return <AdminShell planView={planView}>{children}</AdminShell>;
+  return (
+    <AdminShell planView={planView} footer={<SiteFooter />}>
+      {children}
+    </AdminShell>
+  );
 }

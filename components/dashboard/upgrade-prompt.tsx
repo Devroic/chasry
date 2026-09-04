@@ -1,6 +1,7 @@
 import Image from "next/image";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 import { startCheckout } from "@/app/(dashboard)/settings/billing/actions";
 
@@ -17,8 +18,11 @@ export async function UpgradePrompt({ activeCount }: { activeCount: number }) {
         {t("description", { price: PRO_PRICE_AMOUNT })}
       </p>
       <form action={startCheckout} className="mt-5">
-        <Button type="submit">{t("cta")}</Button>
+        <FormSubmitButton blockUi>{t("cta")}</FormSubmitButton>
       </form>
+      <Link href="/settings/billing" className="mt-3 text-sm font-medium text-brand-primary hover:underline">
+        {t("compareLink")}
+      </Link>
     </div>
   );
 }

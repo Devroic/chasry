@@ -1,11 +1,11 @@
 "use client";
 
 import { useTransition } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LogOut, ArrowLeft, LayoutDashboard, Users, BookOpen, Loader2 } from "lucide-react";
+import { LogOut, ArrowLeft, LayoutDashboard, Users, Mail, BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -13,11 +13,14 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
 import { setAdminPlanOverride } from "@/app/admin/actions";
 import { LogoutPendingOverlay } from "@/components/logout-pending-overlay";
+import { TabLink } from "@/components/tab-link";
+import { navItemClassName } from "@/components/nav-item";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin", labelKey: "tabOverview", icon: LayoutDashboard },
   { href: "/admin/users", labelKey: "tabUsers", icon: Users },
+  { href: "/admin/emails", labelKey: "tabEmails", icon: Mail },
   { href: "/admin/playbook", labelKey: "tabPlaybook", icon: BookOpen },
 ] as const;
 
@@ -26,9 +29,11 @@ const NAV_ITEMS = [
 export function AdminShell({
   children,
   planView,
+  footer,
 }: {
   children: React.ReactNode;
   planView: "free" | "pro";
+  footer?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const t = useTranslations("admin.shell");
@@ -36,28 +41,13 @@ export function AdminShell({
   const handleLogout = () => startLogoutTransition(() => logout());
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
       <LogoutPendingOverlay show={loggingOut} />
       <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-sm">
         <div className="flex h-20 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="flex items-center">
-              <Image
-                src="/brand/logo-light-bg.png"
-                alt="Chasry"
-                width={220}
-                height={60}
-                className="h-10 w-auto sm:h-14 dark:hidden"
-                priority
-              />
-              <Image
-                src="/brand/logo-dark-bg.png"
-                alt="Chasry"
-                width={220}
-                height={60}
-                className="hidden h-10 w-auto sm:h-14 dark:block"
-                priority
-              />
+              <BrandLogo />
             </Link>
             <Badge variant="outline" className="border-brand-primary/20 bg-brand-primary-tint text-brand-primary">
               {t("badge")}
@@ -83,41 +73,23 @@ export function AdminShell({
           {NAV_ITEMS.map((item) => {
             const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap",
-                  active
-                    ? "border-brand-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
+              <TabLink key={item.href} href={item.href} active={active} className="whitespace-nowrap">
                 {t(item.labelKey)}
-              </Link>
+              </TabLink>
             );
           })}
         </nav>
       </header>
 
-      <div className="flex flex-1">
-        <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-56 shrink-0 flex-col overflow-y-auto border-r border-border px-4 py-6 lg:flex">
+      <div className="mx-auto flex w-full max-w-7xl flex-1">
+        <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-60 shrink-0 flex-col overflow-y-auto border-r border-border px-4 py-6 lg:flex">
           <nav className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => {
               const active =
                 item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
               const Icon = item.icon;
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-brand-primary-tint text-brand-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
+                <Link key={item.href} href={item.href} className={navItemClassName(active)}>
                   <Icon className="size-4 shrink-0" />
                   {t(item.labelKey)}
                 </Link>
@@ -126,8 +98,10 @@ export function AdminShell({
           </nav>
         </aside>
 
-        <main className="min-w-0 flex-1 px-4 py-8 sm:px-6">{children}</main>
+        <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">{children}</main>
       </div>
+
+      {footer}
     </div>
   );
 }
@@ -147,6 +121,7 @@ function PlanViewToggle({ planView }: { planView: "free" | "pro" }) {
         <button
           type="button"
           disabled={pending}
+          aria-pressed={planView === "free"}
           onClick={() => startTransition(() => setAdminPlanOverride("free"))}
           className={cn(
             "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
@@ -160,6 +135,7 @@ function PlanViewToggle({ planView }: { planView: "free" | "pro" }) {
         <button
           type="button"
           disabled={pending}
+          aria-pressed={planView === "pro"}
           onClick={() => startTransition(() => setAdminPlanOverride("pro"))}
           className={cn(
             "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",

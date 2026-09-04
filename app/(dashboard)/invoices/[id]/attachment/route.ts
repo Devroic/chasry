@@ -20,10 +20,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "No attachment" }, { status: 404 });
   }
 
+  // Header values must be ASCII: Greek filenames go in the RFC 5987 filename*
+  // parameter (percent-encoded UTF-8) with an ASCII fallback, or undici throws
+  // while building the response and the download 500s.
+  const asciiFallback =
+    invoice.attachment_filename.replace(/["\\\r\n]/g, "").replace(/[^\x20-\x7e]/g, "_") ||
+    "attachment.pdf";
+  const utf8Name = encodeURIComponent(invoice.attachment_filename.replace(/[\r\n"]/g, ""));
+
   return new NextResponse(new Uint8Array(decodeBytea(invoice.attachment_data)), {
     headers: {
       "Content-Type": invoice.attachment_content_type ?? "application/pdf",
-      "Content-Disposition": `inline; filename="${invoice.attachment_filename.replace(/"/g, "")}"`,
+      "Content-Disposition": `inline; filename="${asciiFallback}"; filename*=UTF-8''${utf8Name}`,
       // Client/invoice PII shouldn't linger in a shared machine's disk
       // cache or a proxy's cache once the session ends.
       "Cache-Control": "private, no-store",

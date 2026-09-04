@@ -14,13 +14,7 @@ import * as React from "react";
 import { emailCopy } from "@/emails/copy";
 import type { Locale } from "@/lib/locale";
 
-const BRAND = {
-  primary: "#23458D",
-  ink: "#0D0D0D",
-  neutral: "#5B6B85",
-  tint: "#E2E9F8",
-  border: "#E3E8F2",
-};
+import { EMAIL_BRAND as BRAND } from "@/emails/components/brand";
 
 // color-scheme meta tags alone don't stop Gmail's dark mode inversion — re-asserting
 // the same light colors inside a real prefers-color-scheme media query with !important does.
@@ -42,11 +36,17 @@ export function ReminderLayout({
   previewText,
   businessName,
   locale = "en",
+  showBranding = true,
+  claimUrl,
   children,
 }: {
   previewText: string;
   businessName: string;
   locale?: Locale;
+  /** Free plan: "via Chasry" footer with a link. Pro: brand-free footer. */
+  showBranding?: boolean;
+  /** Signed "I've paid" link for the client; omitted when signing isn't configured. */
+  claimUrl?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -94,12 +94,30 @@ export function ReminderLayout({
           {children}
 
           <Hr style={{ borderColor: BRAND.border, margin: "28px 0 16px" }} />
+          {claimUrl && (
+            <Text className="chasry-footer" style={{ fontSize: "12px", color: BRAND.neutral, margin: "0 0 10px" }}>
+              {emailCopy.claimPaidQuestion(locale)}{" "}
+              <a href={claimUrl} style={{ color: BRAND.primary, textDecoration: "underline" }}>
+                {emailCopy.claimPaidLink(businessName, locale)}
+              </a>
+            </Text>
+          )}
           <Text className="chasry-footer" style={{ fontSize: "12px", color: BRAND.neutral, margin: 0 }}>
-            {emailCopy.footerPrefix(businessName, locale)}
-            <span className="chasry-footer-brand" style={{ color: BRAND.primary, fontWeight: 600 }}>
-              Chasry
-            </span>
-            {emailCopy.footerSuffix(businessName, locale)}
+            {showBranding ? (
+              <>
+                {emailCopy.footerPrefix(businessName, locale)}
+                <a
+                  href="https://chasry.com?utm_source=reminder&utm_medium=email"
+                  className="chasry-footer-brand"
+                  style={{ color: BRAND.primary, fontWeight: 600, textDecoration: "none" }}
+                >
+                  Chasry
+                </a>
+                {emailCopy.footerSuffix(businessName, locale)}
+              </>
+            ) : (
+              emailCopy.footerNoBrand(businessName, locale)
+            )}
           </Text>
         </Container>
       </Body>

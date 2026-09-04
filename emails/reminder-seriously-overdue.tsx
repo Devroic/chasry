@@ -18,6 +18,8 @@ export interface ReminderSeriouslyOverdueProps {
   daysOverdue: number;
   paymentLink?: string;
   locale?: Locale;
+  showBranding?: boolean;
+  claimUrl?: string;
 }
 
 export default function ReminderSeriouslyOverdueEmail({
@@ -29,12 +31,16 @@ export default function ReminderSeriouslyOverdueEmail({
   daysOverdue = 30,
   paymentLink,
   locale = "en",
+  showBranding = true,
+  claimUrl,
 }: Partial<ReminderSeriouslyOverdueProps>) {
   return (
     <ReminderLayout
       previewText={emailCopy.seriouslyOverdue.previewText(daysOverdue, locale)}
       businessName={businessName}
       locale={locale}
+      showBranding={showBranding}
+      claimUrl={claimUrl}
     >
       <ReminderHeading>{emailCopy.seriouslyOverdue.heading(clientName, locale)}</ReminderHeading>
       <ReminderText>{emailCopy.seriouslyOverdue.body(businessName, daysOverdue, locale)}</ReminderText>

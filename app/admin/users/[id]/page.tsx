@@ -1,8 +1,13 @@
 import { notFound } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { BackLink } from "@/components/dashboard/back-link";
+import { requireAdmin } from "@/lib/auth";
+import { BackLink } from "@/components/back-link";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
+import { PLAN_STATUS_STYLE, planStatusLabels } from "@/components/admin/plan-status";
+import { STATUS_TONES } from "@/components/status-tones";
+import { SuspendUserButton } from "./suspend-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { getNextRealPaymentDate } from "@/lib/billing";
@@ -10,22 +15,15 @@ import { isPro } from "@/lib/plan";
 
 export const metadata = { title: { absolute: "User · Chasry Admin" } };
 
-const STATUS_STYLE: Record<string, string> = {
-  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  past_due: "bg-red-50 text-red-700 border-red-200",
-};
-
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  // Layout guards don't cover RSC page-segment requests; every admin page gates itself.
+  await requireAdmin();
   const { id } = await params;
   const t = await getTranslations("admin.userDetail");
   const tStatus = await getTranslations("admin.status");
+  const tSuspend = await getTranslations("admin.suspend");
   const locale = await getLocale();
-  const statusLabel: Record<string, string> = {
-    active: tStatus("pro"),
-    past_due: tStatus("pastDue"),
-    canceled: tStatus("canceled"),
-    none: tStatus("free"),
-  };
+  const statusLabel = planStatusLabels(tStatus);
 
   const supabase = createAdminClient();
 
@@ -33,7 +31,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     supabase
       .from("profiles")
       .select(
-        "id, business_name, email, subscription_status, stripe_subscription_id, current_period_end, cancel_at_period_end, onboarded_at, created_at"
+        "id, business_name, email, subscription_status, stripe_subscription_id, current_period_end, cancel_at_period_end, onboarded_at, suspended_at, created_at"
       )
       .eq("id", id)
       .single(),
@@ -53,17 +51,31 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     <div>
       <BackLink href="/admin/users" label={t("backLabel")} />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">
-          {profile.business_name || profile.email}
-        </h1>
-        <Badge
-          variant="outline"
-          className={pro ? STATUS_STYLE[profile.subscription_status] : undefined}
-        >
-          {statusLabel[profile.subscription_status] ?? profile.subscription_status}
-        </Badge>
-      </div>
+      <PageHeader
+        title={profile.business_name || profile.email}
+        titleBadge={
+          <span className="inline-flex items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className={pro ? PLAN_STATUS_STYLE[profile.subscription_status] : undefined}
+            >
+              {statusLabel[profile.subscription_status] ?? profile.subscription_status}
+            </Badge>
+            {profile.suspended_at && (
+              <Badge variant="outline" className={STATUS_TONES.negative}>
+                {tSuspend("badge")}
+              </Badge>
+            )}
+          </span>
+        }
+        action={
+          <SuspendUserButton
+            userId={profile.id}
+            userLabel={profile.business_name || profile.email}
+            suspended={profile.suspended_at != null}
+          />
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -75,6 +87,14 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               value={profile.onboarded_at ? formatDate(profile.onboarded_at, locale) : t("notYet")}
             />
             <Row label={t("joined")} value={formatDate(profile.created_at, locale)} />
+            {profile.suspended_at && (
+              <Row
+                label={tSuspend("sinceLabel")}
+                value={
+                  <span className="text-destructive">{formatDate(profile.suspended_at, locale)}</span>
+                }
+              />
+            )}
           </CardContent>
         </Card>
 

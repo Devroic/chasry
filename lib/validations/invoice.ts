@@ -9,6 +9,7 @@ export function invoiceSchema(t: Translator) {
     currency: z.string().trim().length(3).default("EUR"),
     due_date: z.string().min(1, t("dueDateRequired")),
     notes: optionalText(2000),
+    recurring: z.enum(["none", "monthly"]).default("none"),
     reminder_offsets: z.array(z.number().int().min(-60).max(60)).max(10).nullable(),
     reminder_enabled: z.boolean().nullable(),
   });
@@ -22,6 +23,7 @@ export function reminderOffsetsSchema(t: Translator) {
       .array(z.number().int().min(-60).max(60))
       .max(10, t("tooManyOffsets")),
     enabled: z.boolean(),
+    copy_self: z.boolean(),
   });
 }
 

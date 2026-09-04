@@ -1,54 +1,66 @@
 import { getTranslations, getLocale } from "next-intl/server";
+import { Sparkles } from "lucide-react";
 import { requireOnboardedUser } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { PlanFeatureList, buildPlanFeatures } from "@/components/plan-comparison";
 import { formatDate } from "@/lib/format";
 import { getNextRealPaymentDate } from "@/lib/billing";
+import { cn } from "@/lib/utils";
 import { startCheckout, openBillingPortal } from "./actions";
+import { DowngradeDialog } from "./downgrade-dialog";
+import { ResumeProButton } from "./resume-pro-button";
 
 export const metadata = { title: "Billing" };
 
 export default async function BillingSettingsPage() {
   const { supabase, user, profile } = await requireOnboardedUser();
   const t = await getTranslations("settings.billing");
+  const tUpgrade = await getTranslations("upgrade");
+  const tPlans = await getTranslations("plans");
   const tCommon = await getTranslations("common");
   const locale = await getLocale();
 
-  const { count: activeInvoiceCount } = await supabase
-    .from("invoices")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "unpaid");
-
   const status = profile.subscription_status;
   const pro = isPro(status);
-  // subscription_status stays "active" until the period actually ends;
-  // cancel_at_period_end is the only signal it won't renew.
+  // subscription_status stays "active" until the period ends, so cancel_at_period_end is the
+  // only signal it won't renew.
   const canceling = status === "active" && profile.cancel_at_period_end;
 
-  // Falls back to the stored period-end date on failure. Skipped once
-  // canceling — current_period_end is already the date Pro access ends.
-  const nextPaymentDate =
+  // Independent, so they run together. The Stripe lookup falls back to the stored period-end
+  // date, and is skipped once canceling since that date is already the end date.
+  const [{ count: activeInvoiceCount }, stripeNextPaymentDate] = await Promise.all([
+    // Usage only renders on the free plan's card.
+    pro
+      ? Promise.resolve({ count: null })
+      : supabase
+          .from("invoices")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("status", "unpaid"),
     status === "active" && !canceling && profile.stripe_subscription_id
-      ? ((await getNextRealPaymentDate(profile.stripe_subscription_id)) ?? profile.current_period_end)
-      : profile.current_period_end;
+      ? getNextRealPaymentDate(profile.stripe_subscription_id)
+      : Promise.resolve(null),
+  ]);
+  const nextPaymentDate = stripeNextPaymentDate ?? profile.current_period_end;
+  // When canceling, current_period_end is the day Pro ends; otherwise the next renewal is
+  // the earliest the downgrade could take effect.
+  const periodEndLabel = canceling
+    ? profile.current_period_end && formatDate(profile.current_period_end, locale)
+    : nextPaymentDate && formatDate(nextPaymentDate, locale);
 
-  const statusLabel: Record<string, string> = {
-    active: canceling ? t("statusCanceling") : t("statusActive"),
-    past_due: t("statusPastDue"),
-    canceled: t("statusCanceled"),
+  const planFeatures = buildPlanFeatures(tPlans);
+  const srLabels = {
+    includedLabel: tPlans("included"),
+    excludedLabel: tPlans("notIncluded"),
   };
-
-  // Same colour vocabulary as InvoiceStatusBadge (emerald = healthy, red = needs attention).
-  const proStatusStyles: Record<string, string> = {
-    active: canceling
-      ? "bg-amber-50 text-amber-700 border-amber-200"
-      : "bg-emerald-50 text-emerald-700 border-emerald-200",
-    past_due: "bg-red-50 text-red-700 border-red-200",
-  };
+  const currentPlanBadge = (
+    <Badge className="border-transparent bg-brand-primary-tint text-brand-primary">
+      {tUpgrade("currentPlan")}
+    </Badge>
+  );
 
   return (
     <div className="space-y-6">
@@ -59,57 +71,105 @@ export default async function BillingSettingsPage() {
       )}
 
       {canceling && profile.current_period_end && (
-        <Alert className="border-amber-200 bg-amber-50">
-          <AlertTitle className="text-amber-800">{t("cancelingTitle")}</AlertTitle>
-          <AlertDescription className="text-amber-700">
-            {t("cancelingWarning", { date: formatDate(profile.current_period_end, locale) })}
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-400/20 dark:bg-amber-400/10">
+          <AlertTitle className="text-amber-800 dark:text-amber-300">{t("cancelingTitle")}</AlertTitle>
+          <AlertDescription className="space-y-3 text-amber-700 dark:text-amber-400">
+            <p>{t("cancelingWarning", { date: formatDate(profile.current_period_end, locale) })}</p>
+            <ResumeProButton />
           </AlertDescription>
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("planTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-foreground">
-                {pro ? t("proLabel", { price: PRO_PRICE_AMOUNT }) : t("freeLabel")}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {pro
-                  ? t("proDescription")
-                  : t("freeDescription", {
-                      limit: FREE_INVOICE_LIMIT,
-                      used: activeInvoiceCount ?? 0,
-                    })}
-              </p>
+      {/* No standalone plan card: the comparison carries everything. Problem states
+          (payment failed, canceling) are announced by the alerts above. */}
+      {/* No visible heading: the two cards are self-describing. The label stays for screen readers. */}
+      <section aria-label={t("compareTitle")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div
+            className={cn(
+              "flex flex-col rounded-2xl bg-card p-5",
+              !pro ? "border-2 border-brand-primary" : "border border-border"
+            )}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase">
+                {tCommon("free")}
+              </h3>
+              {!pro && currentPlanBadge}
             </div>
-            <Badge variant="outline" className={pro ? proStatusStyles[status] : undefined}>
-              {pro ? (statusLabel[status] ?? status) : tCommon("free")}
-            </Badge>
+            <p className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl font-extrabold text-foreground">€0</span>
+              <span className="text-xs text-muted-foreground">{tUpgrade("forever")}</span>
+            </p>
+            {!pro && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {tUpgrade("freeUsage", { used: activeInvoiceCount ?? 0, limit: FREE_INVOICE_LIMIT })}
+              </p>
+            )}
+            <PlanFeatureList className="mt-4 flex-1" features={planFeatures.free} {...srLabels} />
+            {/* Only a healthy subscription can self-cancel; past_due resolves through
+                Manage billing (the action would just fail its status guard). */}
+            {status === "active" &&
+              (canceling ? (
+                periodEndLabel && (
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    {t("switchesOn", { date: periodEndLabel })}
+                  </p>
+                )
+              ) : (
+                <div className="mt-4">
+                  <DowngradeDialog periodEndLabel={periodEndLabel || null} freeLimit={FREE_INVOICE_LIMIT} />
+                </div>
+              ))}
           </div>
 
-          {status === "active" && !canceling && nextPaymentDate && (
-            <p className="text-xs text-muted-foreground">
-              {t("nextPayment", { date: formatDate(nextPaymentDate, locale) })}
+          <div
+            className={cn(
+              "flex flex-col rounded-2xl bg-card p-5",
+              pro ? "border-2 border-brand-primary" : "border border-border"
+            )}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-brand-primary uppercase">
+                {tCommon("pro")}
+              </h3>
+              {pro && currentPlanBadge}
+            </div>
+            <p className="mt-2 flex items-baseline gap-1.5">
+              <span className="text-2xl font-extrabold text-foreground">{PRO_PRICE_AMOUNT}</span>
+              <span className="text-xs text-muted-foreground">{tUpgrade("perMonth")}</span>
             </p>
-          )}
-
-          {pro ? (
-            <form action={openBillingPortal}>
-              <Button type="submit" variant="outline">
-                {t("manageBilling")}
-              </Button>
-            </form>
-          ) : (
-            <form action={startCheckout}>
-              <Button type="submit">{t("upgradeToPro")}</Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            {status === "active" && !canceling && nextPaymentDate && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t("nextPayment", { date: formatDate(nextPaymentDate, locale) })}
+              </p>
+            )}
+            <PlanFeatureList
+              className="mt-4 flex-1"
+              features={planFeatures.pro}
+              highlightProOnly
+              {...srLabels}
+            />
+            {pro && (
+              <form action={openBillingPortal} className="mt-4">
+                <FormSubmitButton blockUi variant="outline" className="w-full">
+                  {t("manageBilling")}
+                </FormSubmitButton>
+              </form>
+            )}
+            {!pro && (
+              <div className="mt-4">
+                <form action={startCheckout}>
+                  <FormSubmitButton blockUi className="w-full">
+                    <Sparkles /> {tUpgrade("cta")}
+                  </FormSubmitButton>
+                </form>
+                <p className="mt-2 text-center text-xs text-muted-foreground">{tUpgrade("note")}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

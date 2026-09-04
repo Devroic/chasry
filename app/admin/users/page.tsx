@@ -1,10 +1,14 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAdminEmail } from "@/lib/auth";
-import { ClickableTableRow } from "@/components/dashboard/clickable-table-row";
-import { SortableHead } from "@/components/dashboard/sortable-head";
-import { TableSearch } from "@/components/dashboard/table-search";
-import { Pagination } from "@/components/dashboard/pagination";
+import { isAdminEmail, requireAdmin } from "@/lib/auth";
+import { ClickableTableRow } from "@/components/clickable-table-row";
+import { PageHeader } from "@/components/page-header";
+import { EmptyMessage } from "@/components/empty-message";
+import { PLAN_STATUS_STYLE, planStatusLabels } from "@/components/admin/plan-status";
+import { STATUS_TONES } from "@/components/status-tones";
+import { SortableHead } from "@/components/sortable-head";
+import { TableSearch } from "@/components/table-search";
+import { Pagination } from "@/components/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { buildListHref, paginate } from "@/lib/utils";
@@ -16,36 +20,29 @@ export const metadata = { title: { absolute: "Users · Chasry Admin" } };
 const SORT_FIELDS = ["name", "email", "status", "joined"] as const;
 type SortField = (typeof SORT_FIELDS)[number];
 
-const STATUS_STYLE: Record<string, string> = {
-  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  past_due: "bg-red-50 text-red-700 border-red-200",
-};
-
 export default async function AdminUsersPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
+  // Layout guards don't cover RSC page-segment requests; every admin page gates itself.
+  await requireAdmin();
   const { q = "", sort = "joined", dir = "desc", page: pageParam } = await searchParams;
   const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "joined";
   const sortDir: "asc" | "desc" = dir === "asc" ? "asc" : "desc";
 
   const t = await getTranslations("admin.users");
   const tStatus = await getTranslations("admin.status");
+  const tSuspend = await getTranslations("admin.suspend");
   const tCommon = await getTranslations("common");
   const locale = await getLocale();
-  const statusLabel: Record<string, string> = {
-    active: tStatus("pro"),
-    past_due: tStatus("pastDue"),
-    canceled: tStatus("canceled"),
-    none: tStatus("free"),
-  };
+  const statusLabel = planStatusLabels(tStatus);
 
   const supabase = createAdminClient();
   const [{ data: profilesRaw }, { data: invoicesRaw }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, business_name, email, subscription_status, current_period_end, created_at"),
+      .select("id, business_name, email, subscription_status, current_period_end, suspended_at, created_at"),
     supabase.from("invoices").select("user_id").eq("status", "unpaid"),
   ]);
 
@@ -90,23 +87,21 @@ export default async function AdminUsersPage({
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("registeredCount", { count: profiles.length })}</p>
-        </div>
-        <TableSearch
-          action="/admin/users"
-          placeholder={t("searchPlaceholder")}
-          defaultValue={q}
-          hiddenParams={{ sort, dir }}
-        />
-      </div>
+      <PageHeader
+        title={t("title")}
+        description={t("registeredCount", { count: profiles.length })}
+        action={
+          <TableSearch
+            action="/admin/users"
+            placeholder={t("searchPlaceholder")}
+            defaultValue={q}
+            hiddenParams={{ sort, dir }}
+          />
+        }
+      />
 
       {sorted.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          {t("noResults")}
-        </p>
+        <EmptyMessage>{profiles.length === 0 ? t("noUsers") : t("noResults")}</EmptyMessage>
       ) : (
         <Card className="p-0">
           <Table>
@@ -143,15 +138,26 @@ export default async function AdminUsersPage({
             </TableHeader>
             <TableBody>
               {paginated.map((profile) => (
-                <ClickableTableRow key={profile.id} href={`/admin/users/${profile.id}`}>
+                <ClickableTableRow
+                  key={profile.id}
+                  href={`/admin/users/${profile.id}`}
+                  label={profile.business_name || profile.email}
+                >
                   <TableCell className="font-medium">{profile.business_name || "—"}</TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">
                     {profile.email}
                   </TableCell>
-                  <TableCell className="pl-0">
-                    <Badge variant="outline" className={STATUS_STYLE[profile.subscription_status]}>
-                      {statusLabel[profile.subscription_status] ?? profile.subscription_status}
-                    </Badge>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Badge variant="outline" className={PLAN_STATUS_STYLE[profile.subscription_status]}>
+                        {statusLabel[profile.subscription_status] ?? profile.subscription_status}
+                      </Badge>
+                      {profile.suspended_at && (
+                        <Badge variant="outline" className={STATUS_TONES.negative}>
+                          {tSuspend("badge")}
+                        </Badge>
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {activeInvoiceCounts.get(profile.id) ?? 0}

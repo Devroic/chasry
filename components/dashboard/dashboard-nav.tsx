@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
+import { navItemClassName } from "@/components/nav-item";
 import { NAV_ITEMS } from "./nav-items";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -21,13 +21,7 @@ export function DashboardNav({
     <nav className="flex flex-col gap-1">
       {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
-        const linkClassName = cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-          collapsed && "justify-center px-0",
-          active
-            ? "bg-brand-primary-tint text-brand-primary"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        );
+        const linkClassName = navItemClassName(active, collapsed);
 
         if (!collapsed) {
           return (

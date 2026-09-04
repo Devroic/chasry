@@ -1,0 +1,163 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { requireUser } from "@/lib/auth";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/dashboard/empty-state";
+import { EmptyMessage } from "@/components/empty-message";
+import { ClickableTableRow } from "@/components/clickable-table-row";
+import { SortableHead } from "@/components/sortable-head";
+import { TableSearch } from "@/components/table-search";
+import { Pagination } from "@/components/pagination";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { buildListHref, paginate } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+export const metadata = { title: "Clients" };
+
+const SORT_FIELDS = ["name", "email", "added"] as const;
+type SortField = (typeof SORT_FIELDS)[number];
+
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
+}) {
+  const { q = "", sort = "added", dir = "desc", page: pageParam } = await searchParams;
+  const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "added";
+  const sortDir: "asc" | "desc" = dir === "asc" ? "asc" : "desc";
+  const { supabase, user } = await requireUser();
+  const t = await getTranslations("customers");
+  const tCommon = await getTranslations("common");
+
+  const { data: customersRaw } = await supabase
+    .from("customers")
+    .select("id, name, email, phone, created_at")
+    .eq("user_id", user.id);
+
+  const customers = customersRaw ?? [];
+  const query = q.trim().toLowerCase();
+  const filtered = query
+    ? customers.filter(
+        (c) => c.name.toLowerCase().includes(query) || c.email.toLowerCase().includes(query)
+      )
+    : customers;
+
+  const sortMultiplier = sortDir === "asc" ? 1 : -1;
+  const sorted = [...filtered].sort((a, b) => {
+    switch (sortField) {
+      case "name":
+        return sortMultiplier * a.name.localeCompare(b.name);
+      case "email":
+        return sortMultiplier * a.email.localeCompare(b.email);
+      case "added":
+      default:
+        return sortMultiplier * (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0);
+    }
+  });
+
+  const currentParams = { q, sort, dir };
+  function sortHref(field: SortField) {
+    const nextDir = sortField === field && sortDir === "asc" ? "desc" : "asc";
+    return buildListHref("/clients", currentParams, { sort: field, dir: nextDir });
+  }
+
+  const { items: paginated, page, totalPages } = paginate(sorted, pageParam);
+
+  return (
+    <div>
+      <PageHeader
+        title={t("listTitle")}
+        description={t("listSubtitle")}
+        action={
+          <Button asChild>
+            <Link href="/clients/new">
+              <Plus /> {t("addClient")}
+            </Link>
+          </Button>
+        }
+      />
+
+      {customers.length > 0 && (
+        <div className="mb-4 flex justify-end">
+          <TableSearch
+            action="/clients"
+            placeholder={t("searchPlaceholder")}
+            defaultValue={q}
+            hiddenParams={{ sort, dir }}
+          />
+        </div>
+      )}
+
+      {customers.length === 0 ? (
+        <EmptyState
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+          actionLabel={t("emptyCta")}
+          actionHref="/clients/new"
+        />
+      ) : sorted.length === 0 ? (
+        <EmptyMessage>{t("noSearchResults")}</EmptyMessage>
+      ) : (
+        <Card className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <SortableHead
+                  label={t("columnName")}
+                  active={sortField === "name"}
+                  dir={sortDir}
+                  href={sortHref("name")}
+                />
+                <SortableHead
+                  label={t("columnEmail")}
+                  active={sortField === "email"}
+                  dir={sortDir}
+                  href={sortHref("email")}
+                />
+                <TableHead className="hidden sm:table-cell">{t("columnPhone")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginated.map((customer) => (
+                <ClickableTableRow key={customer.id} href={`/clients/${customer.id}`} label={customer.name}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-primary-tint text-xs font-semibold text-brand-primary">
+                        {customer.name.trim().charAt(0).toUpperCase() || "?"}
+                      </span>
+                      {customer.name}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{customer.email}</TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
+                    {customer.phone || "—"}
+                  </TableCell>
+                </ClickableTableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {totalPages > 1 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          navLabel={tCommon("pagination")}
+          previousLabel={tCommon("previous")}
+          nextLabel={tCommon("next")}
+          buildHref={(p) => buildListHref("/clients", currentParams, { page: String(p) })}
+        />
+      )}
+    </div>
+  );
+}

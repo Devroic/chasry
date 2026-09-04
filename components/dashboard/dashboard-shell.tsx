@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -27,6 +26,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { DashboardNav } from "./dashboard-nav";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
@@ -66,22 +66,7 @@ export function DashboardShell({
       <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur-sm">
         <div className="flex h-20 items-center justify-between px-4 sm:px-6">
           <Link href="/dashboard" className="flex items-center">
-            <Image
-              src="/brand/logo-light-bg.png"
-              alt="Chasry"
-              width={220}
-              height={60}
-              className="h-10 w-auto sm:h-14 dark:hidden"
-              priority
-            />
-            <Image
-              src="/brand/logo-dark-bg.png"
-              alt="Chasry"
-              width={220}
-              height={60}
-              className="hidden h-10 w-auto sm:h-14 dark:block"
-              priority
-            />
+            <BrandLogo />
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">

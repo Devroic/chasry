@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
+import { requireAdmin } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata = { title: { absolute: "Playbook · Chasry Admin" } };
 
@@ -23,6 +25,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default async function AdminPlaybookPage() {
+  // Layout guards don't cover RSC page-segment requests; every admin page gates itself.
+  await requireAdmin();
   const t = await getTranslations("admin.playbook");
 
   const kbd = { kbd: (chunks: React.ReactNode) => <Kbd>{chunks}</Kbd> };
@@ -30,23 +34,22 @@ export default async function AdminPlaybookPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t.rich("intro", {
-            stripeLink: (chunks) => (
-              <a
-                href="https://dashboard.stripe.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-primary hover:underline"
-              >
-                {chunks}
-              </a>
-            ),
-          })}
-        </p>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title={t("title")}
+        description={t.rich("intro", {
+          stripeLink: (chunks) => (
+            <a
+              href="https://dashboard.stripe.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-primary hover:underline"
+            >
+              {chunks}
+            </a>
+          ),
+        })}
+      />
 
       <Section title={t("cancelTitle")}>
         <p>{t.rich("cancelP1", kbd)}</p>

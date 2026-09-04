@@ -3,6 +3,7 @@
 import { Suspense, startTransition } from "react";
 import Link from "next/link";
 import { useActionState } from "react";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
@@ -48,6 +49,7 @@ function LoginForm() {
       <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>
 
       <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
+        <BlockingOverlay show={pending} spinner={false} />
         {state?.error && (
           <Alert variant="destructive">
             <AlertDescription>{state.error}</AlertDescription>

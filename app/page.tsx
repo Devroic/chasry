@@ -6,6 +6,7 @@ import { Bell, Clock, ShieldCheck, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { PlanFeatureList, buildPlanFeatures } from "@/components/plan-comparison";
 import { createClient } from "@/lib/supabase/server";
 import { FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 
@@ -21,6 +22,8 @@ export default async function RootPage() {
 
   const t = await getTranslations("landing");
   const tAuth = await getTranslations("auth.signup");
+  const tPlans = await getTranslations("plans");
+  const planFeatures = buildPlanFeatures(tPlans);
 
   const features = [1, 2, 3].map((n) => ({
     Icon: FEATURE_ICONS[n - 1],
@@ -104,7 +107,7 @@ export default async function RootPage() {
               {features.map(({ Icon, title, description }) => (
                 <div
                   key={title}
-                  className="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(13,13,13,0.04),0_12px_32px_-16px_rgba(13,13,13,0.12)]"
+                  className="rounded-2xl border border-border bg-card p-6 shadow-card"
                 >
                   <span className="flex size-10 items-center justify-center rounded-full bg-brand-primary-tint text-brand-primary">
                     <Icon className="size-5" />
@@ -161,7 +164,13 @@ export default async function RootPage() {
                 <p className="mt-3 text-sm text-muted-foreground">
                   {t("freeDescription", { limit: FREE_INVOICE_LIMIT })}
                 </p>
-                <Button asChild variant="outline" className="mt-6 w-full">
+                <PlanFeatureList
+                  className="mt-5"
+                  features={planFeatures.free}
+                  includedLabel={tPlans("included")}
+                  excludedLabel={tPlans("notIncluded")}
+                />
+                <Button asChild variant="outline" className="mt-6 h-11 w-full text-base font-semibold">
                   <Link href="/signup">{t("freeCta")}</Link>
                 </Button>
               </div>
@@ -177,6 +186,13 @@ export default async function RootPage() {
                   <span className="text-sm text-muted-foreground">{t("proPricePeriod")}</span>
                 </p>
                 <p className="mt-3 text-sm text-muted-foreground">{t("proDescription")}</p>
+                <PlanFeatureList
+                  className="mt-5"
+                  features={planFeatures.pro}
+                  highlightProOnly
+                  includedLabel={tPlans("included")}
+                  excludedLabel={tPlans("notIncluded")}
+                />
                 {/*
                  * No second signup button here on purpose. Both plans lead
                  * to the same /signup flow (there's no plan picker at

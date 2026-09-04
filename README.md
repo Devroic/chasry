@@ -85,8 +85,9 @@ This prints a webhook signing secret starting with `whsec_...` — use that as
 2. Add and verify `chasry.com` as a sending domain in Resend. It'll give you a handful of DNS
    records (a domain-verification TXT, one or more DKIM CNAMEs, and an SPF-related record).
 3. Add those records in **Namecheap → Domain List → chasry.com → Advanced DNS**. These are a
-   different record type (TXT/CNAME) from the MX records your existing `info@chasry.com`
-   forwarding uses — adding them does **not** break that forwarding.
+   different record type (TXT/CNAME) from the MX records your existing `@chasry.com` mailbox
+   forwarding (`info@`, and the `support@` alias the app shows) uses — adding them does **not**
+   break that forwarding.
 4. Once verified, set `RESEND_FROM_EMAIL="Chasry <reminders@chasry.com>"`.
 5. Until DNS is verified, you can develop against Resend's shared test sending — reminder emails
    just won't be deliverable to real inboxes yet.

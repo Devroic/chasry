@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/locale";
 
 export function LanguageSwitcher() {
   const locale = useLocale() as Locale;
+  const t = useTranslations("header");
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -23,7 +24,7 @@ export function LanguageSwitcher() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Change language"
+          aria-label={t("language")}
           disabled={isPending}
         >
           <Languages className="size-4" />

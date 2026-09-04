@@ -5,13 +5,9 @@ import type { Database } from "@/types/database.types";
 /**
  * Service-role Supabase client. Bypasses Row Level Security entirely.
  *
- * Only use this from trusted server contexts: the cron reminder job and the
- * Stripe webhook handler (neither has a user session to scope to), and the
- * /admin section (which does have a session, but its queries legitimately
- * need to span every user's data, not just the admin's own row) — and only
- * after requireAdmin() has verified the caller is an authorized admin.
- * Never import this into anything that runs in the browser, or into a
- * regular (non-admin) Server Component that renders user-supplied data.
+ * Allowed importers only: the cron jobs, the Stripe webhook, the /admin section (after
+ * requireAdmin()), and the signed-link pages app/paid/[token] and app/email/mark-paid, whose
+ * queries must stay scoped to the verified token's single invoice id. Never anywhere else.
  */
 export function createAdminClient() {
   return createSupabaseClient<Database>(

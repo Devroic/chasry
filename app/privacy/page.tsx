@@ -1,38 +1,17 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { BackLink } from "@/components/dashboard/back-link";
-import { getOptionalUser, getProfile } from "@/lib/auth";
+import { SitePageShell } from "@/components/site-page-shell";
+import { LegalSection as Section } from "@/components/legal-section";
+import { SUPPORT_EMAIL } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Privacy Policy" };
 
-const SUPPORT_EMAIL = "info@chasry.com";
-const LAST_UPDATED = "August 29, 2026";
-
-// Same reasoning as app/terms/page.tsx: deliberately English-only body text.
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-8 first:mt-0">
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
-      <div className="mt-2 space-y-3 text-sm leading-relaxed text-muted-foreground">
-        {children}
-      </div>
-    </section>
-  );
-}
+const LAST_UPDATED = "August 31, 2026";
 
 export default async function PrivacyPage({
   searchParams,
 }: {
   searchParams: Promise<{ standalone?: string }>;
 }) {
-  // Signed-in, fully onboarded visitors get the dashboard shell instead of the marketing header.
-  const user = await getOptionalUser();
-  const profile = user ? await getProfile(user.id) : null;
-  const inApp = Boolean(profile?.onboarded_at);
-  const tCommon = await getTranslations("common");
   // ?standalone=1: opened in a fresh tab (signup checkbox link), so no Back link.
   const { standalone } = await searchParams;
 
@@ -43,7 +22,7 @@ export default async function PrivacyPage({
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
 
-      <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(13,13,13,0.04),0_12px_32px_-16px_rgba(13,13,13,0.12)] sm:p-8">
+      <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
             <Section title="1. Who this policy covers">
               <p>
                 This policy explains what personal data Chasry (&quot;we&quot;, &quot;us&quot;)
@@ -79,6 +58,13 @@ export default async function PrivacyPage({
                 content, we just store and send it on your behalf.
               </p>
               <p>
+                Reminder emails can include a link that lets your client tell you they&apos;ve
+                already paid. If your client uses it, we record the date and time of that
+                confirmation against the invoice and notify you by email. The links in reminder
+                emails contain a signed token that identifies only that one invoice; they don&apos;t
+                sign your client in to anything or expose any other data.
+              </p>
+              <p>
                 For this client data, you are responsible for having a lawful reason to contact your
                 own clients about their own invoices. We process it only to provide the reminder
                 service you&apos;ve asked for.
@@ -96,6 +82,9 @@ export default async function PrivacyPage({
               <ul className="list-disc space-y-1 pl-5">
                 <li>Create and run your account,</li>
                 <li>Generate and send reminder emails to your clients on your behalf, on the schedule you&apos;ve set,</li>
+                <li>Create the next invoice in a series when you&apos;ve marked an invoice as repeating, and notify you when we do,</li>
+                <li>Record your client&apos;s payment confirmation when they use the link in a reminder, and notify you about it,</li>
+                <li>Send you the service emails you&apos;ve turned on, like the weekly summary and copies of your own reminders,</li>
                 <li>Enforce the free plan&apos;s invoice limit,</li>
                 <li>Process your Pro subscription payment,</li>
                 <li>Respond to support requests you send us,</li>
@@ -141,6 +130,7 @@ export default async function PrivacyPage({
               <ul className="list-disc space-y-1 pl-5">
                 <li>A session cookie that keeps you signed in. This is required for the app to work,</li>
                 <li>A cookie that remembers your chosen language,</li>
+                <li>A cookie that remembers your browser&apos;s timezone, so due dates and reminder days are shown for your own calendar day,</li>
                 <li>Your light/dark theme preference, stored in your browser (not a cookie).</li>
               </ul>
               <p>We don&apos;t use advertising or analytics tracking cookies.</p>
@@ -193,32 +183,9 @@ export default async function PrivacyPage({
     </>
   );
 
-  if (inApp && profile) {
-    return (
-      <DashboardShell
-        businessName={profile.business_name || profile.email || user?.email || ""}
-        email={profile.email ?? user?.email ?? ""}
-        subscriptionStatus={profile.subscription_status}
-        footer={<SiteFooter />}
-      >
-        <div className="max-w-3xl">
-          <BackLink href="/dashboard" label={tCommon("back")} useBrowserBack />
-          {content}
-        </div>
-      </DashboardShell>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
-      <SiteHeader />
-      <main className="flex-1 px-6 py-10">
-        {!standalone && (
-          <BackLink href="/" label={tCommon("back")} className="ml-0 mb-6" useBrowserBack />
-        )}
-        <div className="mx-auto max-w-3xl">{content}</div>
-      </main>
-      <SiteFooter />
-    </div>
+    <SitePageShell maxWidthClassName="max-w-3xl" hideBackLink={Boolean(standalone)}>
+      {content}
+    </SitePageShell>
   );
 }

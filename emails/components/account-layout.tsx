@@ -13,14 +13,8 @@ import {
 } from "@react-email/components";
 import * as React from "react";
 
-const BRAND = {
-  primary: "#23458D",
-  ink: "#0D0D0D",
-  neutral: "#5B6B85",
-  border: "#E3E8F2",
-};
-
-const SUPPORT_EMAIL = "info@chasry.com";
+import { EMAIL_BRAND as BRAND } from "@/emails/components/brand";
+import { SUPPORT_EMAIL } from "@/lib/constants";
 
 // Re-asserts light colors under prefers-color-scheme to stop Gmail's dark mode inversion.
 const DARK_MODE_OVERRIDE = `

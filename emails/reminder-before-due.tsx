@@ -18,6 +18,8 @@ export interface ReminderBeforeDueProps {
   daysUntilDue: number;
   paymentLink?: string;
   locale?: Locale;
+  showBranding?: boolean;
+  claimUrl?: string;
 }
 
 export default function ReminderBeforeDueEmail({
@@ -29,6 +31,8 @@ export default function ReminderBeforeDueEmail({
   daysUntilDue = 7,
   paymentLink,
   locale = "en",
+  showBranding = true,
+  claimUrl,
 }: Partial<ReminderBeforeDueProps>) {
   const dueClause = emailCopy.beforeDue.dueClause(daysUntilDue, locale);
 
@@ -37,6 +41,8 @@ export default function ReminderBeforeDueEmail({
       previewText={emailCopy.beforeDue.previewText(dueClause, locale)}
       businessName={businessName}
       locale={locale}
+      showBranding={showBranding}
+      claimUrl={claimUrl}
     >
       <ReminderHeading>{emailCopy.beforeDue.heading(clientName, locale)}</ReminderHeading>
       <ReminderText>{emailCopy.beforeDue.body(businessName, dueClause, locale)}</ReminderText>

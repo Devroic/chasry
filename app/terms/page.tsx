@@ -1,39 +1,18 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { BackLink } from "@/components/dashboard/back-link";
-import { getOptionalUser, getProfile } from "@/lib/auth";
+import { SitePageShell } from "@/components/site-page-shell";
+import { LegalSection as Section } from "@/components/legal-section";
+import { SUPPORT_EMAIL } from "@/lib/constants";
 import { FREE_INVOICE_LIMIT, PRO_PRICE_LABEL } from "@/lib/plan";
 
 export const metadata: Metadata = { title: "Terms of Service" };
 
-const SUPPORT_EMAIL = "info@chasry.com";
-const LAST_UPDATED = "August 29, 2026";
-
-// Deliberately not run through next-intl — legal text is too risky to mistranslate.
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-8 first:mt-0">
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
-      <div className="mt-2 space-y-3 text-sm leading-relaxed text-muted-foreground">
-        {children}
-      </div>
-    </section>
-  );
-}
+const LAST_UPDATED = "August 31, 2026";
 
 export default async function TermsPage({
   searchParams,
 }: {
   searchParams: Promise<{ standalone?: string }>;
 }) {
-  // Signed-in, fully onboarded visitors get the dashboard shell instead of the marketing header.
-  const user = await getOptionalUser();
-  const profile = user ? await getProfile(user.id) : null;
-  const inApp = Boolean(profile?.onboarded_at);
-  const tCommon = await getTranslations("common");
   // ?standalone=1: opened in a fresh tab (signup checkbox link), so no Back link.
   const { standalone } = await searchParams;
 
@@ -44,7 +23,7 @@ export default async function TermsPage({
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
 
-      <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(13,13,13,0.04),0_12px_32px_-16px_rgba(13,13,13,0.12)] sm:p-8">
+      <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8">
             <Section title="1. Agreement to these terms">
               <p>
                 These Terms of Service (&quot;Terms&quot;) govern your use of Chasry (&quot;Chasry&quot;,
@@ -79,11 +58,45 @@ export default async function TermsPage({
               </p>
             </Section>
 
-            <Section title="4. Acceptable use">
+            <Section title="4. Automated actions taken on your instructions">
+              <p>
+                Some Chasry features act automatically on standing instructions you give: scheduled
+                reminders send without further confirmation, repeating invoices create the next
+                invoice in a series on your behalf, and reminder emails can offer your client a
+                link to tell you they&apos;ve already paid. Each of these runs only because you
+                turned it on, and you can turn each one off at any time.
+              </p>
+              <p>
+                When you mark an invoice as repeating, you authorize Chasry to create the next
+                invoice in the series using the details of the previous one (client, amount,
+                currency, notes, payment link, and reminder settings). We notify you by email each
+                time this happens. You are responsible for reviewing each created invoice, for
+                keeping the series&apos; details accurate, for attaching any documents the new
+                invoice needs (attachments are never copied automatically), and for stopping the
+                series when it should end.
+              </p>
+              <p>
+                When a client uses the &quot;already paid&quot; link in a reminder, Chasry records
+                their confirmation, pauses reminders for that invoice, and notifies you. We do not
+                and cannot verify whether payment was actually made. Deciding whether to mark the
+                invoice as paid, or to resume reminders, is entirely your responsibility.
+              </p>
+              <p>
+                Summary and notification emails (for example, the weekly summary) are provided for
+                convenience only. They are not a statement of account or a system of record, and
+                you remain responsible for tracking your own invoices and payments.
+              </p>
+            </Section>
+
+            <Section title="5. Acceptable use">
               <p>You agree to use Chasry only to send reminders about invoices you&apos;re genuinely owed by your own clients. In particular, you agree not to:</p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>Use Chasry to send reminders for invoices that don&apos;t exist or aren&apos;t genuinely owed to you,</li>
                 <li>Use Chasry to harass, threaten, or mislead the people you&apos;re invoicing,</li>
+                <li>
+                  Use repeating invoices to bill for amounts that aren&apos;t genuinely recurring
+                  and owed under your arrangement with the client,
+                </li>
                 <li>
                   Send reminders that don&apos;t comply with the laws that apply to you and your
                   clients (for example, rules on debt collection communications in your
@@ -102,7 +115,7 @@ export default async function TermsPage({
               </p>
             </Section>
 
-            <Section title="5. Payments">
+            <Section title="6. Payments">
               <p>
                 All payments are processed by Stripe. Chasry never receives or stores your card
                 details. Prices are shown to you before you pay and include or exclude tax as
@@ -116,7 +129,7 @@ export default async function TermsPage({
               </p>
             </Section>
 
-            <Section title="6. Your data">
+            <Section title="7. Your data">
               <p>
                 You own the client and invoice information you enter into Chasry. We process it
                 solely to provide the service to you, as described in our{" "}
@@ -128,7 +141,7 @@ export default async function TermsPage({
               </p>
             </Section>
 
-            <Section title="7. Service availability">
+            <Section title="8. Service availability">
               <p>
                 We aim to keep Chasry reliable and available, but we don&apos;t guarantee
                 uninterrupted access. We may perform maintenance, and features may change as we
@@ -137,7 +150,7 @@ export default async function TermsPage({
               </p>
             </Section>
 
-            <Section title="8. Limitation of liability">
+            <Section title="9. Limitation of liability">
               <p>
                 Chasry is provided &quot;as is&quot; and &quot;as available&quot;, without
                 warranties of any kind, express or implied, including any warranty of
@@ -154,23 +167,35 @@ export default async function TermsPage({
               <p>
                 You&apos;re solely responsible for the accuracy and content of the invoices,
                 reminders, and any file attachments Chasry sends on your behalf, and for the
-                accuracy of the client contact details you provide. We&apos;re not liable for how a
-                client responds to, or any dispute arising from, a reminder or attachment sent using
-                information or files you supplied.
+                accuracy of the client contact details you provide. This includes invoices Chasry
+                creates automatically on your standing instructions (repeating invoices). We&apos;re
+                not liable for how a client responds to, or any dispute arising from, a reminder,
+                invoice, or attachment sent or created using information, settings, or files you
+                supplied.
+              </p>
+              <p>
+                We&apos;re also not liable for a client&apos;s &quot;already paid&quot; confirmation
+                being inaccurate or dishonest, for reminders paused or resumed as a result of such a
+                confirmation or of your snooze settings, or for any decision you make in reliance on
+                a notification or summary email. Email delivery depends on networks and mail
+                providers outside our control, so we can&apos;t guarantee that any particular email
+                is delivered, read, or not filtered as spam.
               </p>
             </Section>
 
-            <Section title="9. Indemnification">
+            <Section title="10. Indemnification">
               <p>
                 You agree to defend, indemnify, and hold Chasry harmless from any claim, demand,
                 loss, or expense, including reasonable legal fees, arising from your use of
-                Chasry, the invoices, reminders, or file attachments you send through it, or any
-                dispute between you and your own clients. This includes claims brought against us
-                by your clients or by other third parties as a result of how you used the service.
+                Chasry, the invoices, reminders, or file attachments you send through it, the
+                invoices Chasry creates on your standing instructions, or any dispute between you
+                and your own clients, including disputes about whether an invoice was owed, paid,
+                or correctly billed. This includes claims brought against us by your clients or by
+                other third parties as a result of how you used the service.
               </p>
             </Section>
 
-            <Section title="10. Ending your account">
+            <Section title="11. Ending your account">
               <p>
                 You can delete your account at any time from Settings &rsaquo; Profile. This cancels
                 any active subscription and permanently removes your account, your clients, your
@@ -179,7 +204,7 @@ export default async function TermsPage({
               </p>
             </Section>
 
-            <Section title="11. Changes to these terms">
+            <Section title="12. Changes to these terms">
               <p>
                 We may update these Terms from time to time. We&apos;ll update the &quot;last
                 updated&quot; date above, and for material changes, we&apos;ll try to notify you by
@@ -187,11 +212,11 @@ export default async function TermsPage({
               </p>
             </Section>
 
-            <Section title="12. Governing law">
+            <Section title="13. Governing law">
               <p>These Terms are governed by the laws of Cyprus, without regard to conflict-of-law principles.</p>
             </Section>
 
-            <Section title="13. Contact">
+            <Section title="14. Contact">
               <p>
                 Questions about these Terms? Email us at{" "}
                 <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-primary hover:underline">
@@ -204,32 +229,9 @@ export default async function TermsPage({
     </>
   );
 
-  if (inApp && profile) {
-    return (
-      <DashboardShell
-        businessName={profile.business_name || profile.email || user?.email || ""}
-        email={profile.email ?? user?.email ?? ""}
-        subscriptionStatus={profile.subscription_status}
-        footer={<SiteFooter />}
-      >
-        <div className="max-w-3xl">
-          <BackLink href="/dashboard" label={tCommon("back")} useBrowserBack />
-          {content}
-        </div>
-      </DashboardShell>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-background via-background to-brand-secondary-tint/40">
-      <SiteHeader />
-      <main className="flex-1 px-6 py-10">
-        {!standalone && (
-          <BackLink href="/" label={tCommon("back")} className="ml-0 mb-6" useBrowserBack />
-        )}
-        <div className="mx-auto max-w-3xl">{content}</div>
-      </main>
-      <SiteFooter />
-    </div>
+    <SitePageShell maxWidthClassName="max-w-3xl" hideBackLink={Boolean(standalone)}>
+      {content}
+    </SitePageShell>
   );
 }

@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/dashboard/page-header";
-import { BackLink } from "@/components/dashboard/back-link";
+import { PageHeader } from "@/components/page-header";
+import { BackLink } from "@/components/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { InvoiceForm } from "@/components/dashboard/invoice-form";
 import { requireOnboardedUser } from "@/lib/auth";
@@ -24,7 +24,7 @@ export default async function EditInvoicePage({
     supabase
       .from("invoices")
       .select(
-        "id, customer_id, invoice_number, amount, currency, due_date, notes, reminder_offsets, reminder_enabled, attachment_filename"
+        "id, customer_id, invoice_number, amount, currency, due_date, notes, recurring, reminder_offsets, reminder_enabled, attachment_filename"
       )
       .eq("id", id)
       .eq("user_id", user.id)
@@ -52,7 +52,9 @@ export default async function EditInvoicePage({
             <InvoiceForm
               action={updateInvoice.bind(null, invoice.id)}
               customers={customers ?? []}
-              currency={profile.currency}
+              // The invoice's own currency, NOT profile.currency: editing must never
+              // silently re-denominate an invoice after the account default changed.
+              currency={invoice.currency}
               defaultValues={invoice}
               defaultPaymentLink={profile.payment_link ?? undefined}
               accountDefaults={{

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, startTransition } from "react";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -59,6 +60,7 @@ export default function ResetPasswordPage() {
       <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>
 
       <form onSubmit={handleSubmit(onValid)} noValidate className="mt-8 space-y-4">
+        <BlockingOverlay show={pending} spinner={false} />
         {state?.error && (
           <Alert variant="destructive">
             <AlertDescription>{state.error}</AlertDescription>

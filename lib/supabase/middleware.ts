@@ -7,7 +7,7 @@ const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/reset-password"];
 const SESSION_ACTION_PATHS = ["/reset-password/confirm", "/signup/confirmed"];
 
 // UX convenience only — every protected page also checks auth itself server-side.
-const PROTECTED_PREFIXES = ["/dashboard", "/invoices", "/customers", "/settings", "/onboarding"];
+const PROTECTED_PREFIXES = ["/dashboard", "/invoices", "/clients", "/settings", "/onboarding", "/admin"];
 
 // Rejects backslashes too — browsers normalize "/\evil.com" into an off-site "//evil.com".
 export function isSafeRelativePath(path: string) {

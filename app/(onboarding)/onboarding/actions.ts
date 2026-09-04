@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { profileSchema } from "@/lib/validations/profile";
 
 export type OnboardingState = { error?: string } | null;
@@ -22,16 +22,13 @@ export async function completeOnboarding(
     });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? t("invalidInput") };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // requireUser also applies the suspension gate, like every other action.
+  const { supabase, user } = await requireUser();
 
   const { error: updateError } = await supabase
     .from("profiles")
     .update({ ...parsed.data, onboarded_at: new Date().toISOString() })
-    .eq("id", user!.id);
+    .eq("id", user.id);
 
   if (updateError) return { error: tErrors("saveFailed") };
 
