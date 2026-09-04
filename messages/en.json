@@ -756,8 +756,10 @@
       "usageDigest": "Weekly summary turned on",
       "usageCopySelf": "Reminder copies to self turned on",
       "usageHint": "Counts exclude admin accounts.",
+      "mrr": "Monthly recurring revenue",
       "estimatedMrr": "Estimated MRR",
-      "mrrDescription": "{count, plural, one {# paying account} other {# paying accounts}} × {price}/month. Past-due accounts are counted, they are still billed until Stripe finishes retrying the payment.",
+      "mrrDescription": "{count, plural, one {# paying account} other {# paying accounts}}, net of coupons and discounts, straight from Stripe. Past-due accounts are included until Stripe stops retrying.",
+      "mrrEstimateDescription": "{count, plural, one {# paying account} other {# paying accounts}} × {price}/month. Could not read live amounts from Stripe, so this ignores any coupons.",
       "lifetimeRevenue": "Lifetime revenue",
       "lifetimeRevenueDescription": "Every charge across every subscriber, net of refunds and disputes, all months summed, straight from Stripe.",
       "lifetimeRevenueUnavailable": "Could not load from Stripe right now."

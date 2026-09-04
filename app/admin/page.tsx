@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { PRO_PRICE_AMOUNT } from "@/lib/plan";
-import { getLifetimeRevenueCents } from "@/lib/billing";
+import { getLifetimeRevenueCents, getMrrCents } from "@/lib/billing";
 import { formatMoney } from "@/lib/format";
 import { isAdminEmail, requireAdmin } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ export default async function AdminOverviewPage() {
   const t = await getTranslations("admin.overview");
   const locale = await getLocale();
   const supabase = createAdminClient();
-  const [{ data }, { data: invoicesRaw }, { data: settingsRaw }, lifetimeRevenueCents] =
+  const [{ data }, { data: invoicesRaw }, { data: settingsRaw }, lifetimeRevenueCents, mrrCents] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -44,6 +44,7 @@ export default async function AdminOverviewPage() {
         .select("user_id, status, recurring, recurred_at, snoozed_until, attachment_filename, paid_claimed_at"),
       supabase.from("reminder_settings").select("user_id, copy_self"),
       getLifetimeRevenueCents(),
+      getMrrCents(),
     ]);
   // Admin accounts aren't real subscribers — counting them would skew every metric here.
   const profiles = (data ?? []).filter((p) => !isAdminEmail(p.email));
@@ -69,7 +70,8 @@ export default async function AdminOverviewPage() {
   const newThisMonth = profiles.filter((p) => new Date(p.created_at).getTime() >= monthAgo).length;
 
   const payingCount = active + pastDue;
-  const mrr = payingCount * Number(PRO_PRICE_AMOUNT.replace(/[^\d.]/g, ""));
+  // Real MRR from Stripe (net of coupons); falls back to the list-price estimate if unreachable.
+  const mrr = mrrCents != null ? mrrCents / 100 : payingCount * Number(PRO_PRICE_AMOUNT.replace(/[^\d.]/g, ""));
   const conversionPct = onboarded > 0 ? Math.round((payingCount / onboarded) * 100) : 0;
 
   // Signups bucketed into the last SIGNUP_WEEKS ISO weeks, oldest first.
@@ -157,12 +159,14 @@ export default async function AdminOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{t("estimatedMrr")}</CardTitle>
+            <CardTitle className="text-base">{mrrCents != null ? t("mrr") : t("estimatedMrr")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold text-foreground">{formatMoney(mrr, "EUR")}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {t("mrrDescription", { count: payingCount, price: PRO_PRICE_AMOUNT })}
+              {mrrCents != null
+                ? t("mrrDescription", { count: payingCount })
+                : t("mrrEstimateDescription", { count: payingCount, price: PRO_PRICE_AMOUNT })}
             </p>
           </CardContent>
         </Card>

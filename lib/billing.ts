@@ -52,9 +52,13 @@ export async function getNextRealPaymentDate(subscriptionId: string): Promise<st
     const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
       expand: ["discounts", "customer"],
     });
-    const discountEnds = (subscription.discounts ?? [])
-      .map((d) => (typeof d === "string" ? null : d.end))
-      .filter((end): end is number => end != null);
+    const discounts = (subscription.discounts ?? []).filter(
+      (d): d is Exclude<typeof d, string> => typeof d !== "string"
+    );
+    // A non-expiring discount that already zeroes the invoice means no charge ever falls due.
+    if (discounts.some((d) => d.end == null)) return null;
+
+    const discountEnds = discounts.map((d) => d.end).filter((end): end is number => end != null);
 
     // Discount coverage excludes its end date; with no discount the upcoming invoice is balance-covered.
     const hasDiscount = discountEnds.length > 0;
@@ -91,6 +95,64 @@ const REVENUE_REPORTING_CATEGORIES = new Set([
   "dispute",
   "dispute_reversal",
 ]);
+
+/** Normalizes any billing interval to a per-month cents figure. */
+function toMonthlyCents(unitAmount: number, interval: string, count: number, quantity: number) {
+  const perInterval =
+    interval === "year"
+      ? unitAmount / 12
+      : interval === "week"
+        ? (unitAmount * 52) / 12
+        : interval === "day"
+          ? (unitAmount * 365) / 12
+          : unitAmount;
+  return (perInterval / Math.max(1, count)) * quantity;
+}
+
+/** Applies a subscription's coupons to a base cents amount, floored at zero. */
+function afterDiscounts(baseCents: number, discounts: unknown[]): number {
+  let amount = baseCents;
+  for (const d of discounts) {
+    const coupon = d && typeof d === "object" && "coupon" in d ? (d as { coupon: unknown }).coupon : null;
+    if (!coupon || typeof coupon !== "object") continue;
+    const c = coupon as { percent_off?: number | null; amount_off?: number | null };
+    if (c.percent_off != null) amount -= amount * (c.percent_off / 100);
+    else if (c.amount_off != null) amount -= c.amount_off;
+  }
+  return Math.max(0, amount);
+}
+
+/** True MRR in cents: active + past-due subscriptions, each net of its discounts. */
+export async function getMrrCents(): Promise<number | null> {
+  try {
+    let totalCents = 0;
+    for (const status of ["active", "past_due"] as const) {
+      for await (const sub of stripe.subscriptions.list({
+        status,
+        limit: 100,
+        expand: ["data.discounts"],
+      })) {
+        const base = sub.items.data.reduce((sum, item) => {
+          const price = item.price;
+          if (!price.recurring || price.unit_amount == null) return sum;
+          return (
+            sum +
+            toMonthlyCents(
+              price.unit_amount,
+              price.recurring.interval,
+              price.recurring.interval_count ?? 1,
+              item.quantity ?? 1
+            )
+          );
+        }, 0);
+        totalCents += afterDiscounts(base, sub.discounts ?? []);
+      }
+    }
+    return Math.round(totalCents);
+  } catch {
+    return null;
+  }
+}
 
 /** Lifetime net revenue in cents from Stripe balance history; refunds subtracted, not fee-adjusted. */
 export async function getLifetimeRevenueCents(): Promise<number | null> {
