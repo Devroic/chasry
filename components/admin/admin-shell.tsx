@@ -55,16 +55,16 @@ export function AdminShell({
           </div>
 
           <div className="flex items-center gap-2">
-            <PlanViewToggle planView={planView} />
+            <PlanViewToggle planView={planView} className="hidden sm:flex" />
             <LanguageSwitcher />
             <ThemeToggle />
             <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard">
-                <ArrowLeft /> {t("backToApp")}
+              <Link href="/dashboard" aria-label={t("backToApp")}>
+                <ArrowLeft /> <span className="hidden sm:inline">{t("backToApp")}</span>
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut /> {t("logOut")}
+            <Button variant="ghost" size="sm" onClick={handleLogout} aria-label={t("logOut")}>
+              <LogOut /> <span className="hidden sm:inline">{t("logOut")}</span>
             </Button>
           </div>
         </div>
@@ -79,6 +79,11 @@ export function AdminShell({
             );
           })}
         </nav>
+
+        {/* Plan toggle gets its own row on phones, where the header has no room for it. */}
+        <div className="flex justify-end px-4 pb-2 sm:hidden">
+          <PlanViewToggle planView={planView} className="flex" />
+        </div>
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl flex-1">
@@ -106,13 +111,13 @@ export function AdminShell({
   );
 }
 
-function PlanViewToggle({ planView }: { planView: "free" | "pro" }) {
+function PlanViewToggle({ planView, className }: { planView: "free" | "pro"; className?: string }) {
   const t = useTranslations("admin.shell");
   const tCommon = useTranslations("common");
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="hidden items-center gap-1.5 sm:flex">
+    <div className={cn("items-center gap-1.5", className)}>
       <span className="text-xs text-muted-foreground">{t("planViewLabel")}</span>
       {pending && (
         <Loader2 className="size-3 animate-spin text-muted-foreground" aria-label={tCommon("loading")} />

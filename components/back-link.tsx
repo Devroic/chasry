@@ -30,8 +30,7 @@ export function BackLink({
         }
       }}
       className={cn(
-        // -ml-5 hangs the icon left so the label aligns with the title below.
-        "-ml-5 mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground",
+        "mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground",
         className
       )}
     >

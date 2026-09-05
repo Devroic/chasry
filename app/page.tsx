@@ -129,7 +129,7 @@ export default async function RootPage() {
             <div className="mt-10 grid gap-8 sm:grid-cols-3">
               {steps.map(({ number, title, description }) => (
                 <div key={number} className="text-center sm:text-left">
-                  <span className="flex size-9 items-center justify-center rounded-full bg-brand-primary text-sm font-bold text-white">
+                  <span className="mx-auto flex size-9 items-center justify-center rounded-full bg-brand-primary text-sm font-bold text-white sm:mx-0">
                     {number}
                   </span>
                   <h3 className="mt-4 text-sm font-semibold text-foreground">{title}</h3>
