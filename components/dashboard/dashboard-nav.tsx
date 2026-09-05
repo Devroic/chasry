@@ -6,40 +6,19 @@ import { useTranslations } from "next-intl";
 import { Settings } from "lucide-react";
 import { navItemClassName } from "@/components/nav-item";
 import { NAV_ITEMS } from "./nav-items";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const SETTINGS_HREF = "/settings/profile";
 
-export function DashboardNav({
-  onNavigate,
-  collapsed = false,
-}: {
-  onNavigate?: () => void;
-  collapsed?: boolean;
-}) {
+export function DashboardNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
 
   function item(href: string, label: string, Icon: typeof Settings, active: boolean) {
-    const linkClassName = navItemClassName(active, collapsed);
-    if (!collapsed) {
-      return (
-        <Link href={href} onClick={onNavigate} className={linkClassName}>
-          <Icon className="size-4 shrink-0" />
-          {label}
-        </Link>
-      );
-    }
-    // Collapsed: icon only, label moves to aria-label + a Tooltip instead of dropping.
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link href={href} onClick={onNavigate} className={linkClassName} aria-label={label}>
-            <Icon className="size-4 shrink-0" />
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
-      </Tooltip>
+      <Link href={href} onClick={onNavigate} className={navItemClassName(active)}>
+        <Icon className="size-4 shrink-0" />
+        {label}
+      </Link>
     );
   }
 

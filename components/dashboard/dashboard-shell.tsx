@@ -3,20 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  Menu,
-  LogOut,
-  ChevronDown,
-  Settings,
-  Sparkles,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ShieldCheck,
-} from "lucide-react";
+import { Menu, LogOut, ChevronDown, Settings, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +22,6 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
 import { LogoutPendingOverlay } from "@/components/logout-pending-overlay";
 import { isPro } from "@/lib/plan";
-import { cn } from "@/lib/utils";
 import type { SubscriptionStatus } from "@/types/database.types";
 
 export function DashboardShell({
@@ -51,9 +40,6 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Desktop-only, defaults open, resets on reload rather than persisting to
-  // localStorage (avoids a hydration-mismatch risk for just three links).
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loggingOut, startLogoutTransition] = useTransition();
   const t = useTranslations("header");
   const initial = businessName.trim().charAt(0).toUpperCase() || "?";
@@ -119,37 +105,8 @@ export function DashboardShell({
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl flex-1">
-        <aside
-          className={cn(
-            // Bounded to the viewport height (not the flex row's natural stretch
-            // to `main`'s height), so a bottom-pinned button stays on screen.
-            "sticky top-20 hidden h-[calc(100vh-5rem)] shrink-0 flex-col overflow-y-auto border-r border-border py-6 transition-[width] duration-200 lg:flex",
-            sidebarCollapsed ? "w-16 px-2" : "w-60 px-4"
-          )}
-        >
-          <DashboardNav collapsed={sidebarCollapsed} />
-
-          <div className={cn("mt-auto flex pt-4", sidebarCollapsed ? "justify-center" : "justify-end")}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
-                  aria-label={sidebarCollapsed ? t("expandSidebar") : t("collapseSidebar")}
-                >
-                  {sidebarCollapsed ? (
-                    <PanelLeftOpen className="size-4" />
-                  ) : (
-                    <PanelLeftClose className="size-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {sidebarCollapsed ? t("expandSidebar") : t("collapseSidebar")}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+        <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-60 shrink-0 flex-col overflow-y-auto border-r border-border px-4 py-6 lg:flex">
+          <DashboardNav />
         </aside>
 
         <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">{children}</main>
