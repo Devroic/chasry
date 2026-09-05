@@ -5,17 +5,15 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LogOut, ArrowLeft, LayoutDashboard, Users, Mail, BookOpen, Loader2 } from "lucide-react";
+import { LogOut, ArrowLeft, LayoutDashboard, Users, Mail, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { logout } from "@/app/(auth)/actions";
-import { setAdminPlanOverride } from "@/app/admin/actions";
 import { LogoutPendingOverlay } from "@/components/logout-pending-overlay";
 import { TabLink } from "@/components/tab-link";
 import { navItemClassName } from "@/components/nav-item";
-import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin", labelKey: "tabOverview", icon: LayoutDashboard },
@@ -28,11 +26,9 @@ const NAV_ITEMS = [
 // part of the product a subscriber sees. Below `lg`, the sidebar becomes a horizontal nav row.
 export function AdminShell({
   children,
-  planView,
   footer,
 }: {
   children: React.ReactNode;
-  planView: "free" | "pro";
   footer?: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -55,7 +51,6 @@ export function AdminShell({
           </div>
 
           <div className="flex items-center gap-2">
-            <PlanViewToggle planView={planView} className="hidden sm:flex" />
             <LanguageSwitcher />
             <ThemeToggle />
             <Button asChild variant="ghost" size="sm">
@@ -79,11 +74,6 @@ export function AdminShell({
             );
           })}
         </nav>
-
-        {/* Plan toggle gets its own row on phones, where the header has no room for it. */}
-        <div className="flex justify-end px-4 pb-2 sm:hidden">
-          <PlanViewToggle planView={planView} className="flex" />
-        </div>
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl flex-1">
@@ -107,51 +97,6 @@ export function AdminShell({
       </div>
 
       {footer}
-    </div>
-  );
-}
-
-function PlanViewToggle({ planView, className }: { planView: "free" | "pro"; className?: string }) {
-  const t = useTranslations("admin.shell");
-  const tCommon = useTranslations("common");
-  const [pending, startTransition] = useTransition();
-
-  return (
-    <div className={cn("items-center gap-1.5", className)}>
-      <span className="text-xs text-muted-foreground">{t("planViewLabel")}</span>
-      {pending && (
-        <Loader2 className="size-3 animate-spin text-muted-foreground" aria-label={tCommon("loading")} />
-      )}
-      <div className="inline-flex items-center rounded-lg border border-border p-0.5">
-        <button
-          type="button"
-          disabled={pending}
-          aria-pressed={planView === "free"}
-          onClick={() => startTransition(() => setAdminPlanOverride("free"))}
-          className={cn(
-            "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-            planView === "free"
-              ? "bg-brand-primary-tint text-brand-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("planViewFree")}
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          aria-pressed={planView === "pro"}
-          onClick={() => startTransition(() => setAdminPlanOverride("pro"))}
-          className={cn(
-            "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-            planView === "pro"
-              ? "bg-brand-primary-tint text-brand-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("planViewPro")}
-        </button>
-      </div>
     </div>
   );
 }

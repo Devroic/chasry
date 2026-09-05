@@ -723,7 +723,9 @@
       "tabPlaybook": "Οδηγός",
       "planViewLabel": "Η προβολή σας",
       "planViewFree": "Δωρεάν",
-      "planViewPro": "Pro"
+      "planViewPro": "Pro",
+      "planSimTitle": "Διαχειριστής: προεπισκόπηση της εφαρμογής ως",
+      "planSimHint": "Αλλάζει μόνο τη δική σας προβολή, για δοκιμή Δωρεάν έναντι Pro. Δεν είναι πραγματική αλλαγή πλάνου."
     },
     "status": {
       "pro": "Pro",

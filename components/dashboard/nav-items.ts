@@ -1,6 +1,6 @@
 import { LayoutDashboard, FileText, Users } from "lucide-react";
 
-// Settings lives in DashboardShell's UserMenu, not here — keep it in exactly one place.
+// Settings is rendered separately (bottom-anchored) in DashboardNav, plus in the account menu.
 export const NAV_ITEMS = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/clients", labelKey: "clients", icon: Users },

@@ -102,7 +102,7 @@ export function DashboardShell({
                   <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-64 p-4">
+              <SheetContent side="left" className="flex w-64 flex-col p-4">
                 <SheetTitle className="sr-only">{t("navigation")}</SheetTitle>
                 {!pro && (
                   <Button asChild className="mt-8 mb-4 w-full" onClick={() => setMobileOpen(false)}>

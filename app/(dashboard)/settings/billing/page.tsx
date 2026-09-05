@@ -1,6 +1,6 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Sparkles } from "lucide-react";
-import { requireOnboardedUser } from "@/lib/auth";
+import { requireOnboardedUser, isAdminEmail, getAdminPlanOverride } from "@/lib/auth";
 import { isPro, FREE_INVOICE_LIMIT, PRO_PRICE_AMOUNT } from "@/lib/plan";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { startCheckout, openBillingPortal } from "./actions";
 import { DowngradeDialog } from "./downgrade-dialog";
 import { ResumeProButton } from "./resume-pro-button";
+import { AdminPlanSim } from "./admin-plan-sim";
 
 export const metadata = { title: "Billing" };
 
@@ -22,6 +23,10 @@ export default async function BillingSettingsPage() {
   const tPlans = await getTranslations("plans");
   const tCommon = await getTranslations("common");
   const locale = await getLocale();
+
+  // Admin accounts see a plan-simulation toggle here (their subscription_status is the simulated view).
+  const isAdmin = isAdminEmail(profile.email);
+  const adminPlanView = isAdmin ? await getAdminPlanOverride() : null;
 
   const status = profile.subscription_status;
   const pro = isPro(status);
@@ -61,6 +66,8 @@ export default async function BillingSettingsPage() {
 
   return (
     <div className="space-y-6">
+      {adminPlanView && <AdminPlanSim planView={adminPlanView} />}
+
       {status === "past_due" && (
         <Alert variant="destructive">
           <AlertDescription>{t("pastDueWarning", { limit: FREE_INVOICE_LIMIT })}</AlertDescription>

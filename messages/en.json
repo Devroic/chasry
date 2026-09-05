@@ -723,7 +723,9 @@
       "tabPlaybook": "Playbook",
       "planViewLabel": "Your view",
       "planViewFree": "Free",
-      "planViewPro": "Pro"
+      "planViewPro": "Pro",
+      "planSimTitle": "Admin: preview the app as",
+      "planSimHint": "Changes only your own view, for testing free vs Pro. Not a real plan change."
     },
     "status": {
       "pro": "Pro",
