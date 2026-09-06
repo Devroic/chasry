@@ -47,3 +47,6 @@ next-env.d.ts
 # markdown docs are local-only working notes, except the repo's own README
 *.md
 !/README.md
+
+# social media assets (covers, post images, drafts) are local-only
+/public/brand/social-media/
