@@ -56,7 +56,9 @@ export default async function DashboardPage({
 
   const customerName = new Map((customers ?? []).map((c) => [c.id, c.name]));
 
-  const showChecklist = (customerCount ?? 0) === 0 || (invoiceCount ?? 0) === 0;
+  const hasReviewedSchedule = profile?.reminder_schedule_reviewed ?? true;
+  const showChecklist =
+    (customerCount ?? 0) === 0 || (invoiceCount ?? 0) === 0 || !hasReviewedSchedule;
   const pro = isPro(profile?.subscription_status ?? "none");
 
   return (
@@ -79,6 +81,7 @@ export default async function DashboardPage({
         <OnboardingChecklist
           hasCustomer={(customerCount ?? 0) > 0}
           hasInvoice={(invoiceCount ?? 0) > 0}
+          hasReviewedSchedule={hasReviewedSchedule}
         />
       )}
 

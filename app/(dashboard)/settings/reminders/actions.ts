@@ -47,6 +47,18 @@ export async function updateReminderSettings(
   return { success: tReminders("savedTitle"), description: tReminders("savedDescription") };
 }
 
+/** Marks the dashboard "check your reminder schedule" step done once the user opens this page. */
+export async function markScheduleReviewed() {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ reminder_schedule_reviewed: true })
+    .eq("id", user.id)
+    .eq("reminder_schedule_reviewed", false);
+
+  if (!error) revalidatePath("/dashboard");
+}
+
 /** Toggles the Monday summary email (profiles.digest_enabled). */
 export async function updateDigestPreference(enabled: boolean) {
   const { supabase, user } = await requireUser();

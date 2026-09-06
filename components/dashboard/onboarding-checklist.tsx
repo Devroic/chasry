@@ -8,9 +8,11 @@ import { cn } from "@/lib/utils";
 export async function OnboardingChecklist({
   hasCustomer,
   hasInvoice,
+  hasReviewedSchedule,
 }: {
   hasCustomer: boolean;
   hasInvoice: boolean;
+  hasReviewedSchedule: boolean;
 }) {
   const t = await getTranslations("dashboard");
   const steps = [
@@ -29,7 +31,7 @@ export async function OnboardingChecklist({
       cta: t("checklist.addInvoiceCta"),
     },
     {
-      done: false,
+      done: hasReviewedSchedule,
       title: t("checklist.checkScheduleTitle"),
       description: t("checklist.checkScheduleDescription"),
       href: "/settings/reminders",

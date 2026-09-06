@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,7 +48,12 @@ export function DangerZone() {
               <Button
                 variant="destructive"
                 loading={pending}
-                onClick={() => startTransition(async () => deleteAccount())}
+                onClick={() =>
+                  startTransition(async () => {
+                    const result = await deleteAccount();
+                    if (result?.error) toast.error(result.error);
+                  })
+                }
               >
                 {pending ? t("deleting") : t("confirmSubmit")}
               </Button>

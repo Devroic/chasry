@@ -7,6 +7,7 @@ import { buildReminderPreviews } from "@/lib/reminder-preview";
 import { addDaysUtc } from "@/lib/reminders";
 import { ReminderSettingsForm } from "./reminder-settings-form";
 import { DigestToggle } from "./digest-toggle";
+import { MarkScheduleReviewed } from "./mark-schedule-reviewed";
 
 export const metadata = { title: "Reminders" };
 
@@ -47,6 +48,7 @@ export default async function ReminderSettingsPage() {
 
   return (
     <div className="space-y-6">
+      <MarkScheduleReviewed reviewed={profile?.reminder_schedule_reviewed ?? true} />
       <Card>
         <CardContent>
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3">

@@ -67,25 +67,37 @@ export async function updateProfile(
   return { success: tProfile("savedTitle"), description: tProfile("savedDescription") };
 }
 
-export async function deleteAccount() {
+export async function deleteAccount(): Promise<{ error: string } | void> {
   const { supabase, user } = await requireUser();
+  const tDanger = await getTranslations("settings.dangerZone");
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("stripe_subscription_id")
+    .select("stripe_customer_id")
     .eq("id", user.id)
     .single();
 
-  if (profile?.stripe_subscription_id) {
+  // Delete the Stripe customer, which also cancels any active subscription. If this
+  // fails we stop before deleting the account, so we never leave Stripe billing a
+  // customer that no longer has an account to manage it.
+  if (profile?.stripe_customer_id) {
     try {
-      await stripe.subscriptions.cancel(profile.stripe_subscription_id);
+      await stripe.customers.del(profile.stripe_customer_id);
     } catch (err) {
-      // Already canceled or gone — fine to continue with account deletion either way.
-      console.error("deleteAccount: failed to cancel Stripe subscription", err);
+      // A customer that's already gone is fine; any other failure blocks deletion.
+      if ((err as { code?: string })?.code !== "resource_missing") {
+        console.error("deleteAccount: failed to delete Stripe customer", err);
+        return { error: tDanger("stripeFailed") };
+      }
     }
   }
 
-  await supabase.rpc("delete_account");
+  const { error } = await supabase.rpc("delete_account");
+  if (error) {
+    console.error("deleteAccount: delete_account RPC failed", error);
+    return { error: tDanger("deleteFailed") };
+  }
+
   await supabase.auth.signOut();
   redirect("/login");
 }

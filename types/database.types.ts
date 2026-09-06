@@ -33,6 +33,7 @@ export interface Database {
           digest_enabled: boolean;
           digest_sent_at: string | null;
           suspended_at: string | null;
+          reminder_schedule_reviewed: boolean;
           created_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["profiles"]["Row"]> & {
