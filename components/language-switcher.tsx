@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { setLocale } from "@/lib/locale-actions";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/locale";
+import { BlockingOverlay } from "@/components/blocking-overlay";
 
 export function LanguageSwitcher() {
   const locale = useLocale() as Locale;
@@ -20,6 +21,7 @@ export function LanguageSwitcher() {
 
   return (
     <DropdownMenu>
+      <BlockingOverlay show={isPending} spinner={false} />
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"

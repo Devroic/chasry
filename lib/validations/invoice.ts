@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { optionalText, type Translator } from "./shared";
+import { LOCALES } from "@/lib/locale";
+import { optionalText, optionalUrl, type Translator } from "./shared";
 
 export function invoiceSchema(t: Translator) {
   return z.object({
@@ -28,3 +29,17 @@ export function reminderOffsetsSchema(t: Translator) {
 }
 
 export type ReminderOffsetsInput = z.infer<ReturnType<typeof reminderOffsetsSchema>>;
+
+/**
+ * The Reminders settings form: the schedule (written to `reminder_settings`)
+ * plus the two profile-level reminder-email prefs (payment link + language,
+ * written to `profiles`). The action splits the parsed result across both tables.
+ */
+export function reminderSettingsFormSchema(t: Translator) {
+  return reminderOffsetsSchema(t).extend({
+    payment_link: optionalUrl(t),
+    reminder_locale: z.enum(LOCALES),
+  });
+}
+
+export type ReminderSettingsFormInput = z.infer<ReturnType<typeof reminderSettingsFormSchema>>;

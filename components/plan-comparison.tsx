@@ -21,6 +21,7 @@ export function buildPlanFeatures(t: PlansTranslator): {
   const shared: PlanFeature[] = [
     { label: t("rowClients"), value: true },
     { label: t("rowReminders"), value: true },
+    { label: t("rowLanguages"), value: true },
     { label: t("rowSchedules"), value: true },
     { label: t("rowClaims"), value: true },
     { label: t("rowDigest"), value: true },

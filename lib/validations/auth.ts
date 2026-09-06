@@ -35,5 +35,27 @@ export function updatePasswordSchema(t: Translator) {
   });
 }
 
+export function changePasswordSchema(t: Translator) {
+  return z
+    .object({
+      current_password: z.string().min(1, t("passwordRequired")),
+      password: z.string().min(8, t("passwordMinLength")).max(200),
+      confirm_password: z.string().min(1, t("passwordRequired")),
+    })
+    .refine((data) => data.password === data.confirm_password, {
+      message: t("passwordsDoNotMatch"),
+      path: ["confirm_password"],
+    });
+}
+
+export function changeEmailSchema(t: Translator) {
+  return z.object({
+    email: z.string().trim().email(t("emailInvalid")).max(320),
+  });
+}
+
+export type ChangePasswordInput = z.infer<ReturnType<typeof changePasswordSchema>>;
+export type ChangeEmailInput = z.infer<ReturnType<typeof changeEmailSchema>>;
+
 export type SignupInput = z.infer<ReturnType<typeof signupSchema>>;
 export type LoginInput = z.infer<ReturnType<typeof loginSchema>>;

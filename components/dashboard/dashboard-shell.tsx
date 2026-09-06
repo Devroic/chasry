@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Menu, LogOut, ChevronDown, Settings, Sparkles, ShieldCheck } from "lucide-react";
+import { Menu, LogOut, ChevronDown, Sparkles, ShieldCheck, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -88,7 +88,7 @@ export function DashboardShell({
                   <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="flex w-64 flex-col p-4">
+              <SheetContent side="left" className="w-64 p-4">
                 <SheetTitle className="sr-only">{t("navigation")}</SheetTitle>
                 {!pro && (
                   <Button asChild className="mt-8 mb-4 w-full" onClick={() => setMobileOpen(false)}>
@@ -170,8 +170,8 @@ function UserMenu({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild onClick={onNavigate}>
-          <Link href="/settings/profile" className="flex items-center gap-2">
-            <Settings className="size-4" /> {t("settings")}
+          <Link href="/help" className="flex items-center gap-2">
+            <HelpCircle className="size-4" /> {t("help")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

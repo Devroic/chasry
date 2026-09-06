@@ -59,6 +59,8 @@ export default async function ReminderSettingsPage() {
             defaultOffsets={offsets}
             defaultEnabled={enabled}
             defaultCopySelf={settings?.copy_self ?? false}
+            defaultPaymentLink={profile?.payment_link ?? ""}
+            defaultReminderLocale={profile?.reminder_locale ?? "en"}
           />
         </CardContent>
       </Card>

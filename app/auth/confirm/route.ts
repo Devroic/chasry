@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { stripe } from "@/lib/stripe";
 
-const ALLOWED_NEXT_PATHS = new Set(["/signup/confirmed", "/reset-password/confirm"]);
+const ALLOWED_NEXT_PATHS = new Set([
+  "/signup/confirmed",
+  "/reset-password/confirm",
+  "/settings/profile",
+]);
 
 /**
  * @supabase/ssr's browser client defaults to the PKCE auth flow, so every
@@ -21,6 +26,28 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient();
     await supabase.auth.exchangeCodeForSession(code);
+
+    // After a confirmed email change, keep the Stripe customer's email in step so
+    // receipts and invoices go to the address the user now signs in with.
+    if (next === "/settings/profile") {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.email) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("stripe_customer_id")
+            .eq("id", user.id)
+            .single();
+          if (profile?.stripe_customer_id) {
+            await stripe.customers.update(profile.stripe_customer_id, { email: user.email });
+          }
+        }
+      } catch (err) {
+        console.error("auth/confirm: failed to sync Stripe customer email", err);
+      }
+    }
   }
 
   return NextResponse.redirect(`${origin}${next}`);

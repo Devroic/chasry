@@ -23,7 +23,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           <TabLink
             key={tab.href}
             href={tab.href}
-            active={pathname === tab.href}
+            active={
+              pathname === tab.href ||
+              (tab.href === "/settings/profile" && pathname === "/settings/password")
+            }
             className="whitespace-nowrap"
           >
             {t(`tabs.${tab.labelKey}`)}
