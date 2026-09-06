@@ -49,4 +49,4 @@ next-env.d.ts
 !/README.md
 
 # social media assets (covers, post images, drafts) are local-only
-/public/brand/social-media/
+/brand/social-media/
