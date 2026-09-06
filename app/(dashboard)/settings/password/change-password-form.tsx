@@ -60,7 +60,12 @@ export function ChangePasswordForm() {
         />
       </FormField>
 
-      <FormField label={t("newPasswordLabel")} htmlFor="new_password" error={errors.password?.message}>
+      <FormField
+        label={t("newPasswordLabel")}
+        htmlFor="new_password"
+        error={errors.password?.message}
+        hint={errors.password ? undefined : t("newPasswordHint")}
+      >
         <PasswordInput
           id="new_password"
           autoComplete="new-password"

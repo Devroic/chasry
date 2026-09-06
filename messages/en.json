@@ -623,6 +623,7 @@
         "currentPasswordLabel": "Current password",
         "currentPasswordIncorrect": "That current password is incorrect.",
         "newPasswordLabel": "New password",
+        "newPasswordHint": "At least 8 characters.",
         "confirmPasswordLabel": "Confirm new password",
         "changePasswordButton": "Change password",
         "samePassword": "That's already your current password.",

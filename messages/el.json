@@ -623,6 +623,7 @@
         "currentPasswordLabel": "Τρέχων κωδικός",
         "currentPasswordIncorrect": "Ο τρέχων κωδικός δεν είναι σωστός.",
         "newPasswordLabel": "Νέος κωδικός πρόσβασης",
+        "newPasswordHint": "Τουλάχιστον 8 χαρακτήρες.",
         "confirmPasswordLabel": "Επιβεβαίωση νέου κωδικού",
         "changePasswordButton": "Αλλαγή κωδικού",
         "samePassword": "Αυτός είναι ήδη ο τρέχων κωδικός σας.",
