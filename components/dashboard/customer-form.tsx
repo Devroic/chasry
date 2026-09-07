@@ -155,7 +155,12 @@ export function CustomerForm({
         <Input id="email" type="email" aria-invalid={!!errors.email} {...register("email")} />
       </FormField>
 
-      <FormField label={t("phoneLabel")} htmlFor="phone" error={errors.phone?.message}>
+      <FormField
+        label={t("phoneLabel")}
+        htmlFor="phone"
+        error={errors.phone?.message}
+        hint={errors.phone ? undefined : t("phoneHint")}
+      >
         <Input
           id="phone"
           type="tel"

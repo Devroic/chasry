@@ -44,20 +44,22 @@ export const emailCopy = {
   },
   claimPaidQuestion: (locale: Locale) =>
     locale === "el" ? "Έχετε ήδη πληρώσει αυτό το τιμολόγιο;" : "Already paid this invoice?",
+  // Greek avoids the name here: it would need an article and case that depend on whether the
+  // sender is a person or a company. "Ο αποστολέας" covers both; the footer names them anyway.
   claimPaidLink: (businessName: string, locale: Locale) =>
-    locale === "el" ? `Ενημερώστε ${businessName}` : `Let ${businessName} know`,
+    locale === "el" ? "Ενημερώστε τον αποστολέα" : `Let ${businessName} know`,
 
   beforeDue: {
     dueClause: beforeDueClause,
     previewText: (dueClause: string, locale: Locale) =>
       locale === "el" ? `Φιλική υπενθύμιση: το τιμολόγιο ${dueClause}` : `Friendly reminder: invoice ${dueClause}`,
-    heading: (clientName: string, locale: Locale) =>
-      locale === "el" ? `Γεια σου ${clientName}, μια φιλική υπενθύμιση` : `Hi ${clientName}, just a friendly reminder`,
+    // No name in the greeting: a client can be a company, and Greek names would need the vocative case.
+    heading: (locale: Locale) => (locale === "el" ? "Μια φιλική υπενθύμιση" : "Just a friendly reminder"),
     body: (businessName: string, dueClause: string, locale: Locale) =>
       locale === "el"
         ? `Αυτό το τιμολόγιο από ${businessName} ${dueClause}. Δεν χρειάζεται καμία ενέργεια αν έχει ήδη προγραμματιστεί, είναι απλώς μια υπενθύμιση.`
         : `This invoice from ${businessName} ${dueClause}. No action needed if it's already scheduled, this is just a heads-up.`,
-    closing: (locale: Locale) => (locale === "el" ? "Ευχαριστούμε για τη συνεργασία." : "Thanks for your business."),
+    closing: (locale: Locale) => (locale === "el" ? "Ευχαριστούμε για τη συνεργασία." : "Thanks for working with us."),
   },
 
   overdue: {
@@ -65,15 +67,13 @@ export const emailCopy = {
       locale === "el"
         ? `Το τιμολόγιο είναι πλέον ${daysOverdue} ${dayWord(daysOverdue, locale)} εκπρόθεσμο`
         : `Invoice is now ${daysOverdue} ${dayWord(daysOverdue, locale)} overdue`,
-    heading: (clientName: string, locale: Locale) =>
-      locale === "el"
-        ? `Γεια σου ${clientName}, αυτό το τιμολόγιο είναι πλέον εκπρόθεσμο`
-        : `Hi ${clientName}, this invoice is now overdue`,
+    heading: (locale: Locale) =>
+      locale === "el" ? "Αυτό το τιμολόγιο είναι πλέον εκπρόθεσμο" : "This invoice is now overdue",
     body: (businessName: string, daysOverdue: number, locale: Locale) =>
       locale === "el"
         ? `Αυτό το τιμολόγιο από ${businessName} έληξε πριν από ${daysOverdue} ${dayWord(daysOverdue, locale)} και δεν έχει σημειωθεί ακόμη ως πληρωμένο. Αν έχετε ήδη στείλει την πληρωμή, σας ευχαριστούμε, αγνοήστε αυτό το μήνυμα. Διαφορετικά, παρακαλούμε διευθετήστε την πληρωμή όποτε μπορέσετε.`
         : `This invoice from ${businessName} was due ${daysOverdue} ${dayWord(daysOverdue, locale)} ago and hasn't been marked as paid yet. If you've already sent payment, thank you, feel free to ignore this. Otherwise, please arrange payment when you get a chance.`,
-    closing: (locale: Locale) => (locale === "el" ? "Ευχαριστούμε για τη συνεργασία." : "Thanks for your business."),
+    closing: (locale: Locale) => (locale === "el" ? "Ευχαριστούμε για τη συνεργασία." : "Thanks for working with us."),
   },
 
   seriouslyOverdue: {
@@ -81,10 +81,8 @@ export const emailCopy = {
       locale === "el"
         ? `Το τιμολόγιο είναι πλέον ${daysOverdue} ημέρες εκπρόθεσμο, παρακαλούμε διευθετήστε την πληρωμή`
         : `Invoice is now ${daysOverdue} days overdue, please arrange payment`,
-    heading: (clientName: string, locale: Locale) =>
-      locale === "el"
-        ? `Γεια σου ${clientName}, αυτή η πληρωμή είναι σημαντικά εκπρόθεσμη`
-        : `Hi ${clientName}, this payment is significantly overdue`,
+    heading: (locale: Locale) =>
+      locale === "el" ? "Αυτή η πληρωμή είναι σημαντικά εκπρόθεσμη" : "This payment is significantly overdue",
     body: (businessName: string, daysOverdue: number, locale: Locale) =>
       locale === "el"
         ? `Αυτό το τιμολόγιο από ${businessName} έληξε πριν από ${daysOverdue} ημέρες. Παρακαλούμε διευθετήστε την πληρωμή το συντομότερο δυνατό, ή απαντήστε σε αυτό το email αν υπάρχει κάποιο ζήτημα που πρέπει να γνωρίζουμε.`

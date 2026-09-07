@@ -11,7 +11,6 @@ import type { Locale } from "@/lib/locale";
 
 export interface ReminderSeriouslyOverdueProps {
   businessName: string;
-  clientName: string;
   invoiceNumber?: string;
   amount: string;
   dueDateLabel: string;
@@ -24,7 +23,6 @@ export interface ReminderSeriouslyOverdueProps {
 
 export default function ReminderSeriouslyOverdueEmail({
   businessName = "Acme Design Co.",
-  clientName = "Jordan",
   invoiceNumber,
   amount = "€450.00",
   dueDateLabel = "Was due 20 Jul 2026",
@@ -42,7 +40,7 @@ export default function ReminderSeriouslyOverdueEmail({
       showBranding={showBranding}
       claimUrl={claimUrl}
     >
-      <ReminderHeading>{emailCopy.seriouslyOverdue.heading(clientName, locale)}</ReminderHeading>
+      <ReminderHeading>{emailCopy.seriouslyOverdue.heading(locale)}</ReminderHeading>
       <ReminderText>{emailCopy.seriouslyOverdue.body(businessName, daysOverdue, locale)}</ReminderText>
       <InvoiceSummary
         invoiceNumber={invoiceNumber}

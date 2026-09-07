@@ -366,12 +366,11 @@ export async function sendPreviewReminder(invoiceId: string) {
     return { error: tErrors("noRemindersScheduled") };
   }
 
-  const { invoice, customer, profile } = context;
+  const { invoice, profile } = context;
   for (const offsetDays of [...context.offsets].sort((a, b) => a - b)) {
     const { element, subject } = buildReminderEmail({
       offsetDays,
       businessName: context.businessName,
-      clientName: customer.name,
       invoiceNumber: invoice.invoice_number,
       amount: Number(invoice.amount),
       currency: invoice.currency,
@@ -447,7 +446,6 @@ export async function sendReminderNow(invoiceId: string, offsetDays: number) {
   const { element, subject } = buildReminderEmail({
     offsetDays,
     businessName: context.businessName,
-    clientName: customer.name,
     invoiceNumber: invoice.invoice_number,
     amount: Number(invoice.amount),
     currency: invoice.currency,

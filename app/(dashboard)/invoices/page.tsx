@@ -31,16 +31,22 @@ export const metadata = { title: "Invoices" };
 
 const FILTERS = ["all", "unpaid", "overdue", "paid"] as const;
 
-const SORT_FIELDS = ["client", "due", "amount", "status"] as const;
+// "urgency" is the default order only, never a column: unpaid first (most overdue at the top),
+// then paid/canceled with the most recent due date first. Clicking "Due" gives a plain date sort.
+const SORT_FIELDS = ["urgency", "client", "due", "amount", "status"] as const;
 type SortField = (typeof SORT_FIELDS)[number];
+
+function compareDue(a: string, b: string) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
 
 export default async function InvoicesPage({
   searchParams,
 }: {
   searchParams: Promise<{ filter?: string; q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
-  const { filter = "all", q = "", sort = "due", dir = "asc", page: pageParam } = await searchParams;
-  const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "due";
+  const { filter = "all", q = "", sort = "urgency", dir = "asc", page: pageParam } = await searchParams;
+  const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "urgency";
   const sortDir: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
   const { supabase, user } = await requireUser();
   const t = await getTranslations("invoices");
@@ -96,8 +102,15 @@ export default async function InvoicesPage({
           )
         );
       case "due":
-      default:
-        return sortMultiplier * (a.due_date < b.due_date ? -1 : a.due_date > b.due_date ? 1 : 0);
+        return sortMultiplier * compareDue(a.due_date, b.due_date);
+      case "urgency":
+      default: {
+        const aOpen = a.status === "unpaid" ? 0 : 1;
+        const bOpen = b.status === "unpaid" ? 0 : 1;
+        if (aOpen !== bOpen) return sortMultiplier * (aOpen - bOpen);
+        const byDue = compareDue(a.due_date, b.due_date);
+        return sortMultiplier * (aOpen === 0 ? byDue : -byDue);
+      }
     }
   });
 

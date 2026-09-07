@@ -207,7 +207,6 @@ async function runReminderSweep() {
       const { element, subject } = buildReminderEmail({
         offsetDays,
         businessName,
-        clientName: customer.name,
         invoiceNumber: invoice.invoice_number,
         amount: Number(invoice.amount),
         currency: invoice.currency,

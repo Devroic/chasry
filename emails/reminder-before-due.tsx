@@ -11,7 +11,6 @@ import type { Locale } from "@/lib/locale";
 
 export interface ReminderBeforeDueProps {
   businessName: string;
-  clientName: string;
   invoiceNumber?: string;
   amount: string;
   dueDateLabel: string;
@@ -24,7 +23,6 @@ export interface ReminderBeforeDueProps {
 
 export default function ReminderBeforeDueEmail({
   businessName = "Acme Design Co.",
-  clientName = "Jordan",
   invoiceNumber,
   amount = "€450.00",
   dueDateLabel = "Due 29 Aug 2026",
@@ -44,7 +42,7 @@ export default function ReminderBeforeDueEmail({
       showBranding={showBranding}
       claimUrl={claimUrl}
     >
-      <ReminderHeading>{emailCopy.beforeDue.heading(clientName, locale)}</ReminderHeading>
+      <ReminderHeading>{emailCopy.beforeDue.heading(locale)}</ReminderHeading>
       <ReminderText>{emailCopy.beforeDue.body(businessName, dueClause, locale)}</ReminderText>
       <InvoiceSummary
         invoiceNumber={invoiceNumber}

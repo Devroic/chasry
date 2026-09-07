@@ -11,7 +11,6 @@ import type { Locale } from "@/lib/locale";
 export function buildReminderEmail({
   offsetDays,
   businessName,
-  clientName,
   invoiceNumber,
   amount,
   currency,
@@ -25,7 +24,6 @@ export function buildReminderEmail({
 }: {
   offsetDays: number;
   businessName: string;
-  clientName: string;
   invoiceNumber?: string | null;
   amount: number;
   currency: string;
@@ -57,7 +55,6 @@ export function buildReminderEmail({
     tone === "seriously_overdue"
       ? ReminderSeriouslyOverdueEmail({
           businessName,
-          clientName,
           invoiceNumber: invoiceNum,
           amount: amountLabel,
           dueDateLabel: emailCopy.wasDueLabel(dueDateFormatted, locale),
@@ -70,7 +67,6 @@ export function buildReminderEmail({
       : tone === "overdue"
         ? ReminderOverdueEmail({
             businessName,
-            clientName,
             invoiceNumber: invoiceNum,
             amount: amountLabel,
             dueDateLabel: emailCopy.wasDueLabel(dueDateFormatted, locale),
@@ -82,7 +78,6 @@ export function buildReminderEmail({
           })
         : ReminderBeforeDueEmail({
             businessName,
-            clientName,
             invoiceNumber: invoiceNum,
             amount: amountLabel,
             dueDateLabel:

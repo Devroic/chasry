@@ -23,7 +23,6 @@ const TONE_ORDER: ReminderTone[] = ["before", "overdue", "seriously_overdue"];
 export async function buildReminderPreviews({
   offsets,
   businessName,
-  clientName,
   invoiceNumber,
   amount,
   currency,
@@ -34,7 +33,6 @@ export async function buildReminderPreviews({
 }: {
   offsets: number[];
   businessName: string;
-  clientName: string;
   invoiceNumber?: string | null;
   amount: number;
   currency: string;
@@ -77,7 +75,6 @@ export async function buildReminderPreviews({
       const { element, subject } = buildReminderEmail({
         offsetDays: representative,
         businessName,
-        clientName,
         invoiceNumber,
         amount,
         currency,

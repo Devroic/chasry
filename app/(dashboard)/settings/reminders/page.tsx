@@ -35,7 +35,6 @@ export default async function ReminderSettingsPage() {
       ? await buildReminderPreviews({
           offsets,
           businessName: profile.business_name || profile.email,
-          clientName: tPreview("sampleClientName"),
           invoiceNumber: "INV-001",
           amount: 450,
           currency: profile.currency,

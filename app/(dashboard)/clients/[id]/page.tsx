@@ -129,7 +129,12 @@ export default async function CustomerDetailPage({
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Phone className="size-3.5" /> {tCommon("phone")}
               </p>
-              <p className="text-sm text-foreground">{customer.phone}</p>
+              <a
+                href={`tel:${customer.phone.replace(/[^0-9+]/g, "")}`}
+                className="text-sm text-foreground underline-offset-4 hover:underline"
+              >
+                {customer.phone}
+              </a>
             </div>
           )}
           <div className="col-span-2 sm:col-span-3">

@@ -325,7 +325,7 @@
     "noSearchResults": "Nothing matches this search.",
     "columnName": "Name",
     "columnEmail": "Email",
-    "columnPhone": "Phone",
+    "columnUnpaid": "Unpaid invoices",
     "columnPaymentLink": "Payment link",
     "columnSchedule": "Reminder schedule",
     "columnNotes": "Notes",
@@ -360,6 +360,7 @@
       "emailLabel": "Email",
       "emailHint": "Reminder emails are sent here.",
       "phoneLabel": "Phone (optional)",
+      "phoneHint": "For your own reference, in case you need to call. Never included in reminder emails.",
       "paymentLinkLabel": "Payment link (optional)",
       "paymentLinkHint": "Used in this client's reminders. Leave blank to use your default from Settings.",
       "reminderLocaleLabel": "Reminder email language",
@@ -377,7 +378,7 @@
       "title": "Add a client",
       "subtitle": "Just their name and email to start.",
       "tipsTitle": "Good to know",
-      "tip1": "Only name and email are required. Phone and notes are optional.",
+      "tip1": "Only name and email are required. Phone and notes are optional and just for your own reference.",
       "tip2": "Reminder emails go to the email address you enter here.",
       "tip3": "You can log an invoice for them right after saving."
     },
@@ -562,7 +563,6 @@
     "toneFirm": "Firm (14+ days late)",
     "sentLabel": "Sent: {schedule}",
     "subjectLabel": "Subject",
-    "sampleClientName": "Sample Client",
     "emailMe": "Email all reminders to me",
     "emailMeHint": "Sends one email per scheduled reminder to your own inbox."
   },

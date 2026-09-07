@@ -82,7 +82,6 @@ export default async function InvoiceDetailPage({
     ? await buildReminderPreviews({
         offsets: effectiveOffsets,
         businessName: profile.business_name || profile.email,
-        clientName: customer.name,
         invoiceNumber: invoice.invoice_number,
         amount: Number(invoice.amount),
         currency: invoice.currency,

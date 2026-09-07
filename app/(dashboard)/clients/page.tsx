@@ -16,14 +16,13 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 
 export const metadata = { title: "Clients" };
 
-const SORT_FIELDS = ["name", "email", "added"] as const;
+const SORT_FIELDS = ["name", "email", "unpaid"] as const;
 type SortField = (typeof SORT_FIELDS)[number];
 
 export default async function CustomersPage({
@@ -31,19 +30,24 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{ q?: string; sort?: string; dir?: string; page?: string }>;
 }) {
-  const { q = "", sort = "added", dir = "desc", page: pageParam } = await searchParams;
-  const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "added";
-  const sortDir: "asc" | "desc" = dir === "asc" ? "asc" : "desc";
+  const { q = "", sort = "name", dir = "asc", page: pageParam } = await searchParams;
+  const sortField: SortField = SORT_FIELDS.includes(sort as SortField) ? (sort as SortField) : "name";
+  const sortDir: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
   const { supabase, user } = await requireUser();
   const t = await getTranslations("customers");
   const tCommon = await getTranslations("common");
 
-  const { data: customersRaw } = await supabase
-    .from("customers")
-    .select("id, name, email, phone, created_at")
-    .eq("user_id", user.id);
+  const [{ data: customersRaw }, { data: unpaidRaw }] = await Promise.all([
+    supabase.from("customers").select("id, name, email").eq("user_id", user.id),
+    supabase.from("invoices").select("customer_id").eq("user_id", user.id).eq("status", "unpaid"),
+  ]);
 
-  const customers = customersRaw ?? [];
+  const unpaidCounts = new Map<string, number>();
+  for (const invoice of unpaidRaw ?? []) {
+    unpaidCounts.set(invoice.customer_id, (unpaidCounts.get(invoice.customer_id) ?? 0) + 1);
+  }
+
+  const customers = (customersRaw ?? []).map((c) => ({ ...c, unpaid: unpaidCounts.get(c.id) ?? 0 }));
   const query = q.trim().toLowerCase();
   const filtered = query
     ? customers.filter(
@@ -54,19 +58,21 @@ export default async function CustomersPage({
   const sortMultiplier = sortDir === "asc" ? 1 : -1;
   const sorted = [...filtered].sort((a, b) => {
     switch (sortField) {
-      case "name":
-        return sortMultiplier * a.name.localeCompare(b.name);
       case "email":
         return sortMultiplier * a.email.localeCompare(b.email);
-      case "added":
+      case "unpaid":
+        return sortMultiplier * (a.unpaid - b.unpaid) || a.name.localeCompare(b.name);
+      case "name":
       default:
-        return sortMultiplier * (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0);
+        return sortMultiplier * a.name.localeCompare(b.name);
     }
   });
 
   const currentParams = { q, sort, dir };
   function sortHref(field: SortField) {
-    const nextDir = sortField === field && sortDir === "asc" ? "desc" : "asc";
+    // Counts start highest-first; text columns start A to Z.
+    const nextDir =
+      sortField === field ? (sortDir === "asc" ? "desc" : "asc") : field === "unpaid" ? "desc" : "asc";
     return buildListHref("/clients", currentParams, { sort: field, dir: nextDir });
   }
 
@@ -123,7 +129,12 @@ export default async function CustomersPage({
                   dir={sortDir}
                   href={sortHref("email")}
                 />
-                <TableHead className="hidden sm:table-cell">{t("columnPhone")}</TableHead>
+                <SortableHead
+                  label={t("columnUnpaid")}
+                  active={sortField === "unpaid"}
+                  dir={sortDir}
+                  href={sortHref("unpaid")}
+                />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -138,8 +149,8 @@ export default async function CustomersPage({
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{customer.email}</TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {customer.phone || "—"}
+                  <TableCell className={customer.unpaid > 0 ? "font-medium" : "text-muted-foreground"}>
+                    {customer.unpaid}
                   </TableCell>
                 </ClickableTableRow>
               ))}
