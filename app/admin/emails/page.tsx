@@ -127,7 +127,7 @@ export default async function AdminEmailsPage() {
   const invoiceNumberById = new Map((failedInvoices ?? []).map((i) => [i.id, i.invoice_number]));
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       <PageHeader title={t("title")} description={t("subtitle")} className="mb-0" />
 
       <div className="grid gap-4 sm:grid-cols-2">

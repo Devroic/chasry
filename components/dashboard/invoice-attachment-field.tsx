@@ -15,8 +15,11 @@ export function InvoiceAttachmentField({
   currentFilename,
   selectedFile,
   onFileChange,
+  upgradeHref = "/settings/billing",
 }: {
   isPro: boolean;
+  /** Where the Pro upsell link goes; pass a return_to variant so Settings can offer a way back. */
+  upgradeHref?: string;
   /** Only set when editing an existing invoice — enables the "Remove" action. */
   invoiceId?: string;
   /** The filename already saved on the invoice, if any. */
@@ -37,7 +40,7 @@ export function InvoiceAttachmentField({
     return (
       <p className="rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
         {t("attachmentProOnly")}{" "}
-        <Link href="/settings/billing" className="text-brand-primary hover:underline">
+        <Link href={upgradeHref} className="text-brand-primary hover:underline">
           {t("attachmentUpgrade")}
         </Link>
       </p>

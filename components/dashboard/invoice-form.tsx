@@ -2,11 +2,13 @@
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Link2, Languages } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
@@ -23,7 +25,7 @@ import { ReminderOverrideSection } from "@/components/dashboard/reminder-overrid
 import { InvoiceAttachmentField } from "@/components/dashboard/invoice-attachment-field";
 import type { InvoiceFormState } from "@/app/(dashboard)/invoices/actions";
 import { invoiceSchema, type InvoiceInput } from "@/lib/validations/invoice";
-import { toFormData } from "@/lib/utils";
+import { cn, toFormData } from "@/lib/utils";
 import { encodeReminderOverride } from "@/lib/reminder-override";
 import { withReturnTo } from "@/lib/return-to";
 import type { z } from "zod";
@@ -184,29 +186,66 @@ export function InvoiceForm({
   const effectiveEnabled = selectedCustomer?.reminder_enabled ?? accountDefaults.enabled;
   const effectiveLocale = selectedCustomer?.reminder_locale ?? accountDefaults.locale;
 
-  // "Change your default or set one for this client." Shared by both cascade lines in the note.
-  // When the client already overrides the value, the second link says "change it" instead.
-  const qs = searchParams.toString();
+  // One row of the "Reminder emails" summary: value, where it comes from, and the two ways to change it.
+  // Mirrors the invoice detail card so the same facts look the same on both pages.
+  // A client picked from the dropdown isn't in the URL, so carry it as new_customer_id (which the
+  // form already reads on load) or it's gone when the user comes back from settings or the client.
+  const returnParams = new URLSearchParams(searchParams);
+  if (selectedCustomerId && !defaultValues) returnParams.set("new_customer_id", selectedCustomerId);
+  const qs = returnParams.toString();
   const returnHere = qs ? `${pathname}?${qs}` : pathname;
-  const cascadeLinks = (defaultLabel: string, clientHasOwn: boolean) => (
-    <>
-      <Link href={withReturnTo("/settings/reminders", returnHere)} className="text-brand-primary hover:underline">
-        {defaultLabel}
-      </Link>
-      {selectedCustomer && (
-        <>
-          {" "}
-          {t("or")}{" "}
-          <Link
-            href={withReturnTo(`/clients/${selectedCustomer.id}/edit`, returnHere)}
-            className="text-brand-primary hover:underline"
-          >
-            {clientHasOwn ? t("changeForClient") : t("setForClient")}
+  const summaryRow = ({
+    icon,
+    label,
+    value,
+    clientHasOwn,
+    defaultLabel,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    value: React.ReactNode;
+    clientHasOwn: boolean;
+    defaultLabel: string;
+  }) => (
+    <div className="grid gap-1 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
+      <dt className="flex items-center gap-1 text-xs text-muted-foreground">
+        {icon} {label}
+      </dt>
+      <dd className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          {value}
+          {selectedCustomer && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "whitespace-nowrap",
+                clientHasOwn
+                  ? "border-brand-primary/20 bg-brand-primary-tint text-brand-primary"
+                  : "text-muted-foreground"
+              )}
+            >
+              {clientHasOwn ? t("sourceClient") : t("sourceAccount")}
+            </Badge>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          <Link href={withReturnTo("/settings/reminders", returnHere)} className="text-brand-primary hover:underline">
+            {defaultLabel}
           </Link>
-        </>
-      )}
-      .
-    </>
+          {selectedCustomer && (
+            <>
+              <span aria-hidden="true"> · </span>
+              <Link
+                href={withReturnTo(`/clients/${selectedCustomer.id}/edit`, returnHere)}
+                className="text-brand-primary hover:underline"
+              >
+                {clientHasOwn ? t("changeForClient") : t("setForClient")}
+              </Link>
+            </>
+          )}
+        </p>
+      </dd>
+    </div>
   );
 
   return (
@@ -340,33 +379,12 @@ export function InvoiceForm({
           {!isPro && (
             <p className="rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
               {t("recurringProOnly")}{" "}
-              <Link href="/settings/billing" className="text-brand-primary hover:underline">
+              <Link href={withReturnTo("/settings/billing", returnHere)} className="text-brand-primary hover:underline">
                 {t("attachmentUpgrade")}
               </Link>
             </p>
           )}
         </FormField>
-      </div>
-
-      <div className="space-y-1.5 rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
-        <p>
-          {effectivePaymentLink
-            ? t("paymentLinkNote", {
-                source: selectedCustomer?.payment_link
-                  ? t("paymentLinkSourceClient")
-                  : t("paymentLinkSourceAccount"),
-                link: effectivePaymentLink,
-              })
-            : t("paymentLinkNoteNone")}{" "}
-          {cascadeLinks(effectivePaymentLink ? t("changeDefault") : t("addDefault"), !!selectedCustomer?.payment_link)}
-        </p>
-        <p>
-          {t("localeNote", {
-            language: tCommon(`localeNames.${effectiveLocale}`),
-            source: selectedCustomer?.reminder_locale ? t("localeSourceClient") : t("localeSourceAccount"),
-          })}{" "}
-          {cascadeLinks(t("changeDefault"), !!selectedCustomer?.reminder_locale)}
-        </p>
       </div>
 
       <FormField
@@ -385,8 +403,34 @@ export function InvoiceForm({
           currentFilename={defaultValues?.attachment_filename ?? null}
           selectedFile={attachmentFile}
           onFileChange={setAttachmentFile}
+          upgradeHref={withReturnTo("/settings/billing", returnHere)}
         />
       </FormField>
+
+      <div className="rounded-lg border border-border p-4">
+        <p className="text-sm font-medium text-foreground">{t("summaryTitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("summaryHint")}</p>
+        <dl className="mt-3 space-y-3">
+          {summaryRow({
+            icon: <Link2 className="size-3.5" />,
+            label: t("summaryPaymentLink"),
+            value: effectivePaymentLink ? (
+              <span className="min-w-0 break-all text-sm text-foreground">{effectivePaymentLink}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground">{t("summaryNone")}</span>
+            ),
+            clientHasOwn: !!selectedCustomer?.payment_link,
+            defaultLabel: effectivePaymentLink ? t("changeDefault") : t("addDefault"),
+          })}
+          {summaryRow({
+            icon: <Languages className="size-3.5" />,
+            label: t("summaryLanguage"),
+            value: <span className="text-sm text-foreground">{tCommon(`localeNames.${effectiveLocale}`)}</span>,
+            clientHasOwn: !!selectedCustomer?.reminder_locale,
+            defaultLabel: t("changeDefault"),
+          })}
+        </dl>
+      </div>
 
       <ReminderOverrideSection
         idPrefix="invoice_reminder"

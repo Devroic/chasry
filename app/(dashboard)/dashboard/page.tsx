@@ -62,7 +62,7 @@ export default async function DashboardPage({
   const pro = isPro(profile?.subscription_status ?? "none");
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       {upgraded && pro && (
         <Alert className="border-brand-secondary-tint bg-brand-primary-tint px-4 py-3.5">
           <Sparkles className="text-brand-primary" />

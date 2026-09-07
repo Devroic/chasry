@@ -1,5 +1,6 @@
 import { getAppUrl } from "@/lib/constants";
 import "server-only";
+import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 
 const appUrl = getAppUrl();
@@ -18,16 +19,35 @@ export async function createCheckoutSession({
   successPath?: string;
   cancelPath?: string;
 }) {
+  // A stored id can be stale: the customer was deleted in the Stripe dashboard, or the row was
+  // written by the other key mode (the database is shared between local test-mode runs and
+  // production). Passing a missing id makes Checkout fail with "No such customer", so verify it
+  // and let Stripe create a fresh customer instead; the webhook stores the new id on completion.
+  const customer = stripeCustomerId ? await findLiveCustomer(stripeCustomerId) : null;
+
   return stripe.checkout.sessions.create({
     mode: "subscription",
     client_reference_id: userId,
-    customer: stripeCustomerId ?? undefined,
-    customer_email: stripeCustomerId ? undefined : email,
+    customer: customer ?? undefined,
+    customer_email: customer ? undefined : email,
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
     allow_promotion_codes: true,
     success_url: `${appUrl}${successPath}`,
     cancel_url: `${appUrl}${cancelPath}`,
   });
+}
+
+/** The id if that customer exists (and isn't deleted) under the current key, otherwise null. */
+async function findLiveCustomer(customerId: string): Promise<string | null> {
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    return customer.deleted ? null : customer.id;
+  } catch (error) {
+    if (error instanceof Stripe.errors.StripeInvalidRequestError && error.code === "resource_missing") {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /** Clamps month-end like Stripe (Jan 31 bills Feb 28); bare setUTCMonth would overflow past renewal. */

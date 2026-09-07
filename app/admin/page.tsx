@@ -131,7 +131,7 @@ export default async function AdminOverviewPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       <PageHeader title={t("title")} description={t("subtitle")} className="mb-0" />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

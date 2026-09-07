@@ -12,7 +12,10 @@ export function PageHeader({
   titleBadge?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
-  /** Overrides the default `mb-6` (e.g. `mb-0` inside a `space-y-*` parent). */
+  /**
+   * Overrides the default `mb-6`, e.g. `mb-0` inside a `flex flex-col gap-*` parent. Not with
+   * `space-y-*`: Tailwind 4 implements that as a child bottom margin, which `mb-0` cancels.
+   */
   className?: string;
 }) {
   return (
