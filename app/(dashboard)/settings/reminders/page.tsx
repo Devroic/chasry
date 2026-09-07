@@ -8,10 +8,17 @@ import { addDaysUtc } from "@/lib/reminders";
 import { ReminderSettingsForm } from "./reminder-settings-form";
 import { DigestToggle } from "./digest-toggle";
 import { MarkScheduleReviewed } from "./mark-schedule-reviewed";
+import { safeReturnTo } from "@/lib/return-to";
 
 export const metadata = { title: "Reminders" };
 
-export default async function ReminderSettingsPage() {
+export default async function ReminderSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ return_to?: string }>;
+}) {
+  const { return_to: rawReturnTo } = await searchParams;
+  const returnTo = safeReturnTo(rawReturnTo);
   const { supabase, user } = await requireUser();
   const t = await getTranslations("settings.reminders");
   const tDigest = await getTranslations("settings.digest");
@@ -62,6 +69,7 @@ export default async function ReminderSettingsPage() {
             defaultCopySelf={settings?.copy_self ?? false}
             defaultPaymentLink={profile?.payment_link ?? ""}
             defaultReminderLocale={profile?.reminder_locale ?? "en"}
+            returnTo={returnTo}
           />
         </CardContent>
       </Card>

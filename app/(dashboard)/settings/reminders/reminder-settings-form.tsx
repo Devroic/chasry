@@ -36,12 +36,15 @@ export function ReminderSettingsForm({
   defaultCopySelf,
   defaultPaymentLink,
   defaultReminderLocale,
+  returnTo,
 }: {
   defaultOffsets: number[];
   defaultEnabled: boolean;
   defaultCopySelf: boolean;
   defaultPaymentLink: string;
   defaultReminderLocale: "en" | "el";
+  /** Where to go after a successful save, when the user came from an invoice page. */
+  returnTo?: string;
 }) {
   const [state, formAction, pending] = useActionState<ReminderSettingsState, FormData>(
     updateReminderSettings,
@@ -97,6 +100,7 @@ export function ReminderSettingsForm({
     }
     formData.set("payment_link", data.payment_link ?? "");
     formData.set("reminder_locale", data.reminder_locale);
+    if (returnTo) formData.set("return_to", returnTo);
     startTransition(() => formAction(formData));
   };
 

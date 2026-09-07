@@ -7,15 +7,20 @@ import { FormTips } from "@/components/dashboard/form-tips";
 import { CustomerForm } from "@/components/dashboard/customer-form";
 import { requireUser, getProfile } from "@/lib/auth";
 import { updateCustomer } from "@/app/(dashboard)/clients/actions";
+import { safeReturnTo } from "@/lib/return-to";
 
 export const metadata = { title: "Edit client" };
 
 export default async function EditCustomerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ return_to?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { return_to: rawReturnTo }] = await Promise.all([params, searchParams]);
+  // Query-param controlled: only accept a safe same-origin path.
+  const returnTo = safeReturnTo(rawReturnTo);
   const { supabase, user } = await requireUser();
 
   const [{ data: customer }, { data: reminderSettings }, profile] = await Promise.all([
@@ -38,19 +43,23 @@ export default async function EditCustomerPage({
 
   return (
     <div className="max-w-4xl">
-      <BackLink href={`/clients/${customer.id}`} label={customer.name} />
+      <BackLink
+        href={returnTo || `/clients/${customer.id}`}
+        label={returnTo ? tCommon("back") : customer.name}
+      />
       <PageHeader title={t("editPage.title")} />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-6 lg:col-span-2">
           <CustomerForm
             action={updateCustomer.bind(null, customer.id)}
             defaultValues={customer}
+            returnTo={returnTo}
             accountDefaults={{
               offsets: reminderSettings?.offsets ?? [],
               enabled: reminderSettings?.enabled ?? true,
               locale: profile?.reminder_locale ?? "en",
             }}
-            cancelHref={`/clients/${customer.id}`}
+            cancelHref={returnTo || `/clients/${customer.id}`}
             submitLabel={tCommon("saveChanges")}
           />
         </Card>

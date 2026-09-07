@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { safeReturnTo } from "@/lib/return-to";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { reminderSettingsFormSchema } from "@/lib/validations/invoice";
@@ -44,6 +46,9 @@ export async function updateReminderSettings(
   if (scheduleResult.error || profileResult.error) return { error: tCommon("saveFailed") };
 
   revalidatePath("/settings/reminders");
+  // Came from an invoice page to change a default: take them straight back.
+  const returnTo = safeReturnTo(formData.get("return_to"));
+  if (returnTo) redirect(returnTo);
   return { success: tReminders("savedTitle"), description: tReminders("savedDescription") };
 }
 

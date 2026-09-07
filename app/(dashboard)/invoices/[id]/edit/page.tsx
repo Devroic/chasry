@@ -31,7 +31,7 @@ export default async function EditInvoicePage({
       .single(),
     supabase
       .from("customers")
-      .select("id, name, payment_link, reminder_offsets, reminder_enabled")
+      .select("id, name, payment_link, reminder_offsets, reminder_enabled, reminder_locale")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
     supabase.from("reminder_settings").select("offsets, enabled").eq("user_id", user.id).single(),
@@ -59,6 +59,7 @@ export default async function EditInvoicePage({
               accountDefaults={{
                 offsets: reminderSettings?.offsets ?? [],
                 enabled: reminderSettings?.enabled ?? true,
+                locale: profile.reminder_locale,
               }}
               lockCustomer
               cancelHref={`/invoices/${invoice.id}`}

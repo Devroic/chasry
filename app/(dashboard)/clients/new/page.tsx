@@ -5,7 +5,7 @@ import { BackLink } from "@/components/back-link";
 import { FormTips } from "@/components/dashboard/form-tips";
 import { CustomerForm } from "@/components/dashboard/customer-form";
 import { requireUser, getProfile } from "@/lib/auth";
-import { isSafeRelativePath } from "@/lib/supabase/middleware";
+import { isSafeRelativePath } from "@/lib/return-to";
 import { createCustomer } from "@/app/(dashboard)/clients/actions";
 
 export const metadata = { title: "New client" };

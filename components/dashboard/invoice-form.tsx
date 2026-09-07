@@ -25,6 +25,7 @@ import type { InvoiceFormState } from "@/app/(dashboard)/invoices/actions";
 import { invoiceSchema, type InvoiceInput } from "@/lib/validations/invoice";
 import { toFormData } from "@/lib/utils";
 import { encodeReminderOverride } from "@/lib/reminder-override";
+import { withReturnTo } from "@/lib/return-to";
 import type { z } from "zod";
 
 type InvoiceFormValues = z.input<ReturnType<typeof invoiceSchema>>;
@@ -35,6 +36,7 @@ type CustomerOption = {
   payment_link: string | null;
   reminder_offsets: number[] | null;
   reminder_enabled: boolean | null;
+  reminder_locale: string | null;
 };
 
 function todayIso() {
@@ -78,8 +80,8 @@ export function InvoiceForm({
   suggestedInvoiceNumber?: string;
   /** The business's default payment link — the last fallback once the client's own is checked. */
   defaultPaymentLink?: string;
-  /** The account's reminder default — used to describe/seed the override section. */
-  accountDefaults: { offsets: number[]; enabled: boolean };
+  /** The account's reminder defaults — used to describe/seed the override section and the info note. */
+  accountDefaults: { offsets: number[]; enabled: boolean; locale: string };
   /** Shows the client read-only instead of a Select (editing, or preselected from a client's page). */
   lockCustomer?: boolean;
   /** Which lockCustomer caller this is — picks the read-only hint's wording. */
@@ -180,6 +182,32 @@ export function InvoiceForm({
   const effectivePaymentLink = selectedCustomer?.payment_link || defaultPaymentLink;
   const effectiveOffsets = selectedCustomer?.reminder_offsets ?? accountDefaults.offsets;
   const effectiveEnabled = selectedCustomer?.reminder_enabled ?? accountDefaults.enabled;
+  const effectiveLocale = selectedCustomer?.reminder_locale ?? accountDefaults.locale;
+
+  // "Change your default or set one for this client." Shared by both cascade lines in the note.
+  // When the client already overrides the value, the second link says "change it" instead.
+  const qs = searchParams.toString();
+  const returnHere = qs ? `${pathname}?${qs}` : pathname;
+  const cascadeLinks = (defaultLabel: string, clientHasOwn: boolean) => (
+    <>
+      <Link href={withReturnTo("/settings/reminders", returnHere)} className="text-brand-primary hover:underline">
+        {defaultLabel}
+      </Link>
+      {selectedCustomer && (
+        <>
+          {" "}
+          {t("or")}{" "}
+          <Link
+            href={withReturnTo(`/clients/${selectedCustomer.id}/edit`, returnHere)}
+            className="text-brand-primary hover:underline"
+          >
+            {clientHasOwn ? t("changeForClient") : t("setForClient")}
+          </Link>
+        </>
+      )}
+      .
+    </>
+  );
 
   return (
     <form onSubmit={handleSubmit(onValid)} noValidate className="space-y-4">
@@ -320,16 +348,26 @@ export function InvoiceForm({
         </FormField>
       </div>
 
-      <p className="rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
-        {effectivePaymentLink
-          ? t("paymentLinkNote", {
-              source: selectedCustomer?.payment_link
-                ? t("paymentLinkSourceClient")
-                : t("paymentLinkSourceAccount"),
-              link: effectivePaymentLink,
-            })
-          : t("paymentLinkNoteNone")}
-      </p>
+      <div className="space-y-1.5 rounded-lg border border-border bg-brand-primary-tint p-3 text-xs text-muted-foreground">
+        <p>
+          {effectivePaymentLink
+            ? t("paymentLinkNote", {
+                source: selectedCustomer?.payment_link
+                  ? t("paymentLinkSourceClient")
+                  : t("paymentLinkSourceAccount"),
+                link: effectivePaymentLink,
+              })
+            : t("paymentLinkNoteNone")}{" "}
+          {cascadeLinks(effectivePaymentLink ? t("changeDefault") : t("addDefault"), !!selectedCustomer?.payment_link)}
+        </p>
+        <p>
+          {t("localeNote", {
+            language: tCommon(`localeNames.${effectiveLocale}`),
+            source: selectedCustomer?.reminder_locale ? t("localeSourceClient") : t("localeSourceAccount"),
+          })}{" "}
+          {cascadeLinks(t("changeDefault"), !!selectedCustomer?.reminder_locale)}
+        </p>
+      </div>
 
       <FormField
         label={t("notesLabel")}

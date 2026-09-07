@@ -30,7 +30,7 @@ export default async function NewInvoicePage({
   ] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, name, payment_link, reminder_offsets, reminder_enabled")
+      .select("id, name, payment_link, reminder_offsets, reminder_enabled, reminder_locale")
       .eq("user_id", user.id)
       .order("name", { ascending: true }),
     supabase
@@ -110,6 +110,7 @@ export default async function NewInvoicePage({
                 accountDefaults={{
                   offsets: reminderSettings?.offsets ?? [],
                   enabled: reminderSettings?.enabled ?? true,
+                  locale: profile.reminder_locale,
                 }}
                 isPro={isPro(profile.subscription_status)}
                 cancelHref={
@@ -124,7 +125,7 @@ export default async function NewInvoicePage({
           </Card>
           <FormTips
             title={t("new.tipsTitle")}
-            tips={[t("new.tip1"), t("new.tip2"), t("new.tip3")]}
+            tips={[t("new.tip1"), t("new.tip2")]}
           />
         </div>
       )}

@@ -22,10 +22,27 @@ export function optionalUrl(t: Translator) {
     .string()
     .trim()
     .max(500)
-    .url(t("urlInvalid"))
     .optional()
     .or(z.literal(""))
-    .transform((v) => (v ? v : null));
+    .transform((v, ctx) => {
+      if (!v) return null;
+      // People type "paypal.me/name" or "www.example.com"; the value ends up as an email href, so it
+      // needs a scheme. Add https:// when none is given, then insist on a real http(s) web address.
+      const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`;
+      let url: URL | null = null;
+      try {
+        url = new URL(withScheme);
+      } catch {
+        url = null;
+      }
+      const isWeb =
+        url != null && (url.protocol === "https:" || url.protocol === "http:") && url.hostname.includes(".");
+      if (!isWeb) {
+        ctx.addIssue({ code: "custom", message: t("urlInvalid") });
+        return z.NEVER;
+      }
+      return withScheme;
+    });
 }
 
 /**

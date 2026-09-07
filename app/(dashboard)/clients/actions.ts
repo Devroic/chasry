@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
-import { isSafeRelativePath } from "@/lib/supabase/middleware";
+import { isSafeRelativePath, safeReturnTo } from "@/lib/return-to";
 import { customerSchema } from "@/lib/validations/customer";
 import { decodeReminderOverride } from "@/lib/reminder-override";
 import type { Translator } from "@/lib/validations/shared";
@@ -89,7 +89,8 @@ export async function updateCustomer(
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${customerId}`);
-  redirect(`/clients/${customerId}`);
+  // Edited from an invoice page: go back there instead of the client page.
+  redirect(safeReturnTo(formData.get("return_to")) ?? `/clients/${customerId}`);
 }
 
 export async function deleteCustomer(customerId: string) {

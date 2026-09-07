@@ -1,5 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isSafeRelativePath } from "@/lib/return-to";
+
+// Kept exported here for existing importers; the implementation lives in lib/return-to.
+export { isSafeRelativePath };
 
 const PUBLIC_AUTH_PATHS = ["/login", "/signup", "/reset-password"];
 
@@ -9,10 +13,6 @@ const SESSION_ACTION_PATHS = ["/reset-password/confirm", "/signup/confirmed"];
 // UX convenience only — every protected page also checks auth itself server-side.
 const PROTECTED_PREFIXES = ["/dashboard", "/invoices", "/clients", "/settings", "/onboarding", "/admin"];
 
-// Rejects backslashes too — browsers normalize "/\evil.com" into an off-site "//evil.com".
-export function isSafeRelativePath(path: string) {
-  return path.startsWith("/") && !path.startsWith("//") && !path.includes("\\");
-}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
-import { Wallet, CalendarClock, User, Link2, StickyNote, Paperclip } from "lucide-react";
+import { Wallet, CalendarClock, User, Link2, StickyNote, Paperclip, Languages } from "lucide-react";
 import { requireOnboardedUser } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { BackLink } from "@/components/back-link";
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate, formatMoney, daysUntil, todayInTimeZone } from "@/lib/format";
 import { getUserTimeZone } from "@/lib/timezone";
 import { dueStatusLabel } from "@/lib/reminders";
+import { withReturnTo } from "@/lib/return-to";
 
 export const metadata = { title: "Invoice" };
 
@@ -66,6 +67,18 @@ export default async function InvoiceDetailPage({
     ? t("detail.customForClient", { name: customer.name })
     : t("detail.accountDefault");
 
+  // "Change your default / change it for this client" links come back to this invoice afterwards.
+  const settingsHref = withReturnTo("/settings/reminders", `/invoices/${invoice.id}`);
+  const clientEditHref = customer
+    ? withReturnTo(`/clients/${customer.id}/edit`, `/invoices/${invoice.id}`)
+    : "/clients";
+
+  // Language: client setting, else account default. Same cascade buildReminderPreviews gets below.
+  const reminderLocale = customer?.reminder_locale ?? profile.reminder_locale;
+  const reminderLocaleSource = customer?.reminder_locale
+    ? t("detail.customForClient", { name: customer.name })
+    : t("detail.accountDefault");
+
   const effectiveEnabled = invoice.reminder_enabled ?? customer?.reminder_enabled ?? settings?.enabled ?? true;
   const effectiveOffsets = invoice.reminder_offsets ?? customer?.reminder_offsets ?? settings?.offsets ?? [];
   const accountDefaultLabel = t("detail.accountDefault");
@@ -87,7 +100,7 @@ export default async function InvoiceDetailPage({
         currency: invoice.currency,
         dueDate: invoice.due_date,
         paymentLink: paymentLink ?? undefined,
-        locale: customer.reminder_locale ?? profile.reminder_locale,
+        locale: reminderLocale,
         showBranding: !isPro(profile.subscription_status),
       })
     : [];
@@ -158,25 +171,45 @@ export default async function InvoiceDetailPage({
               <Link2 className="size-3.5" /> {t("detail.paymentLinkInReminders")}
             </p>
             {paymentLink ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href={paymentLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="truncate text-sm text-brand-primary hover:underline"
-                >
-                  {paymentLink}
-                </a>
-                {paymentLinkSource && (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    {paymentLinkSource}
-                  </Badge>
-                )}
-              </div>
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={paymentLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-sm text-brand-primary hover:underline"
+                  >
+                    {paymentLink}
+                  </a>
+                  {paymentLinkSource && (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      {paymentLinkSource}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  <Link href={settingsHref} className="text-brand-primary hover:underline">
+                    {t("detail.changeDefault")}
+                  </Link>
+                  {customer && (
+                    <>
+                      {" "}
+                      {t("detail.or")}{" "}
+                      <Link
+                        href={clientEditHref}
+                        className="text-brand-primary hover:underline"
+                      >
+                        {customer.payment_link ? t("detail.changeForClient") : t("detail.setForClient")}
+                      </Link>
+                    </>
+                  )}
+                  .
+                </p>
+              </>
             ) : (
               <p className="text-sm text-muted-foreground">
                 {t("detail.paymentLinkNone")}{" "}
-                <Link href="/settings/profile" className="text-brand-primary hover:underline">
+                <Link href={settingsHref} className="text-brand-primary hover:underline">
                   {t("detail.addDefault")}
                 </Link>
                 {customer && (
@@ -184,7 +217,7 @@ export default async function InvoiceDetailPage({
                     {" "}
                     {t("detail.or")}{" "}
                     <Link
-                      href={`/clients/${customer.id}/edit`}
+                      href={clientEditHref}
                       className="text-brand-primary hover:underline"
                     >
                       {t("detail.setForClient")}
@@ -194,6 +227,35 @@ export default async function InvoiceDetailPage({
                 .
               </p>
             )}
+          </div>
+          <div className="col-span-2 sm:col-span-3">
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Languages className="size-3.5" /> {t("detail.reminderLocale")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-foreground">{tCommon(`localeNames.${reminderLocale}`)}</span>
+              <Badge variant="outline" className="text-muted-foreground">
+                {reminderLocaleSource}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              <Link href={settingsHref} className="text-brand-primary hover:underline">
+                {t("detail.changeDefault")}
+              </Link>
+              {customer && (
+                <>
+                  {" "}
+                  {t("detail.or")}{" "}
+                  <Link
+                    href={clientEditHref}
+                    className="text-brand-primary hover:underline"
+                  >
+                    {customer.reminder_locale ? t("detail.changeForClient") : t("detail.setLocaleForClient")}
+                  </Link>
+                </>
+              )}
+              .
+            </p>
           </div>
           {invoice.notes && (
             <div className="col-span-2 sm:col-span-3">
@@ -248,7 +310,7 @@ export default async function InvoiceDetailPage({
                 <>
                   {" "}
                   {t("detail.orAccountSettings")}{" "}
-                  <Link href="/settings/reminders" className="text-brand-primary hover:underline">
+                  <Link href={settingsHref} className="text-brand-primary hover:underline">
                     {t("detail.accountSettings")}
                   </Link>
                 </>
