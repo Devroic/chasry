@@ -71,7 +71,7 @@ export default async function EditInvoicePage({
         </Card>
         <FormTips
           title={t("editPage.tipsTitle")}
-          tips={[t("editPage.tip1"), t("editPage.tip2")]}
+          tips={[t("editPage.tip1"), t("editPage.tip2"), t("editPage.tip3")]}
         />
       </div>
     </div>

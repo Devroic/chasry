@@ -339,6 +339,8 @@
       "paymentLinkNone": "None set",
       "customForClient": "Custom for this client",
       "accountDefault": "Your account default",
+      "changeDefault": "Change your default",
+      "addDefault": "Add a default",
       "invoicesTitle": "Invoices",
       "newInvoice": "New invoice",
       "noInvoices": "No invoices for this client yet.",
@@ -362,7 +364,7 @@
       "phoneLabel": "Phone (optional)",
       "phoneHint": "For your own reference, in case you need to call. Never included in reminder emails.",
       "paymentLinkLabel": "Payment link (optional)",
-      "paymentLinkHint": "Used in this client's reminders. Leave blank to use your default from Settings.",
+      "paymentLinkHint": "Reminder emails to this client include a \"Pay now\" button that opens this link. Leave blank to use your default from Settings. If neither is set, reminders go out without a button.",
       "reminderLocaleLabel": "Reminder email language",
       "reminderLocaleAccountDefault": "Account default",
       "notesLabel": "Notes (optional)",
@@ -378,15 +380,17 @@
       "title": "Add a client",
       "subtitle": "Just their name and email to start.",
       "tipsTitle": "Good to know",
-      "tip1": "Only name and email are required. Phone and notes are optional and just for your own reference.",
+      "tip1": "Only name and email are required. Everything else is optional.",
       "tip2": "Reminder emails go to the email address you enter here.",
-      "tip3": "You can log an invoice for them right after saving."
+      "tip3": "You can log an invoice for them right after saving.",
+      "tip4": "Reminders to this client can have their own schedule and language. Leave them on your defaults unless this client needs something different."
     },
     "editPage": {
       "title": "Edit client",
       "tipsTitle": "Good to know",
       "tip1": "Changing the email here doesn't affect invoices you've already sent.",
-      "tip2": "Reminder emails for existing unpaid invoices switch to the new email right away."
+      "tip2": "Reminder emails for existing unpaid invoices switch to the new email right away.",
+      "tip3": "A new schedule or language here applies to their unpaid invoices from the next reminder on. Invoices with their own schedule keep it."
     }
   },
   "invoices": {
@@ -500,7 +504,7 @@
       "summaryHint": "What this client will receive, from their own settings or your account defaults.",
       "summaryPaymentLink": "Payment link",
       "summaryLanguage": "Language",
-      "summaryNone": "None yet, so no \"Pay now\" button.",
+      "summaryNone": "None yet, so reminder emails won't have a \"Pay now\" button.",
       "sourceClient": "Client setting",
       "sourceAccount": "Account default",
       "changeDefault": "Change default",
@@ -539,13 +543,15 @@
       "duplicatedFromGeneric": "Prefilled from an existing invoice. Set the new due date and save.",
       "tipsTitle": "Good to know",
       "tip1": "Chasry checks daily and sends reminders automatically, based on the schedule in Settings.",
-      "tip2": "Mark it paid anytime. Reminders stop the moment you do."
+      "tip2": "Mark it paid anytime. Reminders stop the moment you do.",
+      "tip3": "The free plan covers {limit} unpaid invoices at a time. Marking one as paid frees up the slot."
     },
     "editPage": {
       "title": "Edit invoice",
       "tipsTitle": "Good to know",
       "tip1": "Changing the due date reschedules any reminders that haven't sent yet.",
-      "tip2": "Already-sent reminders aren't recalled or corrected."
+      "tip2": "Already-sent reminders aren't recalled or corrected.",
+      "tip3": "A changed amount or invoice number is picked up by the next reminder that goes out."
     }
   },
   "offsetPicker": {
@@ -651,7 +657,7 @@
       "reminderLocaleLabel": "Reminder emails language",
       "reminderLocaleHint": "The language your clients receive reminder emails in, separate from your own dashboard language. You can also set a different one per client.",
       "paymentLinkLabel": "Payment link (optional)",
-      "paymentLinkHint": "Add a Stripe Payment Link, PayPal.me, or any page clients can pay you from. When set, reminder emails include a \"Pay now\" button linking here. You can also set a different one per client.",
+      "paymentLinkHint": "Add a Stripe Payment Link, PayPal.me, or any page clients can pay you from. When set, reminder emails include a \"Pay now\" button that opens this link. Leave it blank and reminders go out without a button. You can also set a different one per client.",
       "submit": "Save Changes",
       "saved": "Saved.",
       "savedTitle": "Reminder schedule saved",

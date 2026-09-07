@@ -49,7 +49,7 @@ export default async function NewCustomerPage({
         </Card>
         <FormTips
           title={t("new.tipsTitle")}
-          tips={[t("new.tip1"), t("new.tip2"), t("new.tip3")]}
+          tips={[t("new.tip1"), t("new.tip2"), t("new.tip3"), t("new.tip4")]}
         />
       </div>
     </div>

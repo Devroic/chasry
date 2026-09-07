@@ -19,14 +19,11 @@ import { formatDate, formatMoney, daysUntil, todayInTimeZone } from "@/lib/forma
 import { getUserTimeZone } from "@/lib/timezone";
 import { dueStatusLabel } from "@/lib/reminders";
 import { withReturnTo } from "@/lib/return-to";
+import { overrideBadgeClass } from "@/lib/override-badge";
 
 export const metadata = { title: "Invoice" };
 
-export default async function InvoiceDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, user, profile } = await requireOnboardedUser();
 
@@ -79,8 +76,10 @@ export default async function InvoiceDetailPage({
     ? t("detail.customForClient", { name: customer.name })
     : t("detail.accountDefault");
 
-  const effectiveEnabled = invoice.reminder_enabled ?? customer?.reminder_enabled ?? settings?.enabled ?? true;
-  const effectiveOffsets = invoice.reminder_offsets ?? customer?.reminder_offsets ?? settings?.offsets ?? [];
+  const effectiveEnabled =
+    invoice.reminder_enabled ?? customer?.reminder_enabled ?? settings?.enabled ?? true;
+  const effectiveOffsets =
+    invoice.reminder_offsets ?? customer?.reminder_offsets ?? settings?.offsets ?? [];
   const accountDefaultLabel = t("detail.accountDefault");
   const scheduleSource =
     invoice.reminder_offsets != null
@@ -90,7 +89,8 @@ export default async function InvoiceDetailPage({
         : accountDefaultLabel;
 
   // Pre-rendered so the dialog opens instantly, using the same cascade as the cron.
-  const showPreview = invoice.status === "unpaid" && effectiveEnabled && effectiveOffsets.length > 0 && customer;
+  const showPreview =
+    invoice.status === "unpaid" && effectiveEnabled && effectiveOffsets.length > 0 && customer;
   const previews = showPreview
     ? await buildReminderPreviews({
         offsets: effectiveOffsets,
@@ -114,7 +114,10 @@ export default async function InvoiceDetailPage({
         action={
           <div className="flex flex-wrap items-center gap-2">
             {invoice.recurring === "monthly" && (
-              <Badge variant="outline" className="border-brand-primary/20 bg-brand-primary-tint text-brand-primary">
+              <Badge
+                variant="outline"
+                className="border-brand-primary/20 bg-brand-primary-tint text-brand-primary"
+              >
                 {t("detail.recurringBadge")}
               </Badge>
             )}
@@ -182,7 +185,7 @@ export default async function InvoiceDetailPage({
                     {paymentLink}
                   </a>
                   {paymentLinkSource && (
-                    <Badge variant="outline" className="text-muted-foreground">
+                    <Badge variant="outline" className={overrideBadgeClass(!!customer?.payment_link)}>
                       {paymentLinkSource}
                     </Badge>
                   )}
@@ -195,11 +198,10 @@ export default async function InvoiceDetailPage({
                     <>
                       {" "}
                       {t("detail.or")}{" "}
-                      <Link
-                        href={clientEditHref}
-                        className="text-brand-primary hover:underline"
-                      >
-                        {customer.payment_link ? t("detail.changeForClient") : t("detail.setForClient")}
+                      <Link href={clientEditHref} className="text-brand-primary hover:underline">
+                        {customer.payment_link
+                          ? t("detail.changeForClient")
+                          : t("detail.setForClient")}
                       </Link>
                     </>
                   )}
@@ -207,25 +209,24 @@ export default async function InvoiceDetailPage({
                 </p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("detail.paymentLinkNone")}{" "}
-                <Link href={settingsHref} className="text-brand-primary hover:underline">
-                  {t("detail.addDefault")}
-                </Link>
-                {customer && (
-                  <>
-                    {" "}
-                    {t("detail.or")}{" "}
-                    <Link
-                      href={clientEditHref}
-                      className="text-brand-primary hover:underline"
-                    >
-                      {t("detail.setForClient")}
-                    </Link>
-                  </>
-                )}
-                .
-              </p>
+              <>
+                <p className="text-sm text-muted-foreground">{t("detail.paymentLinkNone")}</p>
+                <p className="text-sm text-muted-foreground">
+                  <Link href={settingsHref} className="text-brand-primary hover:underline">
+                    {t("detail.addDefault")}
+                  </Link>
+                  {customer && (
+                    <>
+                      {" "}
+                      {t("detail.or")}{" "}
+                      <Link href={clientEditHref} className="text-brand-primary hover:underline">
+                        {t("detail.setForClient")}
+                      </Link>
+                    </>
+                  )}
+                  .
+                </p>
+              </>
             )}
           </div>
           <div className="col-span-2 sm:col-span-3">
@@ -233,8 +234,10 @@ export default async function InvoiceDetailPage({
               <Languages className="size-3.5" /> {t("detail.reminderLocale")}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-foreground">{tCommon(`localeNames.${reminderLocale}`)}</span>
-              <Badge variant="outline" className="text-muted-foreground">
+              <span className="text-sm text-foreground">
+                {tCommon(`localeNames.${reminderLocale}`)}
+              </span>
+              <Badge variant="outline" className={overrideBadgeClass(!!customer?.reminder_locale)}>
                 {reminderLocaleSource}
               </Badge>
             </div>
@@ -246,11 +249,10 @@ export default async function InvoiceDetailPage({
                 <>
                   {" "}
                   {t("detail.or")}{" "}
-                  <Link
-                    href={clientEditHref}
-                    className="text-brand-primary hover:underline"
-                  >
-                    {customer.reminder_locale ? t("detail.changeForClient") : t("detail.setLocaleForClient")}
+                  <Link href={clientEditHref} className="text-brand-primary hover:underline">
+                    {customer.reminder_locale
+                      ? t("detail.changeForClient")
+                      : t("detail.setLocaleForClient")}
                   </Link>
                 </>
               )}
@@ -287,7 +289,12 @@ export default async function InvoiceDetailPage({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">{t("detail.reminderSchedule")}</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="text-muted-foreground">
+            <Badge
+              variant="outline"
+              className={overrideBadgeClass(
+                invoice.reminder_offsets != null || customer?.reminder_offsets != null
+              )}
+            >
               {scheduleSource}
             </Badge>
             {previews.length > 0 && (
@@ -303,7 +310,10 @@ export default async function InvoiceDetailPage({
           {!effectiveEnabled ? (
             <p className="text-sm text-muted-foreground">
               {t("detail.remindersOffTitle")}{" "}
-              <Link href={`/invoices/${invoice.id}/edit`} className="text-brand-primary hover:underline">
+              <Link
+                href={`/invoices/${invoice.id}/edit`}
+                className="text-brand-primary hover:underline"
+              >
                 {t("detail.editInvoice")}
               </Link>
               {scheduleSource === accountDefaultLabel && (
@@ -338,7 +348,8 @@ export default async function InvoiceDetailPage({
                 invoiceIsPaid={invoice.status !== "unpaid"}
                 sendPaused={
                   invoice.paid_claimed_at != null ||
-                  (invoice.snoozed_until != null && todayInTimeZone(timeZone) < invoice.snoozed_until)
+                  (invoice.snoozed_until != null &&
+                    todayInTimeZone(timeZone) < invoice.snoozed_until)
                 }
                 timeZone={timeZone}
               />

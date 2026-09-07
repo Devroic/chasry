@@ -125,7 +125,11 @@ export default async function NewInvoicePage({
           </Card>
           <FormTips
             title={t("new.tipsTitle")}
-            tips={[t("new.tip1"), t("new.tip2")]}
+            tips={[
+              t("new.tip1"),
+              t("new.tip2"),
+              ...(isPro(profile.subscription_status) ? [] : [t("new.tip3", { limit: FREE_INVOICE_LIMIT })]),
+            ]}
           />
         </div>
       )}

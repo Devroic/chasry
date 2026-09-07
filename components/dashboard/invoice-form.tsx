@@ -28,6 +28,7 @@ import { invoiceSchema, type InvoiceInput } from "@/lib/validations/invoice";
 import { cn, toFormData } from "@/lib/utils";
 import { encodeReminderOverride } from "@/lib/reminder-override";
 import { withReturnTo } from "@/lib/return-to";
+import { overrideBadgeClass } from "@/lib/override-badge";
 import type { z } from "zod";
 
 type InvoiceFormValues = z.input<ReturnType<typeof invoiceSchema>>;
@@ -217,12 +218,7 @@ export function InvoiceForm({
           {selectedCustomer && (
             <Badge
               variant="outline"
-              className={cn(
-                "whitespace-nowrap",
-                clientHasOwn
-                  ? "border-brand-primary/20 bg-brand-primary-tint text-brand-primary"
-                  : "text-muted-foreground"
-              )}
+              className={cn("whitespace-nowrap", overrideBadgeClass(clientHasOwn))}
             >
               {clientHasOwn ? t("sourceClient") : t("sourceAccount")}
             </Badge>

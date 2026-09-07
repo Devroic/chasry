@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { Plus, Pencil, Phone, Link2, Bell, StickyNote, Languages, History } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
+import { overrideBadgeClass } from "@/lib/override-badge";
+import { withReturnTo } from "@/lib/return-to";
 import { PageHeader } from "@/components/page-header";
 import { BackLink } from "@/components/back-link";
 import { InvoiceStatusBadge } from "@/components/dashboard/invoice-status-badge";
@@ -27,12 +29,6 @@ import { describeReminderSchedule } from "@/lib/reminders";
 import { deleteCustomer } from "@/app/(dashboard)/clients/actions";
 
 export const metadata = { title: "Client" };
-
-function overrideBadgeClass(isCustom: boolean) {
-  return isCustom
-    ? "border-brand-primary/20 bg-brand-primary-tint text-brand-primary"
-    : "text-muted-foreground";
-}
 
 export default async function CustomerDetailPage({
   params,
@@ -71,6 +67,8 @@ export default async function CustomerDetailPage({
   const scheduleOffsets = customer.reminder_offsets ?? settings?.offsets ?? [];
   const scheduleEnabled = customer.reminder_enabled ?? settings?.enabled ?? true;
   const reminderLocale = customer.reminder_locale ?? profile?.reminder_locale ?? "en";
+  // Account-default rows offer a jump to Settings that comes back here afterwards.
+  const settingsHref = withReturnTo("/settings/reminders", `/clients/${customer.id}`);
 
   const t = await getTranslations("customers");
   const tInvoices = await getTranslations("invoices");
@@ -143,21 +141,31 @@ export default async function CustomerDetailPage({
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {paymentLink ? (
-                <a
-                  href={paymentLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="truncate text-sm text-brand-primary hover:underline"
-                >
-                  {paymentLink}
-                </a>
+                <>
+                  <a
+                    href={paymentLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate text-sm text-brand-primary hover:underline"
+                  >
+                    {paymentLink}
+                  </a>
+                  <Badge variant="outline" className={overrideBadgeClass(!!customer.payment_link)}>
+                    {customer.payment_link ? t("detail.customForClient") : t("detail.accountDefault")}
+                  </Badge>
+                </>
               ) : (
+                // Nothing set on the client or the account: no "default" is being applied, so no badge.
                 <span className="text-sm text-muted-foreground">{t("detail.paymentLinkNone")}</span>
               )}
-              <Badge variant="outline" className={overrideBadgeClass(!!customer.payment_link)}>
-                {customer.payment_link ? t("detail.customForClient") : t("detail.accountDefault")}
-              </Badge>
             </div>
+            {!customer.payment_link && (
+              <p className="text-sm">
+                <Link href={settingsHref} className="text-brand-primary hover:underline">
+                  {paymentLink ? t("detail.changeDefault") : t("detail.addDefault")}
+                </Link>
+              </p>
+            )}
           </div>
           <div className="col-span-2 sm:col-span-3">
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -169,6 +177,13 @@ export default async function CustomerDetailPage({
                 {customer.reminder_locale ? t("detail.customForClient") : t("detail.accountDefault")}
               </Badge>
             </div>
+            {!customer.reminder_locale && (
+              <p className="text-sm">
+                <Link href={settingsHref} className="text-brand-primary hover:underline">
+                  {t("detail.changeDefault")}
+                </Link>
+              </p>
+            )}
           </div>
           {avgPaymentDelta != null && (
             <div className="col-span-2 sm:col-span-3">
