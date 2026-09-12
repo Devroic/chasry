@@ -61,11 +61,23 @@ export async function handleCronRequest(
       // Jobs signal failure via 500, not a throw, so status derives from the response.
       status: response.ok ? "ok" : "error",
     });
+    await flushSentry(monitorSlug);
     return response;
   } catch (err) {
     Sentry.captureCheckIn({ checkInId, monitorSlug, status: "error" });
     Sentry.captureException(err, { tags: { job: monitorSlug, stage: "unhandled" } });
     console.error(`cron/${monitorSlug}: unhandled failure`, err);
+    await flushSentry(monitorSlug);
     return NextResponse.json({ error: "Cron run failed" }, { status: 500 });
   }
+}
+
+/**
+ * The closing check-in is queued right before the handler returns, and Vercel freezes the
+ * function as soon as the response goes out, so without a flush it is often never delivered.
+ * Sentry then sees only "in_progress" and raises a timeout alert for a run that finished fine.
+ */
+async function flushSentry(monitorSlug: string) {
+  const delivered = await Sentry.flush(5000);
+  if (!delivered) console.error(`cron/${monitorSlug}: Sentry flush timed out`);
 }
